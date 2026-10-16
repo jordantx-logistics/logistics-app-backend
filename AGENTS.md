@@ -8,15 +8,22 @@ Laravel 13 + PHP 8.3 REST API. JWT auth (`php-open-source-saver/jwt-auth`), `spa
 
 ## Commands
 
-- `composer dev` — starts `php artisan serve`, queue listener, and Vite concurrently.
-- `composer test` — clears config and runs `php artisan test` (Pest). Append filter args, e.g. `composer test -- --filter=OrderTest`.
-- `php artisan test tests/Feature/OrderTest.php` — single file.
-- `./vendor/bin/pest --filter='it creates an order'` — single test by name.
-- `./vendor/bin/pint` — format PHP (Laravel Pint).
-- `php artisan migrate` / `php artisan migrate:fresh --seed`.
-- `php artisan jwt:secret` — required on first setup after `key:generate`.
-- `php artisan make:module Logistics/Shipment` — custom generator (see `app/Console/Commands/MakeModuleCommand.php`); scaffolds `src/<Name>/{Controllers,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. **Must** manually register the new `routes.php` in `app/Providers/ModuleServiceProvider.php`.
-- `php artisan scribe:generate` — rebuild API docs from controller docblocks.
+El backend se ejecuta **solo con Docker** (Octane sobre FrankenPHP). No uses PHP/Composer del host.
+Ver `CONTRIBUTING.md` y `docker-compose.yml`.
+
+- `docker compose up -d --build` — levanta app (Octane), horizon, scheduler, nginx, mysql, redis y mailpit.
+- `docker compose exec app composer install` — instala dependencias (solo la primera vez; `vendor/` y `.env` no se versionan).
+- `docker compose exec app php artisan key:generate` — genera `APP_KEY` (solo la primera vez).
+- `docker compose exec app php artisan jwt:secret` — secreto JWT (solo la primera vez, tras `key:generate`).
+- `docker compose exec app php artisan test` — suite Pest. Con filtro: `... php artisan test --filter=OrderTest` o `... php artisan test tests/Feature/OrderTest.php`.
+- `docker compose exec app ./vendor/bin/pint` — formatea PHP (Laravel Pint).
+- `docker compose exec app php artisan migrate` / `php artisan migrate:fresh --seed`.
+- `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Controllers,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. **Debe** registrarse a mano en `app/Providers/ModuleServiceProvider.php`.
+- `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
+- `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código.
+- `docker compose logs -f app` — logs del servicio web.
+
+Los assets (Vite) aún no se compilan dentro del contenedor; se resolverá en una fase posterior.
 
 ## Architecture
 
@@ -59,7 +66,7 @@ Scribe generates from controller docblocks (`@group`, `@apiResource`, `@apiResou
 
 ## Testing
 
-- Feature tests auto-use `RefreshDatabase` via `tests/Pest.php`.
+- Feature tests auto-use `RefreshDatabase` desde `tests/TestCase.php` (así aplica también a las clases de test con estilo PHPUnit, ya que los traits registrados en `tests/Pest.php` no llegan a esas clases).
 - `phpunit.xml` pins `DB_CONNECTION=sqlite` / `DB_DATABASE=:memory:` and `QUEUE_CONNECTION=sync` — don't override these in individual tests.
 - `BCRYPT_ROUNDS=4` in tests — don't benchmark hashing.
 
