@@ -21,7 +21,8 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Adapters,Controllers,Events,Exceptions,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` automáticamente.
 - `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
 - `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código.
-- `docker compose logs -f app` — logs del servicio web.
+- `docker compose logs -f app` — logs JSON del servicio web.
+- `docker compose build app` — obligatorio tras tocar `Dockerfile` o `docker/entrypoint.sh` (se copian en la imagen, no están montados).
 
 Los assets (Vite) aún no se compilan dentro del contenedor; se resolverá en una fase posterior.
 
@@ -76,6 +77,15 @@ Two endpoints, both public (a probe carries no token):
 
 - `GET /up` — **liveness**. Laravel's built-in route, no external dependency. It is the `healthcheck` of the `app` service in `docker-compose.yml`.
 - `GET /api/v1/health` — **readiness**. `src/System` checks MySQL (trivial query), Redis (`PING`) and the queue connection; returns `200` with `data.status=ok` or `503` with `data.status=degraded` plus the per-dependency detail (`status`, `detail`, `latency_ms`). Each probe is timed and never throws, so one dead dependency still reports the others.
+
+### Logs y request_id
+
+El canal por defecto es `json` (`config/logging.php`): una línea JSON por registro a **stderr**, con `context`/`extra` aplanados en la raíz, de modo que `request_id`, `user_id`, `route`, `status` o `duration_ms` se indexan sin abrir subobjetos.
+
+- `AssignRequestId` (global) respeta el `X-Request-Id` del cliente —solo ids que casan `[A-Za-z0-9._-]{1,64}`, para no inyectar saltos de línea— o genera un UUID, lo guarda en `Context` y lo devuelve en la respuesta. `LogHttpRequest` (global) añade `user_id` y deja una línea `http_request` por petición.
+- `Context` es el almacén de estado de petición de Laravel (`scoped`): Octane lo descarta al terminar cada petición y `ContextLogProcessor` —que `LogManager` empuja a todos los canales— vuelca sus datos en cada registro. Ese processor resuelve la aplicación **en cada llamada**; uno que capture el contenedor en su constructor se quedaría con la app original y registraría contexto vacío, porque Octane clona la aplicación en cada petición.
+- Las líneas van a stderr y el *entrypoint* arranca Octane con `--log-level` (`OCTANE_LOG_LEVEL`, por defecto `warn`): sin ese flag Octane parsea el stderr de los workers como log JSON de Caddy y las líneas de la app acaban como `ERROR unknown error`.
+- Los tests fijan `LOG_CHANNEL=null` (`phpunit.xml`) para no ensuciar la salida.
 
 ### API docs
 

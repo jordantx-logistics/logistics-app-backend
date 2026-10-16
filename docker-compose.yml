@@ -14,6 +14,8 @@ services:
       APP_ROLE: web
       OCTANE_WORKERS: "${OCTANE_WORKERS:-2}"
       OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+      # Compose interpola estas variables desde el `.env` de Laravel del proyecto.
+      OCTANE_LOG_LEVEL: "${OCTANE_LOG_LEVEL:-warn}"
     volumes:
       - .:/var/www
     healthcheck:

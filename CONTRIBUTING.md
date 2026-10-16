@@ -28,6 +28,23 @@ Reglas:
 - No instalar ni invocar PHP/Composer del host para este repositorio.
 - `vendor/` y `.env` no se versionan; se recrean dentro del contenedor.
 - Tras cambiar código, `docker compose exec app php artisan octane:reload` (el worker de Octane cachea el código en memoria).
+- Tras tocar `Dockerfile` o `docker/entrypoint.sh` hay que reconstruir: `docker compose build app` (se copian dentro de la imagen, no van montados).
+- Cambiar `.env` requiere recrear el contenedor: `docker compose up -d --force-recreate app` (`octane:reload` no relee el entorno).
+
+## Logs
+
+La app registra **una línea JSON por evento a stderr**, con `context`/`extra` aplanados en la raíz:
+
+```bash
+docker compose logs -f app
+# {"method":"GET","route":"api/v1/permission/roles","status":200,"duration_ms":114.7,
+#  "ip":"172.20.0.6","request_id":"trace-auth-600","user_id":2,
+#  "message":"http_request","level_name":"INFO","datetime":"..."}
+```
+
+- Cada petición lleva `request_id`: se respeta el `X-Request-Id` que envíe el cliente y se devuelve en la respuesta, así que una traza se sigue de extremo a extremo. `user_id` aparece solo si la petición va autenticada.
+- `OCTANE_LOG_LEVEL` (`warn` por defecto) controla el nivel de Caddy, no el de la app (`LOG_LEVEL`). Necesario para que Octane no interprete el stderr de los workers como log de Caddy.
+- En los tests `LOG_CHANNEL=null` (`phpunit.xml`), así que la suite no imprime logs.
 
 ## Ramas
 

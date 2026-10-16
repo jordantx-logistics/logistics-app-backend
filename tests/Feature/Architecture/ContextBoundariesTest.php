@@ -21,8 +21,9 @@ use Illuminate\Support\Str;
 function contextLayerNames(): array
 {
     return [
-        'Adapters', 'Contracts', 'Controllers', 'Events', 'Exceptions', 'Models',
-        'Pipelines', 'Requests', 'Resources', 'Rules', 'Services', 'Traits', 'UseCases',
+        'Adapters', 'Contracts', 'Controllers', 'Events', 'Exceptions',
+        'Logging', 'Middleware', 'Models', 'Pipelines', 'Requests', 'Resources',
+        'Rules', 'Services', 'Traits', 'UseCases',
     ];
 }
 

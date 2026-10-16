@@ -7,6 +7,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Src\Shared\Exceptions\BusinessRuleException;
+use Src\System\Middleware\AssignRequestId;
+use Src\System\Middleware\LogHttpRequest;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -17,7 +19,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // `api/*` nunca redirige a un login web (no existe): así el
+        // AuthenticationException llega al handler de abajo y responde 401 JSON
+        // aunque el cliente no envíe `Accept: application/json`.
+        $middleware->redirectGuestsTo(
+            fn (Request $request) => $request->is('api/*') ? null : '/'
+        );
+
+        $middleware->append(AssignRequestId::class);
+        $middleware->append(LogHttpRequest::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request) {
