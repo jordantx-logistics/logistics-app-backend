@@ -45,7 +45,10 @@ class MakeModuleCommand extends Command
 
         // Create directories
         $directories = [
+            'Adapters',
             'Controllers',
+            'Events',
+            'Exceptions',
             'Models',
             'Requests',
             'Resources',

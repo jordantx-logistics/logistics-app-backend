@@ -22,10 +22,11 @@ return new class extends Migration
             $table->string('idempotency_key', 64)->unique();
 
             // ── Business data ───────────────────────────────
-            $table->foreignId('sender_id')->constrained('persons');
-            $table->foreignId('receiver_id')->constrained('persons');
-            $table->foreignId('origin_agency_id')->constrained('agencies');
-            $table->foreignId('destination_agency_id')->constrained('agencies');
+            // Referencias a otros contextos: columna indexada, sin FK (ADR-0006).
+            $table->unsignedBigInteger('sender_id');
+            $table->unsignedBigInteger('receiver_id')->index();
+            $table->unsignedBigInteger('origin_agency_id');
+            $table->unsignedBigInteger('destination_agency_id');
             $table->text('description')->nullable();
             $table->decimal('weight_kg', 8, 3);
             $table->decimal('volume_m3', 8, 4)->nullable();
@@ -36,7 +37,7 @@ return new class extends Migration
             $table->string('status', 20)->default('pending'); // pending -> confirmed -> in_transit -> delivered -> cancelled
 
             // ── Audit ───────────────────────────────────────
-            $table->foreignId('created_by')->constrained('users');
+            $table->unsignedBigInteger('created_by')->index();
             $table->timestamps();
 
             // ── Indexes for high-scale queries ──────────────

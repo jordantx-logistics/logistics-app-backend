@@ -4,13 +4,16 @@ namespace Src\Logistics\Order\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Src\Customer\Models\Person;
-use Src\Logistics\Payment\Models\Payment;
-use Src\Organization\Models\Agency;
 use Src\Shared\Traits\HasTicketIdentifiers;
 
+/**
+ * Orden de envío (contexto `Logistics/Order`).
+ *
+ * `sender_id`, `receiver_id`, `origin_agency_id`, `destination_agency_id` y
+ * `created_by` apuntan a otros contextos (`Customer`, `Organization`, `Auth`):
+ * son columnas indexadas sin FK y sin relaciones Eloquent (ADR-0006). Para leer
+ * esos datos se usa un puerto (`Src\Shared\Contracts`), nunca el modelo ajeno.
+ */
 class Order extends Model
 {
     use HasFactory, HasTicketIdentifiers;
@@ -43,31 +46,5 @@ class Order extends Model
     public function getTicketPrefix(): string
     {
         return 'ORD';
-    }
-
-    // ── Relationships ────────────────────────────────────
-    public function sender(): BelongsTo
-    {
-        return $this->belongsTo(Person::class, 'sender_id');
-    }
-
-    public function receiver(): BelongsTo
-    {
-        return $this->belongsTo(Person::class, 'receiver_id');
-    }
-
-    public function originAgency(): BelongsTo
-    {
-        return $this->belongsTo(Agency::class, 'origin_agency_id');
-    }
-
-    public function destinationAgency(): BelongsTo
-    {
-        return $this->belongsTo(Agency::class, 'destination_agency_id');
-    }
-
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class);
     }
 }

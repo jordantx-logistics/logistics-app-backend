@@ -18,7 +18,7 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose exec app php artisan test` — suite Pest. Con filtro: `... php artisan test --filter=OrderTest` o `... php artisan test tests/Feature/OrderTest.php`.
 - `docker compose exec app ./vendor/bin/pint` — formatea PHP (Laravel Pint).
 - `docker compose exec app php artisan migrate` / `php artisan migrate:fresh --seed`.
-- `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Controllers,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` automáticamente.
+- `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Adapters,Controllers,Events,Exceptions,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` automáticamente.
 - `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
 - `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código.
 - `docker compose logs -f app` — logs del servicio web.
@@ -33,11 +33,21 @@ Business code lives in **`src/`** (PSR-4 `Src\\`), NOT `app/`. `app/` only holds
 
 ```
 src/<Module>/
-  Controllers/  Models/  Requests/  Resources/  Rules/  Services/  UseCases/
+  Adapters/  Controllers/  Events/  Exceptions/  Models/  Requests/
+  Resources/  Rules/  Services/  UseCases/
   routes.php
 ```
 
 Current modules: `Auth`, `Customer` (Persons/Companies), `Organization` (Agencies), `Logistics/Order`, `Logistics/Payment`, plus cross-cutting `Shared/`.
+
+### Cross-context boundaries (ADR-0006)
+
+A **context** is each `src/<Contexto>` and `src/<Contexto>/<Subcontexto>` (the folder of layers closes the name: `Logistics/Order/Models/Order.php` belongs to `Logistics\Order`). Rules:
+
+- **No context imports another context's classes** (not just models). Communication goes through a **port** or an event. `Src\Shared\` (kernel) is the only namespace every context may use.
+- Ports live in `src/Shared/Contracts/` (e.g. `CustomerDirectory`, `AgencyDirectory`); the **adapter** that knows the foreign model lives in the owning context (`src/Customer/Adapters/`, `src/Organization/Adapters/`); the **binding** lives only in the composition root `app/Providers/DomainServiceProvider.php`.
+- **No foreign keys between contexts**: cross-context references are plain indexed columns (`orders.sender_id`, `payments.order_id`) and their existence is validated in a Rule through a port.
+- `tests/Feature/Architecture/ContextBoundariesTest.php` enforces the imports and the missing FKs; `ModuleRoutesTest.php` enforces route discovery.
 
 ### Routing
 
@@ -50,7 +60,7 @@ All API routes live under `api/v1/<domain>/…` and use the `auth:api` (JWT) mid
 Controller → FormRequest (validation) → **UseCase** (orchestration) → **RulesPipeline** → Services → Model + **OutboxEvent**.
 
 - **UseCases** (`src/*/UseCases/*UseCase.php`) are the single entry point for business operations. Controllers are thin: validate, delegate, respond.
-- **Rules** are pipeline stages with `handle($payload, Closure $next)` run via `Src\Shared\Pipelines\RulesPipeline::run($data, [RuleA::class, RuleB::class])`. They throw `BusinessRuleException` on failure (see `CreateOrderUseCase` for the canonical pattern).
+- **Rules** are pipeline stages with `handle($payload, Closure $next)` run via `Src\Shared\Pipelines\RulesPipeline::run($data, [RuleA::class, RuleB::class])`. They throw `BusinessRuleException` on failure (see `CreateOrderUseCase` for the canonical pattern). Rules are resolved from the container, so a rule that needs another context takes its **port** in the constructor (see `ValidateCustomerExists`).
 - **Outbox pattern**: state-changing UseCases write to `outbox_events` inside the same DB transaction as the domain row. Do not dispatch jobs/events directly from UseCases — write an `OutboxEvent` row and let downstream workers consume it.
 - **Ticket identifiers**: models using `Src\Shared\Traits\HasTicketIdentifiers` auto-populate `ticket_code` and `ticket_number` on `creating`. The model must implement `getTicketPrefix(): string` (e.g. `'ORD'`). Numbers come from the `sequences` table under a `lockForUpdate()`, so tests must use a real DB connection (SQLite `:memory:` is fine).
 
@@ -73,5 +83,5 @@ Scribe generates from controller docblocks (`@group`, `@apiResource`, `@apiResou
 ## Conventions
 
 - New business logic goes in a UseCase, not a controller or model. If validation is more than shape-checking (e.g. "customer exists", "no duplicates"), make it a Rule and put it in the pipeline.
-- Shared cross-module code goes in `src/Shared/` (Traits, Services, Pipelines, Exceptions, Models like `OutboxEvent`).
+- Shared cross-module code goes in `src/Shared/` (Traits, Services, Pipelines, Exceptions, Contracts, Models like `OutboxEvent`).
 - `App\Models\User` stays in `app/` because Laravel's auth config references it; module-owned models live under `src/<Module>/Models/`.
