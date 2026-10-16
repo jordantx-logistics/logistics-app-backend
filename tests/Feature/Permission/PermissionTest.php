@@ -141,4 +141,17 @@ class PermissionTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['name']);
     }
+
+    /**
+     * Un id no numérico no debe llegar al controlador (`int $id`): la restricción
+     * de ruta lo deja en un 404 en vez de un TypeError (500).
+     */
+    public function test_it_returns_404_for_a_non_numeric_permission_id(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user, 'api');
+
+        $this->getJson('/api/v1/permission/permissions/architecto')->assertStatus(404);
+        $this->deleteJson('/api/v1/permission/permissions/architecto')->assertStatus(404);
+    }
 }
