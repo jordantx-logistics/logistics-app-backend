@@ -102,6 +102,8 @@ El canal por defecto es `json` (`config/logging.php`): una línea JSON por regis
 
 Scribe generates from controller docblocks (`@group`, `@apiResource`, `@apiResourceModel`, `@apiResourceAdditional`). Config in `config/scribe.php`; output in `.scribe/`.
 
+La documentación generada (`.scribe/`, `resources/views/scribe/`, `public/vendor/scribe/`) **no se versiona**: se regenera con `docker compose exec app php artisan scribe:generate` y el contrato OpenAPI viaja como artefacto de CI. Los ejemplos de respuesta los produce Faker, así que versionarlos solo generaba ruido en cada diff. Consecuencia: `/docs` da error hasta que se ejecute `scribe:generate` una vez en el entorno.
+
 ## Testing
 
 - Feature tests auto-use `RefreshDatabase` desde `tests/TestCase.php` (así aplica también a las clases de test con estilo PHPUnit, ya que los traits registrados en `tests/Pest.php` no llegan a esas clases).

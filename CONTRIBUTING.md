@@ -20,7 +20,7 @@ docker compose exec app php artisan migrate --seed
 # Comandos del día a día
 docker compose exec app php artisan test
 docker compose exec app ./vendor/bin/pint
-docker compose exec app php artisan scribe:generate
+docker compose exec app php artisan scribe:generate   # la doc generada no se versiona
 docker compose logs -f app
 ```
 
