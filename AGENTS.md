@@ -38,7 +38,7 @@ src/<Module>/
   routes.php
 ```
 
-Current modules: `Auth`, `Customer` (Persons/Companies), `Organization` (Agencies), `Logistics/Order`, `Logistics/Payment`, plus cross-cutting `Shared/`.
+Current modules: `Auth`, `Customer` (Persons/Companies), `Organization` (Agencies), `Logistics/Order`, `Logistics/Payment`, `System` (health checks), plus cross-cutting `Shared/`.
 
 ### Cross-context boundaries (ADR-0006)
 
@@ -69,6 +69,13 @@ Controller → FormRequest (validation) → **UseCase** (orchestration) → **Ru
 Every controller extends `App\Http\Controllers\Controller`, which uses `Src\Shared\Traits\ApiResponse`. Always return via `$this->success(...)` / `$this->error(...)`. Response shape is `{ success, message, data? }`.
 
 Exception rendering is centralized in `bootstrap/app.php` for any request matching `api/*`: `ValidationException`, `AuthenticationException`, `NotFoundHttpException`, and a catch-all that toggles debug details by `APP_DEBUG`. `BusinessRuleException` renders itself (with `error_code`) — do not add another handler for it.
+
+### Health checks
+
+Two endpoints, both public (a probe carries no token):
+
+- `GET /up` — **liveness**. Laravel's built-in route, no external dependency. It is the `healthcheck` of the `app` service in `docker-compose.yml`.
+- `GET /api/v1/health` — **readiness**. `src/System` checks MySQL (trivial query), Redis (`PING`) and the queue connection; returns `200` with `data.status=ok` or `503` with `data.status=degraded` plus the per-dependency detail (`status`, `detail`, `latency_ms`). Each probe is timed and never throws, so one dead dependency still reports the others.
 
 ### API docs
 
