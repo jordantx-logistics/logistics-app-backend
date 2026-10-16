@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 /**
  * Seeder para crear un usuario con rol SuperAdmin
@@ -56,8 +56,8 @@ class SuperAdminSeeder extends Seeder
 
         // Log de creación
         $this->command->info('Usuario SuperAdmin creado/actualizado');
-        $this->command->info('Email: ' . $email);
-        $this->command->info('Password: ' . $password);
+        $this->command->info('Email: '.$email);
+        $this->command->info('Password: '.$password);
         $this->command->info('Rol: SuperAdmin (todos los permisos)');
     }
 }

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\Organization\Models\Agency;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\Organization\Models\Agency>
+ * @extends Factory<Agency>
  */
 class AgencyFactory extends Factory
 {
