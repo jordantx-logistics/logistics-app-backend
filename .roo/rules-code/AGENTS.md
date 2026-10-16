@@ -4,9 +4,11 @@
 When creating a new module, follow this exact structure:
 ```
 src/<Module>/
-  Controllers/  Models/  Requests/  Resources/  Rules/  Services/  UseCases/
+  Adapters/  Controllers/  Events/  Exceptions/  Models/  Requests/
+  Resources/  Rules/  Services/  UseCases/
   routes.php
 ```
+`php artisan make:module <Name>` scaffolds it (including `Adapters/`, `Events/` and `Exceptions/`).
 
 ## Request Flow Order
 1. Controller (thin wrapper)
@@ -31,6 +33,7 @@ src/<Module>/
 - Always import from `Src\` namespace for module-specific code
 - Use `App\` namespace for framework classes (Controllers, Models, Providers)
 - Shared utilities from `Src\Shared\`
+- **Never** import another context's classes (ADR-0006): declare/receive a port from `Src\Shared\Contracts\` instead. The adapter lives in the context that owns the model and is bound in `app/Providers/DomainServiceProvider.php`
 
 ## Resources
 - Resources are for API response serialization (not DTOs)

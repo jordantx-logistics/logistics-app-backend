@@ -1,9 +1,11 @@
 # Architect Mode Rules
 
 ## Modular Monolith Pattern
-- Each module is self-contained with its own Controllers, Models, Requests, Resources, Rules, Services, UseCases
-- Modules communicate via shared models in `src/Shared/Models/` (e.g., `OutboxEvent`)
-- Cross-module business logic goes in `src/Shared/Services/`
+- Each module is self-contained with its own Adapters, Controllers, Events, Exceptions, Models, Requests, Resources, Rules, Services and UseCases
+- Modules do **not** import each other's classes (ADR-0006). They talk through a **port** in `src/Shared/Contracts/` (e.g. `CustomerDirectory`, `AgencyDirectory`) or an event
+- The adapter that knows the foreign model lives in the owning context (`src/Customer/Adapters/`); the binding lives only in `app/Providers/DomainServiceProvider.php` (composition root)
+- No foreign keys between contexts: cross-context references are plain indexed columns validated in a Rule through a port
+- `tests/Feature/Architecture/ContextBoundariesTest.php` fails on a cross-context import or FK
 
 ## Routing Architecture
 ```
@@ -58,4 +60,6 @@ Model + OutboxEvent (persistence)
 - `Organization` — agencies
 - `Logistics/Order` — order management
 - `Logistics/Payment` — payment processing
-- `Shared` — cross-module utilities
+- `Permission` — roles and permissions
+- `System` — health checks (`/api/v1/health`) and Prometheus metrics (`/metrics`)
+- `Shared` — cross-module kernel (Traits, Pipelines, Exceptions, Services, Contracts)

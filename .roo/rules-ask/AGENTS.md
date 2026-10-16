@@ -8,7 +8,8 @@
 ## Counterintuitive Structure
 - Business code is in `src/`, NOT `app/` (common Laravel pattern)
 - `app/` only contains: base Controller, User model, Service Providers, Console Commands
-- Each module has its own `routes.php` that must be manually registered
+- Each module's `routes.php` is **auto-discovered** by `ModuleServiceProvider`; there is no list to register by hand
+- Cross-context calls go through ports in `src/Shared/Contracts/`, never by importing the other context's classes (ADR-0006)
 
 ## Misleading Names
 - `Resources` are API response serializers, not resource controllers
@@ -16,11 +17,12 @@
 - `UseCases` orchestrate flow, don't contain implementation details
 
 ## File Organization
-- `src/<Module>/routes.php` — module-specific routes (must be registered)
+- `src/<Module>/routes.php` — module-specific routes (auto-discovered)
+- `src/<Module>/Adapters/` — implementations of ports owned by other contexts
 - `src/<Module>/Controllers/` — thin controllers that delegate to UseCases
 - `src/<Module>/UseCases/` — business logic orchestration entry points
 - `src/<Module>/Rules/` — validation pipeline stages for UseCases
-- `src/Shared/` — cross-module utilities (Traits, Pipelines, Exceptions)
+- `src/Shared/` — cross-module kernel (Traits, Pipelines, Exceptions, Services, Contracts)
 
 ## Environment Variables
 - `BCRYPT_ROUNDS=4` in tests (lower than production for speed)
