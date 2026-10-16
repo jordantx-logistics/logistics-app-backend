@@ -18,9 +18,8 @@ class UpdateRoleUseCase
     /**
      * Update an existing role
      *
-     * @param int $id Role ID
-     * @param UpdateRoleRequest $request Validation request
-     * @return Role
+     * @param  int  $id  Role ID
+     * @param  UpdateRoleRequest  $request  Validation request
      */
     public function execute(int $id, UpdateRoleRequest $request): Role
     {

@@ -1,12 +1,11 @@
 <?php
 
-use Illuminate\Support\Facades\DB;
 use Src\Shared\Pipelines\RulesPipeline;
 use Src\Shared\Services\TicketCodeGenerator;
 use Src\Shared\Services\TicketNumberGenerator;
 
 it('generates sequential ticket numbers', function () {
-    $generator = new TicketNumberGenerator();
+    $generator = new TicketNumberGenerator;
 
     $code1 = $generator->generate('ABC');
     $code2 = $generator->generate('ABC');
@@ -16,7 +15,7 @@ it('generates sequential ticket numbers', function () {
 });
 
 it('generates 8 char alphanumeric ticket codes', function () {
-    $generator = new TicketCodeGenerator();
+    $generator = new TicketCodeGenerator;
 
     $code = $generator->generate();
 
@@ -25,16 +24,22 @@ it('generates 8 char alphanumeric ticket codes', function () {
 });
 
 it('runs data through a rules pipeline', function () {
-    class AddOneRule {
-        public function handle(array $data, Closure $next) {
+    class AddOneRule
+    {
+        public function handle(array $data, Closure $next)
+        {
             $data['count'] += 1;
+
             return $next($data);
         }
     }
 
-    class MultiplyTwoRule {
-        public function handle(array $data, Closure $next) {
+    class MultiplyTwoRule
+    {
+        public function handle(array $data, Closure $next)
+        {
             $data['count'] *= 2;
+
             return $next($data);
         }
     }

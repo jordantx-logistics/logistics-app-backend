@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Src\Shared\Traits\ApiResponse;
+
 abstract class Controller
 {
-    use \Src\Shared\Traits\ApiResponse;
+    use ApiResponse;
 }
-

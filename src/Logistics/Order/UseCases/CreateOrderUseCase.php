@@ -34,29 +34,29 @@ class CreateOrderUseCase
         // 3: Transactional core: Save + Outbox
         return DB::transaction(function () use ($data) {
             $order = Order::create([
-                'idempotency_key'        => $data['idempotency_key'],
-                'sender_id'              => $data['sender_id'],
-                'receiver_id'            => $data['receiver_id'],
-                'origin_agency_id'       => $data['origin_agency_id'],
-                'destination_agency_id'  => $data['destination_agency_id'],
-                'description'            => $data['description'] ?? null,
-                'weight_kg'              => $data['weight_kg'],
-                'volume_m3'              => $data['volume_m3'] ?? null,
-                'declared_value'         => $data['declared_value'] ?? 0,
-                'total_amount'           => $data['total_amount'],
-                'status'                 => 'pending',
-                'created_by'             => auth()->id(),
+                'idempotency_key' => $data['idempotency_key'],
+                'sender_id' => $data['sender_id'],
+                'receiver_id' => $data['receiver_id'],
+                'origin_agency_id' => $data['origin_agency_id'],
+                'destination_agency_id' => $data['destination_agency_id'],
+                'description' => $data['description'] ?? null,
+                'weight_kg' => $data['weight_kg'],
+                'volume_m3' => $data['volume_m3'] ?? null,
+                'declared_value' => $data['declared_value'] ?? 0,
+                'total_amount' => $data['total_amount'],
+                'status' => 'pending',
+                'created_by' => auth()->id(),
             ]);
 
             OutboxEvent::create([
                 'event_type' => 'order.created',
                 'payload' => [
-                    'order_id'      => $order->id,
+                    'order_id' => $order->id,
                     'ticket_number' => $order->ticket_number,
-                    'ticket_code'   => $order->ticket_code,
-                    'total_amount'  => $order->total_amount,
-                    'created_by'    => $order->created_by,
-                ]
+                    'ticket_code' => $order->ticket_code,
+                    'total_amount' => $order->total_amount,
+                    'created_by' => $order->created_by,
+                ],
             ]);
 
             return $order;

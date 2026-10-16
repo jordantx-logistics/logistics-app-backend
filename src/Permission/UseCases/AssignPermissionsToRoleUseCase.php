@@ -19,9 +19,8 @@ class AssignPermissionsToRoleUseCase
     /**
      * Assign permissions to a role
      *
-     * @param int $roleId Role ID
-     * @param AssignPermissionsToRoleRequest $request Validation request
-     * @return Role
+     * @param  int  $roleId  Role ID
+     * @param  AssignPermissionsToRoleRequest  $request  Validation request
      */
     public function execute(int $roleId, AssignPermissionsToRoleRequest $request): Role
     {

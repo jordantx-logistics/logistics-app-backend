@@ -9,9 +9,7 @@ class RulesPipeline
     /**
      * Run a payload through a series of Rule classes.
      *
-     * @param mixed $payload
-     * @param array<class-string> $rules
-     * @return mixed
+     * @param  array<class-string>  $rules
      */
     public static function run(mixed $payload, array $rules): mixed
     {

@@ -13,7 +13,7 @@ class ValidateOrderWeight
     {
         if (($payload['weight_kg'] ?? 0) > self::MAX_WEIGHT_KG) {
             throw new BusinessRuleException(
-                message: "Order weight exceeds the maximum of ".self::MAX_WEIGHT_KG." kg.",
+                message: 'Order weight exceeds the maximum of '.self::MAX_WEIGHT_KG.' kg.',
                 errorCode: 'WEIGHT_EXCEEDED',
             );
         }

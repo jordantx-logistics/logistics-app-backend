@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\User;
-use Src\Customer\Models\Person;
-use Src\Customer\Models\Company;
 
 beforeEach(function () {
     $this->user = User::factory()->create();

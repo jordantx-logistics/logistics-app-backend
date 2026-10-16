@@ -18,9 +18,8 @@ class UpdatePermissionUseCase
     /**
      * Update an existing permission
      *
-     * @param int $id Permission ID
-     * @param UpdatePermissionRequest $request Validation request
-     * @return Permission
+     * @param  int  $id  Permission ID
+     * @param  UpdatePermissionRequest  $request  Validation request
      */
     public function execute(int $id, UpdatePermissionRequest $request): Permission
     {

@@ -18,9 +18,8 @@ class AssignRoleToUserUseCase
     /**
      * Assign a role to a user
      *
-     * @param int $userId User ID
-     * @param AssignRoleToUserRequest $request Validation request
-     * @return User
+     * @param  int  $userId  User ID
+     * @param  AssignRoleToUserRequest  $request  Validation request
      */
     public function execute(int $userId, AssignRoleToUserRequest $request): User
     {

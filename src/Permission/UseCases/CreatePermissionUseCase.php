@@ -18,8 +18,7 @@ class CreatePermissionUseCase
     /**
      * Create a new permission
      *
-     * @param CreatePermissionRequest $request Validation request
-     * @return Permission
+     * @param  CreatePermissionRequest  $request  Validation request
      */
     public function execute(CreatePermissionRequest $request): Permission
     {

@@ -17,8 +17,7 @@ class DeleteRoleUseCase
     /**
      * Delete a role
      *
-     * @param int $id Role ID
-     * @return void
+     * @param  int  $id  Role ID
      */
     public function execute(int $id): void
     {

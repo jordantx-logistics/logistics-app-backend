@@ -17,8 +17,7 @@ class DeletePermissionUseCase
     /**
      * Delete a permission
      *
-     * @param int $id Permission ID
-     * @return void
+     * @param  int  $id  Permission ID
      */
     public function execute(int $id): void
     {

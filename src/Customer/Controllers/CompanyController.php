@@ -19,9 +19,11 @@ class CompanyController extends Controller
      * List Corporate Customers
      *
      * Retrieves a list of all registered corporate clients.
-     * 
+     *
      * @apiResourceCollection Src\Customer\Resources\CompanyResource
+     *
      * @apiResourceModel Src\Customer\Models\Company
+     *
      * @apiResourceAdditional success=true message="Companies retrieved successfully."
      */
     public function index(): JsonResponse
@@ -36,18 +38,20 @@ class CompanyController extends Controller
      * Register Corporate Customer
      *
      * Creates a new company record, typically requiring RUC formatting and business names.
-     * 
+     *
      * @apiResource Src\Customer\Resources\CompanyResource
+     *
      * @apiResourceModel Src\Customer\Models\Company
+     *
      * @apiResourceAdditional success=true message="Company created successfully."
      */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'tax_id'        => 'required|string|max:50|unique:companies,tax_id',
+            'tax_id' => 'required|string|max:50|unique:companies,tax_id',
             'business_name' => 'required|string|max:200',
-            'trade_name'    => 'nullable|string|max:200',
-            'address'       => 'nullable|string',
+            'trade_name' => 'nullable|string|max:200',
+            'address' => 'nullable|string',
             'contact_email' => 'nullable|email',
             'contact_phone' => 'nullable|string|max:20',
         ]);

@@ -20,8 +20,8 @@ it('can list agencies', function () {
     $response->assertStatus(200)
         ->assertJsonStructure([
             'data' => [
-                '*' => ['id', 'code', 'name', 'address', 'phone', 'district', 'is_active']
-            ]
+                '*' => ['id', 'code', 'name', 'address', 'phone', 'district', 'is_active'],
+            ],
         ]);
 });
 

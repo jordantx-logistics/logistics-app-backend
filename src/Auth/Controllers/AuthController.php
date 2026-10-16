@@ -21,7 +21,7 @@ class AuthController extends Controller
      * User Registration
      *
      * Creates a new user in the system and automatically provisions them with a JWT access token.
-     * 
+     *
      * @response 201 {
      *   "success": true,
      *   "message": "User registered successfully.",
@@ -47,7 +47,7 @@ class AuthController extends Controller
      * Retrieve Access Token
      *
      * Authenticates a user using email and password, returning a JWT token for use in subsequent authenticated requests.
-     * 
+     *
      * @response 200 {
      *   "success": true,
      *   "message": "Successfully authenticated.",
@@ -72,7 +72,7 @@ class AuthController extends Controller
      * Terminate Session
      *
      * Invalidates the current JWT token, ensuring it can no longer be used for authenticated requests.
-     * 
+     *
      * @response 200 {"success": true, "message": "Successfully logged out."}
      */
     public function logout(): JsonResponse
@@ -86,7 +86,7 @@ class AuthController extends Controller
      * Refresh Access Token
      *
      * Issues a new JWT token assuming the current one is still within its refresh window.
-     * 
+     *
      * @response 200 {
      *   "success": true,
      *   "message": "Token refreshed successfully.",
@@ -100,7 +100,7 @@ class AuthController extends Controller
     {
         return $this->success(
             data: [
-                'token'      => auth('api')->refresh(),
+                'token' => auth('api')->refresh(),
                 'expires_in' => auth('api')->factory()->getTTL() * 60,
             ],
             message: 'Token refreshed successfully.'

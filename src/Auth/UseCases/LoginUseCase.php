@@ -2,29 +2,30 @@
 
 namespace Src\Auth\UseCases;
 
+use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
 class LoginUseCase
 {
     /**
-     * @return array{user: \App\Models\User, token: string, expires_in: int}
+     * @return array{user: User, token: string, expires_in: int}
      */
     public function execute(array $credentials): array
     {
         $token = auth('api')->attempt([
-            'email'    => $credentials['email'],
+            'email' => $credentials['email'],
             'password' => $credentials['password'],
         ]);
 
-        if (!$token) {
+        if (! $token) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
         return [
-            'user'       => auth('api')->user(),
-            'token'      => $token,
+            'user' => auth('api')->user(),
+            'token' => $token,
             'expires_in' => auth('api')->factory()->getTTL() * 60,
         ];
     }

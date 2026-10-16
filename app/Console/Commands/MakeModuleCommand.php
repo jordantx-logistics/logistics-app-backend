@@ -32,13 +32,14 @@ class MakeModuleCommand extends Command
 
         // Ensure the name is properly capitalized (PascalCase)
         $parts = explode('/', $name);
-        $parts = array_map(fn($part) => Str::studly($part), $parts);
+        $parts = array_map(fn ($part) => Str::studly($part), $parts);
         $parsedName = implode('/', $parts);
 
         $basePath = base_path("src/{$parsedName}");
 
         if (File::exists($basePath)) {
             $this->error("Module '{$parsedName}' already exists!");
+
             return static::FAILURE;
         }
 

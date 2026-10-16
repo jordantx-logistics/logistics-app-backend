@@ -2,6 +2,7 @@
 
 namespace Src\Permission\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Spatie\Permission\Models\Permission;
 
@@ -21,7 +22,7 @@ class AssignPermissionsToRoleRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -33,7 +34,7 @@ class AssignPermissionsToRoleRequest extends FormRequest
                 function ($attribute, $value, $fail) {
                     $existingPermissions = Permission::pluck('id');
                     foreach ($value as $id) {
-                        if (!$existingPermissions->contains($id)) {
+                        if (! $existingPermissions->contains($id)) {
                             $fail("El permiso con ID {$id} no existe.");
                         }
                     }

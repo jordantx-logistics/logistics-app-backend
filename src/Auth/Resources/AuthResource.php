@@ -11,12 +11,12 @@ class AuthResource extends JsonResource
     {
         return [
             'user' => [
-                'id'    => $this->resource['user']->id,
-                'name'  => $this->resource['user']->name,
+                'id' => $this->resource['user']->id,
+                'name' => $this->resource['user']->name,
                 'email' => $this->resource['user']->email,
                 'roles' => $this->resource['user']->roles->pluck('name'),
             ],
-            'token'      => $this->resource['token'],
+            'token' => $this->resource['token'],
             'expires_in' => $this->resource['expires_in'],
         ];
     }

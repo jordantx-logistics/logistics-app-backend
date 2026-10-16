@@ -17,8 +17,8 @@ class RegisterUseCase
     public function execute(array $data): array
     {
         $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
+            'name' => $data['name'],
+            'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
 
@@ -26,7 +26,7 @@ class RegisterUseCase
         // $user->assignRole('customer');
 
         return $this->loginUseCase->execute([
-            'email'    => $data['email'],
+            'email' => $data['email'],
             'password' => $data['password'],
         ]);
     }

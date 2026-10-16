@@ -19,9 +19,11 @@ class AgencyController extends Controller
      * List Agencies
      *
      * Retrieves all registered agencies configured in the system.
-     * 
+     *
      * @apiResourceCollection Src\Organization\Resources\AgencyResource
+     *
      * @apiResourceModel Src\Organization\Models\Agency
+     *
      * @apiResourceAdditional success=true message="Agencies retrieved successfully."
      */
     public function index(): JsonResponse
@@ -40,9 +42,11 @@ class AgencyController extends Controller
      * Create Agency
      *
      * Registers a new branch location where packages can be originated or received.
-     * 
+     *
      * @apiResource Src\Organization\Resources\AgencyResource
+     *
      * @apiResourceModel Src\Organization\Models\Agency
+     *
      * @apiResourceAdditional success=true message="Agency created successfully."
      */
     public function store(AgencyRequest $request): JsonResponse
@@ -60,9 +64,11 @@ class AgencyController extends Controller
      * Request Agency Details
      *
      * Retrieves detailed geographical and contact information for a specific agency.
-     * 
+     *
      * @apiResource Src\Organization\Resources\AgencyResource
+     *
      * @apiResourceModel Src\Organization\Models\Agency
+     *
      * @apiResourceAdditional success=true message="Agency details retrieved successfully."
      */
     public function show(Agency $agency): JsonResponse
@@ -77,9 +83,11 @@ class AgencyController extends Controller
      * Modify Agency
      *
      * Updates an existing agency's contact information, active status, or configured properties.
-     * 
+     *
      * @apiResource Src\Organization\Resources\AgencyResource
+     *
      * @apiResourceModel Src\Organization\Models\Agency
+     *
      * @apiResourceAdditional success=true message="Agency updated successfully."
      */
     public function update(AgencyRequest $request, Agency $agency): JsonResponse
@@ -96,7 +104,7 @@ class AgencyController extends Controller
      * Delete Agency
      *
      * Removes an agency from the system. (Warning: This action usually requires checking for relational integrity).
-     * 
+     *
      * @response 200 {"success": true, "message": "Agency deactivated successfully."}
      */
     public function destroy(Agency $agency): JsonResponse

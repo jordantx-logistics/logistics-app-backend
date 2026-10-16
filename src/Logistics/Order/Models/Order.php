@@ -2,6 +2,7 @@
 
 namespace Src\Logistics\Order\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,8 +10,6 @@ use Src\Customer\Models\Person;
 use Src\Logistics\Payment\Models\Payment;
 use Src\Organization\Models\Agency;
 use Src\Shared\Traits\HasTicketIdentifiers;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Order extends Model
 {
@@ -34,10 +33,10 @@ class Order extends Model
     protected function casts(): array
     {
         return [
-            'weight_kg'      => 'decimal:3',
-            'volume_m3'      => 'decimal:4',
+            'weight_kg' => 'decimal:3',
+            'volume_m3' => 'decimal:4',
             'declared_value' => 'decimal:2',
-            'total_amount'   => 'decimal:2',
+            'total_amount' => 'decimal:2',
         ];
     }
 

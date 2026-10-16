@@ -15,8 +15,8 @@ it('can register a new user', function () {
             'data' => [
                 'user' => ['id', 'name', 'email', 'roles'],
                 'token',
-                'expires_in'
-            ]
+                'expires_in',
+            ],
         ]);
 });
 
@@ -36,8 +36,8 @@ it('can login an existing user', function () {
             'data' => [
                 'user' => ['id', 'name', 'email', 'roles'],
                 'token',
-                'expires_in'
-            ]
+                'expires_in',
+            ],
         ]);
 });
 
@@ -46,7 +46,7 @@ it('can logout an authenticated user', function () {
     $token = auth('api')->login($user);
 
     $response = $this->withHeaders([
-        'Authorization' => "Bearer {$token}"
+        'Authorization' => "Bearer {$token}",
     ])->postJson('/api/v1/auth/logout');
 
     $response->assertStatus(200);

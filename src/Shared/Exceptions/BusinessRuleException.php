@@ -20,7 +20,7 @@ class BusinessRuleException extends Exception
         return response()->json([
             'success' => false,
             'message' => $this->getMessage(),
-            'data'    => ['error_code' => $this->errorCode],
+            'data' => ['error_code' => $this->errorCode],
         ], $this->statusCode);
     }
 }

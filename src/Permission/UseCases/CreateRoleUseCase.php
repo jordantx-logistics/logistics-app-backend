@@ -18,8 +18,7 @@ class CreateRoleUseCase
     /**
      * Create a new role
      *
-     * @param CreateRoleRequest $request Validation request
-     * @return Role
+     * @param  CreateRoleRequest  $request  Validation request
      */
     public function execute(CreateRoleRequest $request): Role
     {
