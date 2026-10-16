@@ -3,6 +3,8 @@
 namespace Src\Permission\UseCases;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Spatie\Permission\Models\Permission;
 
 /**
@@ -17,10 +19,10 @@ class ListPermissionsUseCase
     /**
      * List all permissions with optional filtering
      *
-     * @param int|null $id Filter by permission ID
-     * @return Permission[]
+     * @param  int|null  $id  Filter by permission ID
+     * @return Collection<int, Permission>
      */
-    public function execute(?int $id = null): array
+    public function execute(?int $id = null): Collection
     {
         $query = Permission::query();
 
@@ -34,16 +36,14 @@ class ListPermissionsUseCase
     /**
      * Find a permission by ID or throw exception
      *
-     * @param int $id
-     * @return Permission
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findOrFail(int $id): Permission
     {
         $permission = $this->execute($id)->first();
 
-        if (!$permission) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Permission not found with ID {$id}");
+        if (! $permission) {
+            throw new ModelNotFoundException("Permission not found with ID {$id}");
         }
 
         return $permission;

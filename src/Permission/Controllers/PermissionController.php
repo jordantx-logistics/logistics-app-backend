@@ -23,6 +23,7 @@ class PermissionController extends Controller
      * List all permissions
      *
      * @apiResource Src\Permission\Resources\PermissionResource
+     *
      * @apiResourceModel Src\Permission\Models\Permission
      */
     public function index(ListPermissionsUseCase $useCase): JsonResponse
@@ -30,7 +31,7 @@ class PermissionController extends Controller
         $permissions = $useCase->execute();
 
         return $this->success(
-            data: PermissionResource::collection($permissions),
+            data: ['permissions' => PermissionResource::collection($permissions)],
             message: 'Permissions retrieved successfully.'
         );
     }
@@ -39,6 +40,7 @@ class PermissionController extends Controller
      * Create a new permission
      *
      * @apiResource Src\Permission\Resources\PermissionResource
+     *
      * @apiResourceModel Src\Permission\Models\Permission
      */
     public function store(CreatePermissionRequest $request, CreatePermissionUseCase $useCase): JsonResponse
@@ -56,6 +58,7 @@ class PermissionController extends Controller
      * Retrieve a specific permission
      *
      * @apiResource Src\Permission\Resources\PermissionResource
+     *
      * @apiResourceModel Src\Permission\Models\Permission
      */
     public function show(int $id, ListPermissionsUseCase $useCase): JsonResponse
@@ -72,6 +75,7 @@ class PermissionController extends Controller
      * Update an existing permission
      *
      * @apiResource Src\Permission\Resources\PermissionResource
+     *
      * @apiResourceModel Src\Permission\Models\Permission
      */
     public function update(int $id, UpdatePermissionRequest $request, UpdatePermissionUseCase $useCase): JsonResponse

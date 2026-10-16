@@ -2,6 +2,7 @@
 
 namespace Src\Permission\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Spatie\Permission\Models\Role;
 
@@ -21,12 +22,11 @@ class AssignRoleToUserRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'exists:users,id'],
             'role_ids' => [
                 'required',
                 'array',
@@ -34,7 +34,7 @@ class AssignRoleToUserRequest extends FormRequest
                 function ($attribute, $value, $fail) {
                     $existingRoles = Role::pluck('id');
                     foreach ($value as $id) {
-                        if (!$existingRoles->contains($id)) {
+                        if (! $existingRoles->contains($id)) {
                             $fail("El rol con ID {$id} no existe.");
                         }
                     }

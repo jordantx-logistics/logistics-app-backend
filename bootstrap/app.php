@@ -1,8 +1,14 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Src\Shared\Exceptions\BusinessRuleException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,18 +20,20 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {
                 $firstError = collect($e->errors())->first()[0] ?? $e->getMessage();
+
                 return response()->json([
                     'success' => false,
                     'message' => $firstError,
-                    'data'    => $e->errors(),
+                    'data' => $e->errors(),
+                    'errors' => $e->errors(),
                 ], $e->status);
             }
         });
 
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
@@ -34,7 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
@@ -43,12 +51,12 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
-            if ($request->is('api/*') && !$e instanceof \Src\Shared\Exceptions\BusinessRuleException) {
-                $status = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface ? $e->getStatusCode() : 500;
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if ($request->is('api/*') && ! $e instanceof BusinessRuleException) {
+                $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
                 $isDebug = config('app.debug');
-                $message = $status === 500 && !$isDebug ? 'Internal Server Error' : $e->getMessage();
-                
+                $message = $status === 500 && ! $isDebug ? 'Internal Server Error' : $e->getMessage();
+
                 $response = [
                     'success' => false,
                     'message' => $message,
@@ -56,10 +64,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 if ($isDebug) {
                     $response['debug'] = [
-                        'file'    => $e->getFile(),
-                        'line'    => $e->getLine(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
                         'message' => $e->getMessage(),
-                        'trace'   => collect($e->getTrace())->take(10)->toArray(),
+                        'trace' => collect($e->getTrace())->take(10)->toArray(),
                     ];
                 }
 

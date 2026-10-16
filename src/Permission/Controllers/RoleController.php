@@ -27,6 +27,7 @@ class RoleController extends Controller
      * List all roles
      *
      * @apiResource Src\Permission\Resources\RoleResource
+     *
      * @apiResourceModel Src\Permission\Models\Role
      */
     public function index(ListRolesUseCase $useCase): JsonResponse
@@ -34,7 +35,7 @@ class RoleController extends Controller
         $roles = $useCase->execute();
 
         return $this->success(
-            data: RoleResource::collection($roles),
+            data: ['roles' => RoleResource::collection($roles)],
             message: 'Roles retrieved successfully.'
         );
     }
@@ -43,6 +44,7 @@ class RoleController extends Controller
      * Create a new role
      *
      * @apiResource Src\Permission\Resources\RoleResource
+     *
      * @apiResourceModel Src\Permission\Models\Role
      */
     public function store(CreateRoleRequest $request, CreateRoleUseCase $useCase): JsonResponse
@@ -60,6 +62,7 @@ class RoleController extends Controller
      * Retrieve a specific role
      *
      * @apiResource Src\Permission\Resources\RoleResource
+     *
      * @apiResourceModel Src\Permission\Models\Role
      */
     public function show(int $id, ListRolesUseCase $useCase): JsonResponse
@@ -76,6 +79,7 @@ class RoleController extends Controller
      * Update an existing role
      *
      * @apiResource Src\Permission\Resources\RoleResource
+     *
      * @apiResourceModel Src\Permission\Models\Role
      */
     public function update(int $id, UpdateRoleRequest $request, UpdateRoleUseCase $useCase): JsonResponse
@@ -104,6 +108,7 @@ class RoleController extends Controller
      * Assign permissions to a role
      *
      * @apiResource Src\Permission\Resources\RoleResource
+     *
      * @apiResourceModel Src\Permission\Models\Role
      */
     public function assignPermissions(int $id, AssignPermissionsToRoleRequest $request, AssignPermissionsToRoleUseCase $useCase): JsonResponse

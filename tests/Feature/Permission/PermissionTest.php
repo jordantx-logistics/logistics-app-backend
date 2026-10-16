@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Permission;
 
-use Tests\TestCase;
 use App\Models\User;
 use Src\Permission\Models\Permission;
+use Tests\TestCase;
 
 class PermissionTest extends TestCase
 {
@@ -20,7 +20,11 @@ class PermissionTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            'data' => ['permissions' => ['*']],
+            'data' => [
+                'permissions' => [
+                    '*' => ['id', 'name', 'guard_name'],
+                ],
+            ],
         ]);
     }
 

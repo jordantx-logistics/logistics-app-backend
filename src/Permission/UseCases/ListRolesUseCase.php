@@ -3,6 +3,8 @@
 namespace Src\Permission\UseCases;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -17,10 +19,10 @@ class ListRolesUseCase
     /**
      * List all roles with optional filtering
      *
-     * @param int|null $id Filter by role ID
-     * @return Role[]
+     * @param  int|null  $id  Filter by role ID
+     * @return Collection<int, Role>
      */
-    public function execute(?int $id = null): array
+    public function execute(?int $id = null): Collection
     {
         $query = Role::query();
 
@@ -34,16 +36,14 @@ class ListRolesUseCase
     /**
      * Find a role by ID or throw exception
      *
-     * @param int $id
-     * @return Role
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findOrFail(int $id): Role
     {
         $role = $this->execute($id)->first();
 
-        if (!$role) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Role not found with ID {$id}");
+        if (! $role) {
+            throw new ModelNotFoundException("Role not found with ID {$id}");
         }
 
         return $role;
