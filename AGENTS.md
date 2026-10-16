@@ -11,7 +11,7 @@ Laravel 13 + PHP 8.3 REST API. JWT auth (`php-open-source-saver/jwt-auth`), `spa
 El backend se ejecuta **solo con Docker** (Octane sobre FrankenPHP). No uses PHP/Composer del host.
 Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 
-- `docker compose up -d --build` — levanta app (Octane), horizon, scheduler, nginx, mysql, redis y mailpit.
+- `docker compose up -d --build` — levanta app (Octane), scheduler, nginx, mysql, redis y mailpit. `horizon` queda tras el perfil homónimo (llega en la Fase 1): `docker compose --profile horizon up -d horizon`.
 - `docker compose exec app composer install` — instala dependencias (solo la primera vez; `vendor/` y `.env` no se versionan).
 - `docker compose exec app php artisan key:generate` — genera `APP_KEY` (solo la primera vez).
 - `docker compose exec app php artisan jwt:secret` — secreto JWT (solo la primera vez, tras `key:generate`).

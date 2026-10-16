@@ -8,7 +8,8 @@ El diseño y las decisiones viven en `../spec/`.
 Este proyecto **no** se ejecuta con PHP/Composer instalados en el host. Todo pasa por Docker.
 
 ```bash
-# Levantar la infraestructura local (app, horizon, scheduler, mysql, redis, nginx, mailpit)
+# Levantar la infraestructura local (app/Octane, scheduler, nginx, mysql, redis, mailpit)
+# `horizon` es de la Fase 1 y va tras perfil: docker compose --profile horizon up -d horizon
 docker compose up -d --build
 
 # Dependencias y arranque (solo la primera vez)

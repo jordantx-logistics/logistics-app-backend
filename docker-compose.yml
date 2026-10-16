@@ -47,6 +47,10 @@ services:
       - logistics-network
 
   horizon:
+    # Horizon llega en la Fase 1 (todavía no está instalado): el servicio queda
+    # definido pero fuera del `docker compose up` por defecto.
+    #   docker compose --profile horizon up -d horizon
+    profiles: ["horizon"]
     image: logistics-app-backend:local
     command: ["php", "artisan", "horizon"]
     restart: unless-stopped
@@ -54,6 +58,11 @@ services:
       APP_ROLE: horizon
     volumes:
       - .:/var/www
+    # Ni horizon ni scheduler sirven HTTP: el healthcheck que heredan de la
+    # imagen base (el `/metrics` de Caddy en :2019) no aplica. El rol web sí
+    # lo redefine con `/up`.
+    healthcheck:
+      disable: true
     depends_on:
       mysql:
         condition: service_healthy
@@ -68,6 +77,8 @@ services:
       APP_ROLE: scheduler
     volumes:
       - .:/var/www
+    healthcheck:
+      disable: true
     depends_on:
       mysql:
         condition: service_healthy
