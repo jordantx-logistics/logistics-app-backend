@@ -1,50 +1,37 @@
-FROM php:8.3-fpm
+# syntax=docker/dockerfile:1.7
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libzip-dev \
-    zip \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+############################################################
+# Imagen de desarrollo / runtime del backend (Octane + FrankenPHP)
+#
+# Una sola imagen sirve a los roles: web (Octane), horizon y scheduler.
+# El rol se elige con APP_ROLE (ver docker/entrypoint.sh).
+############################################################
+FROM dunglas/frankenphp:1-php8.3-alpine
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+# Extensiones de la aplicación.
+# pdo_sqlite se incluye porque la suite de tests usa SQLite en memoria (phpunit.xml).
+RUN install-php-extensions \
+      pdo_mysql \
+      pdo_sqlite \
+      bcmath \
+      exif \
+      gd \
+      intl \
+      pcntl \
+      redis \
+      zip
 
-# Install Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
+# Composer (la imagen base no lo trae)
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/99-opcache.ini
+COPY docker/php/app.ini     /usr/local/etc/php/conf.d/99-app.ini
 
-# Set working directory
 WORKDIR /var/www
 
-# Copy composer files first (better layer caching)
-COPY composer.json composer.lock ./
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Install dependencies with timeout disabled and platform requirements ignored
-RUN composer install \
-    --no-interaction \
-    --no-scripts \
-    --no-autoloader \
-    --no-progress \
-    --ignore-platform-reqs \
-    --optimize-autoloader
+EXPOSE 8000
 
-# Copy entire application
-COPY . .
-
-# Recreate autoloader
-RUN composer dump-autoload --no-scripts --optimize
-
-# Set permissions
-RUN chmod +x docker/scripts/*.sh 2>/dev/null || true
-
-EXPOSE 9000
-
-ENTRYPOINT ["php-fpm"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
