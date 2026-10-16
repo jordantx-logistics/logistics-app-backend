@@ -14,6 +14,7 @@
         "laravel/octane": "^2.22",
         "laravel/tinker": "^3.0",
         "php-open-source-saver/jwt-auth": "^2.9",
+        "promphp/prometheus_client_php": "^2.15",
         "spatie/laravel-permission": "^7.3"
     },
     "require-dev": {

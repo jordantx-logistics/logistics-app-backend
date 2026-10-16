@@ -9,6 +9,7 @@ use Illuminate\Validation\ValidationException;
 use Src\Shared\Exceptions\BusinessRuleException;
 use Src\System\Middleware\AssignRequestId;
 use Src\System\Middleware\LogHttpRequest;
+use Src\System\Middleware\RecordHttpMetrics;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(AssignRequestId::class);
         $middleware->append(LogHttpRequest::class);
+        $middleware->append(RecordHttpMetrics::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request) {

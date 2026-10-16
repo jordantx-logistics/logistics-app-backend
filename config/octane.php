@@ -22,6 +22,7 @@ use Laravel\Octane\Listeners\FlushUploadedFiles;
 use Laravel\Octane\Listeners\ReportException;
 use Laravel\Octane\Listeners\StopWorkerIfNecessary;
 use Laravel\Octane\Octane;
+use Prometheus\CollectorRegistry;
 
 return [
 
@@ -132,6 +133,10 @@ return [
 
     'warm' => [
         ...Octane::defaultServicesToWarm(),
+
+        // El registry de Prometheus mantiene el cliente de Redis: si se resuelve
+        // en cada petición, cada petición abriría una conexión nueva.
+        CollectorRegistry::class,
     ],
 
     'flush' => [

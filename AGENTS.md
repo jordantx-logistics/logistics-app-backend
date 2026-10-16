@@ -87,6 +87,16 @@ El canal por defecto es `json` (`config/logging.php`): una línea JSON por regis
 - Las líneas van a stderr y el *entrypoint* arranca Octane con `--log-level` (`OCTANE_LOG_LEVEL`, por defecto `warn`): sin ese flag Octane parsea el stderr de los workers como log JSON de Caddy y las líneas de la app acaban como `ERROR unknown error`.
 - Los tests fijan `LOG_CHANNEL=null` (`phpunit.xml`) para no ensuciar la salida.
 
+### Métricas
+
+`GET /metrics` sirve el scrape de Prometheus (`promphp/prometheus_client_php`), fuera de `api/v1` porque lo consume Prometheus, no el frontend.
+
+- `RecordHttpMetrics` (global) alimenta `http_requests_total{route,method,status,env}` y `http_request_duration_seconds{route,env}` usando el **patrón** de ruta (`api/v1/orders/{order}`) o `unmatched`: la URL nunca es etiqueta, o cada id abriría una serie temporal.
+- `db_connections_used{pool,env}` se lee en cada scrape (`Threads_connected` de MySQL; `null` en SQLite) y `octane_workers_busy{env}` es una aproximación: peticiones en curso, que se descuadra si un worker muere a mitad (ver `MetricsRecorder`).
+- El almacén es Redis (`METRICS_STORAGE`) para que el contador sea común a todos los workers de Octane; en tests es `in-memory`. `CollectorRegistry` está en `config/octane.php` → `warm` para no abrir una conexión de Redis por petición.
+- Acceso: con `METRICS_TOKEN` hay que enviarlo (`Authorization: Bearer <token>` o `?token=`); sin token solo se atiende desde red privada/loopback. `METRICS_ENABLED=false` deja el endpoint en 404 y el exporter apagado.
+- El exporter nunca puede cambiar una respuesta: si el almacén falla se registra `metrics_unavailable` y la petición sigue.
+
 ### API docs
 
 Scribe generates from controller docblocks (`@group`, `@apiResource`, `@apiResourceModel`, `@apiResourceAdditional`). Config in `config/scribe.php`; output in `.scribe/`.

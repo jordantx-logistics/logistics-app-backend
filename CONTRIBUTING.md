@@ -46,6 +46,20 @@ docker compose logs -f app
 - `OCTANE_LOG_LEVEL` (`warn` por defecto) controla el nivel de Caddy, no el de la app (`LOG_LEVEL`). Necesario para que Octane no interprete el stderr de los workers como log de Caddy.
 - En los tests `LOG_CHANNEL=null` (`phpunit.xml`), así que la suite no imprime logs.
 
+## Métricas
+
+`GET /metrics` sirve el scrape de Prometheus (formato texto 0.0.4):
+
+```bash
+curl -s http://localhost:8000/metrics | grep http_requests_total
+# con METRICS_TOKEN definido, hay que enviarlo:
+curl -s -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:8000/metrics
+```
+
+- Acceso: con `METRICS_TOKEN` se exige el token; sin él solo se atiende desde red privada (dentro del clúster). `METRICS_ENABLED=false` apaga el endpoint (404).
+- Series expuestas: `http_requests_total`, `http_request_duration_seconds`, `db_connections_used` (gauge leído en el scrape) y `octane_workers_busy` (peticiones en curso).
+- El exporter nunca puede tumbar una petición: si el almacén falla se registra `metrics_unavailable` y la petición continúa.
+
 ## Ramas
 
 | Rama | Uso |
