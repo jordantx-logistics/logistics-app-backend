@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,8 +21,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         // Crear roles y permisos por defecto
         $this->call(PermissionSeeder::class);
 
@@ -31,10 +28,20 @@ class DatabaseSeeder extends Seeder
         $email = env('SCRIBE_AUTH_EMAIL', 'admin@admin.pe');
         $password = env('SCRIBE_AUTH_PASSWORD', 'SecureAdmin2026!@#');
 
-        User::factory()->create([
-            'name' => 'Admin',
-            'email' => $email,
-            'password' => Hash::make($password),
-        ]);
+        // `migrate --seed` tiene que poder repetirse (es el arranque documentado),
+        // así que el admin se crea o se actualiza en lugar de insertarse siempre:
+        // la contraseña se rota desde el entorno y `email_verified_at` no es
+        // asignable en masa (lo pone el cast/fill explícito).
+        $user = User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'Admin',
+                'password' => $password,
+            ],
+        );
+
+        if ($user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
     }
 }
