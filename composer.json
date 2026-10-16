@@ -44,17 +44,18 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
-            "@php artisan migrate --force",
-            "npm install --ignore-scripts",
-            "npm run build"
-        ],
-        "dev": [
-            "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
+            "@php artisan jwt:secret",
+            "@php artisan migrate --force"
         ],
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "lint": [
+            "@php ./vendor/bin/pint --test"
+        ],
+        "format": [
+            "@php ./vendor/bin/pint"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
