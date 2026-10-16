@@ -93,7 +93,7 @@ Los cambios incompatibles de API no rompen `api/v1/` en caliente: se versionan (
 - Validaciones de negocio en **Rules** dentro del `RulesPipeline`.
 - Estado de cambio se escribe en `outbox_events` dentro de la transacción (patrón outbox).
 - Respuestas siempre con `$this->success(...)` / `$this->error(...)`.
-- Rutas protegidas con `auth:sanctum` + `permission:`.
+- Rutas protegidas con `auth:api` (JWT) y permisos de `spatie/laravel-permission`.
 - Un contexto **no** importa modelos de otro contexto: se comunica por interfaz de dominio o evento (ADR-0006 y ADR-0001).
 
 ## Calidad antes del PR
@@ -107,6 +107,27 @@ docker compose exec app php artisan scribe:generate   # el contrato OpenAPI es a
 - Pint sin diferencias, suite Pest en verde.
 - Cobertura ≥ 80 % en dominios críticos.
 - Si se añade o cambia una ruta, se actualiza Scribe y se regenera el contrato.
+
+## CI
+
+`.github/workflows/ci.yml` corre en cada push a `develop`/`main` y en cada PR (ADR-0010). Como el backend se ejecuta solo con Docker, **todo pasa dentro de la imagen**: el runner no instala PHP.
+
+| Paso | Qué comprueba |
+|---|---|
+| Construir la imagen | Que el `Dockerfile` compila (es el artefacto que se despliega). |
+| Dependencias y entorno | `composer install` con el `composer.lock`, `.env` + `APP_KEY` + `JWT_SECRET` (no van versionados). |
+| Validar docker-compose | `docker compose config --quiet`. |
+| Estilo | `./vendor/bin/pint --test`. |
+| Tests | `php artisan test` (Pest, SQLite en memoria). |
+| Migraciones sobre MySQL | `php artisan migrate --seed` contra un MySQL 8.0 real, no solo SQLite. |
+| Contrato | `php artisan scribe:generate` y subida del artefacto `openapi` (`storage/app/private/scribe/openapi.yaml`), base de ADR-0008. |
+
+Para reproducir cualquier paso: es el mismo comando dentro del contenedor, por ejemplo
+
+```bash
+docker compose exec app php artisan test
+docker compose exec app ./vendor/bin/pint --test
+```
 
 ## Documentación
 

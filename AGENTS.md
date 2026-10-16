@@ -23,6 +23,7 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código.
 - `docker compose logs -f app` — logs JSON del servicio web.
 - `docker compose build app` — obligatorio tras tocar `Dockerfile` o `docker/entrypoint.sh` (se copian en la imagen, no están montados).
+- CI (`.github/workflows/ci.yml`) hace lo mismo **dentro de la imagen**: `pint --test`, `php artisan test`, `migrate --seed` sobre MySQL 8 y `scribe:generate` (el OpenAPI se publica como artefacto `openapi`).
 
 Los assets (Vite) aún no se compilan dentro del contenedor; se resolverá en una fase posterior.
 
