@@ -16,7 +16,7 @@
 - `sequences` table is required for ticket number generation — verify it exists
 
 ## Common Issues
-- **Routes not loading**: Module not registered in `ModuleServiceProvider::$modules` array
+- **Routes not loading**: the module needs a `src/<Context>/routes.php` (or `src/<Context>/<Sub>/routes.php`) declaring its `api/…` prefix
 - **Ticket numbers not generating**: Model missing `getTicketPrefix()` method implementation
 - **Outbox events not processing**: Check queue worker is running
 - **BusinessRuleException not rendering**: Ensure exception is thrown from UseCase, not controller

@@ -11,21 +11,26 @@ class ModuleServiceProvider extends ServiceProvider
         $this->loadModuleRoutes();
     }
 
+    /**
+     * Carga el `routes.php` de cada contexto bajo `src/`.
+     *
+     * Un contexto es `src/<Contexto>` o `src/<Contexto>/<Subcontexto>`, por eso se
+     * buscan los dos niveles. El descubrimiento es automático: un módulo nuevo con
+     * `routes.php` queda accesible sin tocar esta clase (deuda B11 resuelta).
+     */
     private function loadModuleRoutes(): void
     {
-        $modules = [
-            base_path('src/Auth/routes.php'),
-            base_path('src/Organization/routes.php'),
-            base_path('src/Customer/routes.php'),
-            base_path('src/Logistics/Order/routes.php'),
-            base_path('src/Logistics/Payment/routes.php'),
-            base_path('src/Permission/routes.php'),
-        ];
+        $modules = array_merge(
+            glob(base_path('src/*/routes.php')) ?: [],
+            glob(base_path('src/*/*/routes.php')) ?: [],
+        );
+
+        // glob() no garantiza el mismo orden en todos los sistemas de ficheros;
+        // ordenar mantiene el registro de rutas estable entre entornos.
+        sort($modules);
 
         foreach ($modules as $routeFile) {
-            if (file_exists($routeFile)) {
-                $this->loadRoutesFrom($routeFile);
-            }
+            $this->loadRoutesFrom($routeFile);
         }
     }
 }

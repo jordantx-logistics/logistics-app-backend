@@ -370,23 +370,26 @@ composer test
 php artisan make:module Logistics/Shipment
 
 # Crea:
-# src/Shipment/{Controllers,Models,Requests,Rules,Services,UseCases}
-# src/Shipment/routes.php
-
-# CRITICAL: Registrar ruta en ModuleServiceProvider
-# Agregar base_path('src/Shipment/routes.php') al array $modules
+# src/Logistics/Shipment/{Controllers,Models,Requests,Rules,Services,UseCases}
+# src/Logistics/Shipment/routes.php
 ```
+
+`ModuleServiceProvider` descubre automáticamente los `routes.php` de `src/*/routes.php` y `src/*/*/routes.php`, así que no hay que registrar nada: en cuanto el módulo declara sus rutas bajo `api/…`, están accesibles.
 
 ## Agregar Nueva Ruta
 
+Añade las rutas al `routes.php` del módulo que corresponda:
+
 ```php
-// ModuleServiceProvider::loadModuleRoutes()
-$modules = [
-    base_path('src/Auth/routes.php'),
-    // ...
-    base_path('src/NewModule/routes.php'), // ← Agregar aquí
-];
+// src/Logistics/Shipment/routes.php
+Route::prefix('api/v1/logistics')
+    ->middleware('auth:api')
+    ->group(function () {
+        Route::apiResource('shipments', ShipmentController::class);
+    });
 ```
+
+El prefijo de primer nivel (`api/…`) es el que identifica al contexto; `tests/Feature/Architecture/ModuleRoutesTest.php` falla si un `routes.php` declara un prefijo que no acaba registrado en el router.
 
 ## Base de Datos
 

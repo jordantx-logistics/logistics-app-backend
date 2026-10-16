@@ -18,7 +18,7 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose exec app php artisan test` — suite Pest. Con filtro: `... php artisan test --filter=OrderTest` o `... php artisan test tests/Feature/OrderTest.php`.
 - `docker compose exec app ./vendor/bin/pint` — formatea PHP (Laravel Pint).
 - `docker compose exec app php artisan migrate` / `php artisan migrate:fresh --seed`.
-- `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Controllers,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. **Debe** registrarse a mano en `app/Providers/ModuleServiceProvider.php`.
+- `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Controllers,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` automáticamente.
 - `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
 - `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código.
 - `docker compose logs -f app` — logs del servicio web.
@@ -41,7 +41,7 @@ Current modules: `Auth`, `Customer` (Persons/Companies), `Organization` (Agencie
 
 ### Routing
 
-`routes/web.php` only serves the welcome view. **All API routes are loaded by `App\Providers\ModuleServiceProvider`** (`bootstrap/providers.php`), which iterates a hardcoded list of `src/<Module>/routes.php` files. When adding a module, append its route path to the `$modules` array in `ModuleServiceProvider::loadModuleRoutes()` or it will be silently unreachable.
+`routes/web.php` only serves the welcome view. **All API routes are loaded by `App\Providers\ModuleServiceProvider`** (`bootstrap/providers.php`), which discovers every `src/*/routes.php` and `src/*/*/routes.php` with `glob()` (sorted for a stable order). A new module with a `routes.php` is reachable with no further registration; `tests/Feature/Architecture/ModuleRoutesTest.php` fails if a context's `api/…` prefix ends up unregistered.
 
 All API routes live under `api/v1/<domain>/…` and use the `auth:api` (JWT) middleware except auth endpoints.
 

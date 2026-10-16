@@ -8,7 +8,7 @@
 ## Routing Architecture
 ```
 routes/web.php — serves welcome page only
-ModuleServiceProvider — loads all module routes dynamically
+ModuleServiceProvider — discovers and loads every module routes.php
 Each module's routes.php — defines api/v1/<domain>/ routes
 ```
 
@@ -48,9 +48,9 @@ Model + OutboxEvent (persistence)
 - `BusinessRuleException` renders itself with `error_code` field
 
 ## Module Registration
-- New modules must be added to `ModuleServiceProvider::$modules` array
-- Routes are loaded in order defined in the array
-- Missing registration = silent failure (routes not accessible)
+- `ModuleServiceProvider` discovers `src/*/routes.php` and `src/*/*/routes.php` with `glob()` (sorted)
+- Adding a module's `routes.php` is enough; there is no list to maintain
+- `tests/Feature/Architecture/ModuleRoutesTest.php` guards that a context's `api/…` prefix is registered
 
 ## Current Modules
 - `Auth` — authentication (login/register)

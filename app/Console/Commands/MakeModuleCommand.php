@@ -66,7 +66,7 @@ class MakeModuleCommand extends Command
 
         $this->newLine();
         $this->comment("Module scaffolding for '{$parsedName}' created successfully.");
-        $this->info("Don't forget to register `base_path('src/{$parsedName}/routes.php')` in `app/Providers/ModuleServiceProvider.php`!");
+        $this->info('Routes are discovered automatically: ModuleServiceProvider globs `src/*/routes.php` and `src/*/*/routes.php`.');
 
         return static::SUCCESS;
     }

@@ -14,10 +14,10 @@ This file provides guidance to agents when working with code in this repository.
 ## Critical Gotchas
 
 ### Module Creation
-When creating a module with `php artisan make:module`, you **MUST** manually register its routes file in `app/Providers/ModuleServiceProvider.php` by adding the path to the `$modules` array. Routes will not be loaded automatically.
+When creating a module with `php artisan make:module`, no registration step is needed: `ModuleServiceProvider` discovers `src/*/routes.php` and `src/*/*/routes.php` automatically.
 
 ### Routing
-All API routes are loaded dynamically by `ModuleServiceProvider::loadModuleRoutes()`. The hardcoded list in `ModuleServiceProvider` determines which modules are active.
+All API routes are loaded dynamically by `ModuleServiceProvider::loadModuleRoutes()`, which globs every module `routes.php` under `src/`.
 
 ### Business Logic Flow
 Controllers are thin wrappers. All business logic must go in **UseCases**. Validation rules belong in FormRequests or Rule classes within a RulesPipeline.

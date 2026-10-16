@@ -15,7 +15,7 @@ Laravel 13 + PHP 8.3 REST API. JWT auth (`php-open-source-saver/jwt-auth`), `spa
 - `./vendor/bin/pint` — format PHP (Laravel Pint).
 - `php artisan migrate` / `php artisan migrate:fresh --seed`.
 - `php artisan jwt:secret` — required on first setup after `key:generate`.
-- `php artisan make:module Logistics/Shipment` — custom generator (see `app/Console/Commands/MakeModuleCommand.php`); scaffolds `src/<Name>/{Controllers,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. **Must** manually register the new `routes.php` in `app/Providers/ModuleServiceProvider.php`.
+- `php artisan make:module Logistics/Shipment` — custom generator (see `app/Console/Commands/MakeModuleCommand.php`); scaffolds `src/<Name>/{Controllers,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`; the routes file needs no registration because `ModuleServiceProvider` discovers `src/*/routes.php` and `src/*/*/routes.php`.
 - `php artisan scribe:generate` — rebuild API docs from controller docblocks.
 
 ## Architecture
@@ -34,7 +34,7 @@ Current modules: `Auth`, `Customer` (Persons/Companies), `Organization` (Agencie
 
 ### Routing
 
-`routes/web.php` only serves the welcome view. **All API routes are loaded by `App\Providers\ModuleServiceProvider`** (`bootstrap/providers.php`), which iterates a hardcoded list of `src/<Module>/routes.php` files. When adding a module, append its route path to the `$modules` array in `ModuleServiceProvider::loadModuleRoutes()` or it will be silently unreachable.
+`routes/web.php` only serves the welcome view. **All API routes are loaded by `App\Providers\ModuleServiceProvider`** (`bootstrap/providers.php`), which discovers every `src/*/routes.php` and `src/*/*/routes.php` with `glob()` (sorted for a stable order). A new module with a `routes.php` is reachable with no further registration.
 
 All API routes live under `api/v1/<domain>/…` and use the `auth:api` (JWT) middleware except auth endpoints.
 
