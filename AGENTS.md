@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Stack
 
-Laravel 13 + PHP 8.3 REST API. JWT auth (`php-open-source-saver/jwt-auth`), `spatie/laravel-permission`, Pest 4 for tests, Scribe for API docs, Vite + Tailwind v4 (assets only — no SPA). MySQL in development, SQLite `:memory:` in tests.
+Laravel 13 + PHP 8.3 REST API. Auth con `laravel/sanctum` (cookie de sesión para la SPA, tokens opacos para apps/PDA), `spatie/laravel-permission`, Pest 4 for tests, Scribe for API docs, Vite + Tailwind v4 (assets only — no SPA). MySQL in development, SQLite `:memory:` in tests.
 
 ## Commands
 
@@ -14,12 +14,12 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose up -d --build` — levanta app (Octane), scheduler, nginx, mysql, redis y mailpit. El worker de colas (`horizon`, Fase 1) va tras su propio perfil: `docker compose --profile horizon up -d horizon` (panel en `http://localhost:8000/horizon`).
 - `docker compose exec app composer install` — instala dependencias (solo la primera vez; `vendor/` y `.env` no se versionan).
 - `docker compose exec app php artisan key:generate` — genera `APP_KEY` (solo la primera vez).
-- `docker compose exec app php artisan jwt:secret` — secreto JWT (solo la primera vez, tras `key:generate`).
 - `docker compose exec app php artisan test` — suite Pest. Con filtro: `... php artisan test --filter=OrderTest` o `... php artisan test tests/Feature/OrderTest.php`.
 - `docker compose exec app ./vendor/bin/pint` — formatea PHP (Laravel Pint).
 - `docker compose exec app php artisan migrate` / `php artisan migrate:fresh --seed` — el contenedor tiene que estar en la red de compose (los servicios se llaman `mysql` y `redis` en `.env`), no vale un `docker run` suelto: la migración de `spatie/laravel-permission` vacía su caché de permisos, así que `migrate` necesita el almacén de caché vivo (Redis en local/prod; `array` en tests, que es lo que fija `phpunit.xml`).
 - `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Adapters,Controllers,Events,Exceptions,Jobs,Mail,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` y los comandos de `Console/Commands` automáticamente.
 - `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
+- `docker compose exec app php artisan permission:cache-reset` — vacía la caché de roles/permisos de Spatie (Redis). Necesario si se tocan las tablas de permisos a mano.
 - `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código. Vale igual para `scheduler` y `horizon`: también aguantan la aplicación en memoria, así que un comando o un job nuevos no existen hasta reiniciarlos.
 - `docker compose exec scheduler php artisan outbox:consume` — publica en las colas los eventos pendientes del outbox (lo agenda el rol `scheduler` cada 5 s; a mano sirve para depurar, con `--limit=N`).
 - `docker compose exec scheduler php artisan metrics:collect` — recalcula los gauges de cola y outbox (agendado cada 15 s).
@@ -59,7 +59,18 @@ A **context** is each `src/<Contexto>` and `src/<Contexto>/<Subcontexto>` (the f
 
 `routes/web.php` only serves the welcome view. **All API routes are loaded by `App\Providers\ModuleServiceProvider`** (`bootstrap/providers.php`), which discovers every `src/*/routes.php` and `src/*/*/routes.php` with `glob()` (sorted for a stable order). A new module with a `routes.php` is reachable with no further registration; `tests/Feature/Architecture/ModuleRoutesTest.php` fails if a context's `api/…` prefix ends up unregistered.
 
-All API routes live under `api/v1/<domain>/…` and use the `auth:api` (JWT) middleware except auth endpoints.
+All API routes live under `api/v1/<domain>/…`. Cada ruta de negocio declara `auth:sanctum` **y** `permission:<recurso.accion>`; los endpoints de `api/v1/auth/*` son los únicos fuera de ese par (rate limited con `throttle:auth`). `tests/Feature/Architecture/AuthorizationRoutesTest.php` falla si aparece una ruta de negocio sin permiso del catálogo.
+
+### Auth y autorización (Sanctum + Spatie)
+
+Autenticación con **Sanctum**: la SPA usa la cookie de sesión (Sanctum *stateful*, `SANCTUM_STATEFUL_DOMAINS`) y las apps/PDA un **token opaco** (`Bearer`, `SANCTUM_TOKEN_EXPIRATION` minutos). No hay JWT: `php-open-source-saver/jwt-auth`, el guard `api` y `config/jwt.php` se retiraron en la Fase 1.
+
+- Guards (`config/auth.php`): `web` (session, la SPA) y `sanctum` (bearer). Endpoints en `src/Auth/routes.php`: `login`, `token`, `logout`, `logout-all`, `me`, `forgot-password`, `reset-password`. **No hay registro público**: el alta de usuarios es de Identity (Fase 2). Todos pasan por el rate limiter `auth` (10/min por IP y por `email|IP`, definido en `AppServiceProvider`).
+- **Los permisos viven en el guard `web`** y el modelo lo fija con `protected $guard_name = 'web'` (`App\Models\User` y `Src\Permission\Models\{Role,Permission}`). Es obligatorio: `Illuminate\Auth\Middleware\Authenticate` hace `shouldUse('sanctum')` al validar `auth:sanctum`, y eso **reescribe `config('auth.defaults.guard')`**; Spatie deduce de esa config el guard con el que busca el permiso, así que sin fijarlo dentro de una petición buscaría permisos de guard `sanctum` (no existen) y devolvería 403 a todo el mundo, admin incluido. Por el mismo motivo `config/permission.php` apunta a los modelos de `Src\Permission` y no a los del paquete: son los únicos con el guard fijado.
+- El alias `permission:` es `Src\System\Middleware\EnforcePermission`, que envuelve el middleware de Spatie para poder leer `authz.enforce` (`config/authz.php`) **en cada petición**: con `AUTHZ_ENFORCE=false` (interruptor de rollback de la Fase 1) la ruta deja pasar sin comprobar y `AppServiceProvider` lo registra en el log al arrancar.
+- Catálogo: `database/seeders/PermissionSeeder.php` (12 permisos `recurso.accion` y los 10 roles del spec; los roles cuyos módulos aún no existen quedan sin permisos). Los `permission:` de los `routes.php` solo pueden usar esos nombres; `AuthorizationRoutesTest` lo comprueba ruta a ruta.
+- Ámbito por agencia: pivot `agency_user` + `User::agencyIds()` + `Agency::scopeForAgencies()`; los roles nacionales (`admin`, `analyst`, vía `User::hasNationalScope()`) ven todo y el resto solo sus agencias.
+- `LogHttpRequest` lee `$request->user()` **después** de `$next`, con `auth:sanctum` ya resuelto, para el `user_id` del log.
 
 ### Request flow
 
@@ -133,6 +144,9 @@ La documentación generada (`.scribe/`, `resources/views/scribe/`, `public/vendo
 ## Testing
 
 - Feature tests auto-use `RefreshDatabase` desde `tests/TestCase.php` (así aplica también a las clases de test con estilo PHPUnit, ya que los traits registrados en `tests/Pest.php` no llegan a esas clases).
+- Helpers de `tests/Pest.php`: `adminUser()` siembra el catálogo y devuelve un usuario con el rol `admin` (todas las rutas de negocio llevan `permission:`, así que un usuario pelado recibiría 403) y `tokenHeadersFor($user)` da la cabecera `Authorization` de Sanctum. Para ejercitar un rol concreto: `adminUser()` + `removeRole('admin')` + `assignRole('counter')`.
+- Auth en tests: `actingAs($user)` (guard `web`) lo recoge Sanctum; para tokens, `$user->createToken('test')->plainTextToken` + `withToken(...)`. El login por cookie solo arranca sesión si la petición manda un `Origin` que esté en `SANCTUM_STATEFUL_DOMAINS` (`localhost` en `phpunit.xml`).
+- Cuidado al encadenar peticiones autenticadas en un mismo test: el guard `sanctum` es un `RequestGuard` y **cachea el usuario** entre peticiones. Usa `$this->app['auth']->forgetGuards()` antes de la siguiente si esperas otro usuario (o ninguno).
 - `phpunit.xml` pins `DB_CONNECTION=sqlite` / `DB_DATABASE=:memory:` and `QUEUE_CONNECTION=sync` — don't override these in individual tests.
 - La suite es **hermética**: corre sin servicios (SQLite `:memory:`, caché/sesión `array`, colas `sync`) y el CI la ejecuta con `--network none`. Un test no puede depender de MySQL/Redis: mockea la dependencia (ver `HealthTest` con `Redis::shouldReceive`) o usa una ruta que no toque nada (`/up`), nunca `/api/v1/health`, que comprueba dependencias de verdad.
 - `BCRYPT_ROUNDS=4` in tests — don't benchmark hashing.

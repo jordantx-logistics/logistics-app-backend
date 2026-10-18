@@ -49,6 +49,32 @@ docker compose logs -f app
 - `OCTANE_LOG_LEVEL` (`warn` por defecto) controla el nivel de Caddy, no el de la app (`LOG_LEVEL`). Necesario para que Octane no interprete el stderr de los workers como log de Caddy.
 - En los tests `LOG_CHANNEL=null` (`phpunit.xml`), así que la suite no imprime logs.
 
+## Autenticación (Sanctum) y permisos
+
+La SPA entra con **cookie de sesión** (Sanctum *stateful*) y las apps/PDA con un **token opaco** (`Bearer`). No hay JWT.
+
+```bash
+# SPA: cookie CSRF + login de sesión (el Origin tiene que estar en SANCTUM_STATEFUL_DOMAINS)
+curl -s -c jar http://localhost:8000/sanctum/csrf-cookie
+XSRF=$(grep XSRF-TOKEN jar | awk '{print $7}' | python -c 'import sys,urllib.parse;print(urllib.parse.unquote(sys.stdin.read().strip()))')
+curl -s -b jar -c jar -H "X-XSRF-TOKEN: $XSRF" -H "Origin: http://localhost:5173" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@admin.pe","password":"SecureAdmin2026!@#"}' \
+  http://localhost:8000/api/v1/auth/login
+
+# Apps/PDA: token opaco para el header Authorization
+curl -s -H 'Content-Type: application/json' \
+  -d '{"email":"admin@admin.pe","password":"SecureAdmin2026!@#","device_name":"PDA","platform":"android"}' \
+  http://localhost:8000/api/v1/auth/token
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/auth/me
+```
+
+- Todas las rutas de negocio llevan `auth:sanctum` **y** `permission:recurso.accion`; el catálogo está en `database/seeders/PermissionSeeder.php` y `tests/Feature/Architecture/AuthorizationRoutesTest.php` falla al añadir una ruta sin permiso.
+- Los permisos usan el guard `web` (`protected $guard_name = 'web'` en los modelos): dentro de una petición `config('auth.defaults.guard')` vale `sanctum` —lo cambia el middleware `auth:sanctum`— y Spatie deduce de ahí el guard con el que busca el permiso. Sin fijarlo, todo el mundo recibiría 403.
+- `AUTHZ_ENFORCE=false` (rollback de la Fase 1) deja pasar sin comprobar permisos; se lee por petición y queda constancia en el log.
+- El listado de agencias se acota por `agency_user` (pivot); los roles nacionales (`admin`, `analyst`) ven todas las agencias.
+- En tests: `adminUser()` (rol `admin`, todos los permisos) y `tokenHeadersFor($user)`, en `tests/Pest.php`. Los intentos de login/token/recuperación comparten el limiter `auth` (10/min): una tanda de pruebas en local puede devolver `429` un minuto.
+
 ## Métricas
 
 `GET /metrics` sirve el scrape de Prometheus (formato texto 0.0.4):
@@ -114,7 +140,7 @@ Los cambios incompatibles de API no rompen `api/v1/` en caliente: se versionan (
 - Qué jobs consume cada `event_type` se decide en `app/Providers/DomainServiceProvider.php` (`OutboxEventMap`), el único sitio que puede juntar contextos.
 - Cada job del outbox es **idempotente** con `ProcessedEvents::once($eventId, self::class, ...)`: el outbox garantiza *at-least-once*.
 - Respuestas siempre con `$this->success(...)` / `$this->error(...)`.
-- Rutas protegidas con `auth:api` (JWT) y permisos de `spatie/laravel-permission`.
+- Rutas protegidas con `auth:sanctum` + `permission:<recurso.accion>` (Sanctum para la sesión de la SPA y tokens de app; permisos de `spatie/laravel-permission` en el guard `web`).
 - Un contexto **no** importa modelos de otro contexto: se comunica por interfaz de dominio o evento (ADR-0006 y ADR-0001).
 
 ## Calidad antes del PR
@@ -138,7 +164,7 @@ Los pasos que necesitan servicios levantan **el mismo `docker-compose.yml` que e
 | Paso | Qué comprueba |
 |---|---|
 | Construir la imagen | Que el `Dockerfile` compila (es el artefacto que se despliega). |
-| Dependencias y entorno | `composer install` con el `composer.lock`, `.env` + `APP_KEY` + `JWT_SECRET` (no van versionados). |
+| Dependencias y entorno | `composer install` con el `composer.lock`, `.env` + `APP_KEY` (no van versionados). |
 | Validar docker-compose | `docker compose config --quiet`. |
 | Estilo | `./vendor/bin/pint --test`. |
 | Tests | `php artisan test` (Pest, SQLite en memoria) **sin red** (`--network none`): la suite no puede depender de MySQL ni de Redis. |
