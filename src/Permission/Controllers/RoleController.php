@@ -26,9 +26,26 @@ class RoleController extends Controller
     /**
      * List all roles
      *
-     * @apiResource Src\Permission\Resources\RoleResource
+     * El controlador envuelve la colección (`data.roles`), y eso no se puede
+     * inferir de un `@apiResource`: la forma se documenta a mano para que el
+     * contrato no mienta (`spec/08-calidad/02-contrato-openapi-frontend.md`).
      *
-     * @apiResourceModel Src\Permission\Models\Role
+     * @response 200 {
+     *   "success": true,
+     *   "message": "Roles retrieved successfully.",
+     *   "data": {
+     *     "roles": [
+     *       {
+     *         "id": 1,
+     *         "name": "admin",
+     *         "guard_name": "web",
+     *         "permissions": ["orders.view", "orders.create"],
+     *         "created_at": "2026-10-18T20:18:04.000000Z",
+     *         "updated_at": "2026-10-18T20:18:04.000000Z"
+     *       }
+     *     ]
+     *   }
+     * }
      */
     public function index(ListRolesUseCase $useCase): JsonResponse
     {

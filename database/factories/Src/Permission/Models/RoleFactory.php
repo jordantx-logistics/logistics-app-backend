@@ -13,7 +13,11 @@ class RoleFactory extends Factory
     {
         return [
             'name' => fake()->unique()->name(),
-            'guard_name' => 'api',
+            // El guard real de la aplicación es `web` (`config/auth.php` y
+            // `$guard_name` de los modelos de `Src\Permission`). El ejemplo de
+            // Scribe sale de esta factory: con `api` documentaba un guard que
+            // ya no existe.
+            'guard_name' => 'web',
         ];
     }
 }

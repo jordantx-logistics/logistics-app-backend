@@ -2,7 +2,6 @@
 
 namespace Src\Permission\UseCases;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Src\Permission\Models\Role;
@@ -12,19 +11,16 @@ use Src\Permission\Models\Role;
  */
 class ListRolesUseCase
 {
-    public function __construct(
-        private readonly User $currentUser
-    ) {}
-
     /**
-     * List all roles with optional filtering
+     * Todos los roles con sus permisos ya cargados: `RoleResource` los pinta, y
+     * sin el `with` el listado haría una consulta por rol.
      *
-     * @param  int|null  $id  Filter by role ID
+     * @param  int|null  $id  Filtra por id de rol
      * @return Collection<int, Role>
      */
     public function execute(?int $id = null): Collection
     {
-        $query = Role::query();
+        $query = Role::query()->with('permissions');
 
         if ($id !== null) {
             $query->where('id', $id);

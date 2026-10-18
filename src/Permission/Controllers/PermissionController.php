@@ -22,9 +22,25 @@ class PermissionController extends Controller
     /**
      * List all permissions
      *
-     * @apiResource Src\Permission\Resources\PermissionResource
+     * El controlador envuelve la colección (`data.permissions`), y eso no se
+     * puede inferir de un `@apiResource`: la forma se documenta a mano para que
+     * el contrato no mienta (`spec/08-calidad/02-contrato-openapi-frontend.md`).
      *
-     * @apiResourceModel Src\Permission\Models\Permission
+     * @response 200 {
+     *   "success": true,
+     *   "message": "Permissions retrieved successfully.",
+     *   "data": {
+     *     "permissions": [
+     *       {
+     *         "id": 1,
+     *         "name": "orders.view",
+     *         "guard_name": "web",
+     *         "created_at": "2026-10-18T20:18:04.000000Z",
+     *         "updated_at": "2026-10-18T20:18:04.000000Z"
+     *       }
+     *     ]
+     *   }
+     * }
      */
     public function index(ListPermissionsUseCase $useCase): JsonResponse
     {

@@ -13,7 +13,8 @@ class PermissionFactory extends Factory
     {
         return [
             'name' => fake()->unique()->name(),
-            'guard_name' => 'api',
+            // Ver `RoleFactory`: el guard de la aplicación es `web`, no `api`.
+            'guard_name' => 'web',
         ];
     }
 }
