@@ -124,6 +124,10 @@ class RoleController extends Controller
     /**
      * Assign permissions to a role
      *
+     * Sustituye los permisos del rol por los que llegan (`syncPermissions`).
+     *
+     * @bodyParam permission_ids integer[] required Ids de los permisos del catálogo. Example: [1, 2, 3]
+     *
      * @apiResource Src\Permission\Resources\RoleResource
      *
      * @apiResourceModel Src\Permission\Models\Role

@@ -22,6 +22,9 @@ class OrderController extends Controller
      *
      * Returns the orders visible to the authenticated user, newest first, paginated with `page` and `per_page` (max 100).
      *
+     * @queryParam page integer Page to return. Example: 2
+     * @queryParam per_page integer Rows per page (1..100, por defecto 15). Example: 15
+     *
      * @apiResourceCollection Src\Logistics\Order\Resources\OrderResource
      *
      * @apiResourceModel Src\Logistics\Order\Models\Order paginate=15
