@@ -4,6 +4,7 @@ namespace Src\Organization\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Src\Organization\Models\Agency;
 use Src\Organization\Requests\AgencyRequest;
 use Src\Organization\Resources\AgencyResource;
@@ -26,9 +27,17 @@ class AgencyController extends Controller
      *
      * @apiResourceAdditional success=true message="Agencies retrieved successfully."
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+
+        // Ámbito de agencia: un rol nacional (`admin`, `analyst`) ve todas; el
+        // resto, solo las suyas (`agencyIds()`), y sin agencia no ve ninguna.
         $agencies = Agency::query()
+            ->when(
+                ! $user->hasNationalScope(),
+                fn ($query) => $query->forAgencies($user->agencyIds()),
+            )
             ->orderBy('name')
             ->get();
 

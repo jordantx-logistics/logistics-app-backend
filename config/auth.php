@@ -43,8 +43,11 @@ return [
             'provider' => 'users',
         ],
 
-        'api' => [
-            'driver' => 'jwt',
+        // Tokens opacos (apps/PDA) y sesión de la SPA: Sanctum reutiliza el
+        // guard `web` cuando la petición llega de un dominio stateful
+        // (`SANCTUM_STATEFUL_DOMAINS`) y, si no, valida el bearer token.
+        'sanctum' => [
+            'driver' => 'sanctum',
             'provider' => 'users',
         ],
     ],

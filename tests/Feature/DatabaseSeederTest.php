@@ -12,13 +12,17 @@ it('se puede ejecutar dos veces sin romper', function () {
         ->and($user->email_verified_at)->not->toBeNull();
 });
 
-it('deja un admin que puede autenticarse con las credenciales del entorno', function () {
+it('deja un admin con el rol del catálogo y credenciales válidas', function () {
     $this->seed();
 
-    $token = auth('api')->attempt([
-        'email' => env('SCRIBE_AUTH_EMAIL', 'admin@admin.pe'),
-        'password' => env('SCRIBE_AUTH_PASSWORD', 'SecureAdmin2026!@#'),
-    ]);
+    $user = User::where('email', env('SCRIBE_AUTH_EMAIL', 'admin@admin.pe'))->sole();
 
-    expect($token)->not->toBeFalse();
+    // Sin rol, el middleware de permisos dejaría al admin fuera de todas las rutas.
+    expect($user->hasRole('admin'))->toBeTrue()
+        ->and($user->hasPermissionTo('orders.create'))->toBeTrue();
+
+    expect(auth('web')->validate([
+        'email' => $user->email,
+        'password' => env('SCRIBE_AUTH_PASSWORD', 'SecureAdmin2026!@#'),
+    ]))->toBeTrue();
 });

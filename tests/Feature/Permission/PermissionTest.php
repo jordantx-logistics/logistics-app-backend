@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Permission;
 
-use App\Models\User;
 use Src\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -13,8 +12,8 @@ class PermissionTest extends TestCase
      */
     public function test_it_can_list_permissions(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->getJson('/api/v1/permission/permissions');
 
@@ -33,8 +32,8 @@ class PermissionTest extends TestCase
      */
     public function test_it_can_create_permission(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->postJson(
             '/api/v1/permission/permissions',
@@ -49,6 +48,15 @@ class PermissionTest extends TestCase
                 'name' => 'test.permission',
             ],
         ]);
+
+        // El guard tiene que salir del modelo (`web`), no de
+        // `config('auth.defaults.guard')`: dentro de una petición el middleware
+        // `auth:sanctum` lo cambia a `sanctum` y el permiso nacería con un guard
+        // que no casa con el de los usuarios.
+        $this->assertDatabaseHas('permissions', [
+            'name' => 'test.permission',
+            'guard_name' => 'web',
+        ]);
     }
 
     /**
@@ -56,9 +64,9 @@ class PermissionTest extends TestCase
      */
     public function test_it_can_retrieve_permission(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $permission = Permission::create(['name' => 'test.permission']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->getJson("/api/v1/permission/permissions/{$permission->id}");
 
@@ -75,9 +83,9 @@ class PermissionTest extends TestCase
      */
     public function test_it_can_update_permission(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $permission = Permission::create(['name' => 'test.permission']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->putJson(
             "/api/v1/permission/permissions/{$permission->id}",
@@ -99,9 +107,9 @@ class PermissionTest extends TestCase
      */
     public function test_it_can_delete_permission(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $permission = Permission::create(['name' => 'test.permission']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->deleteJson("/api/v1/permission/permissions/{$permission->id}");
 
@@ -117,8 +125,8 @@ class PermissionTest extends TestCase
      */
     public function test_it_returns_404_for_nonexistent_permission(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->getJson('/api/v1/permission/permissions/99999');
 
@@ -130,8 +138,8 @@ class PermissionTest extends TestCase
      */
     public function test_it_validates_permission_creation(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->postJson(
             '/api/v1/permission/permissions',
@@ -148,8 +156,8 @@ class PermissionTest extends TestCase
      */
     public function test_it_returns_404_for_a_non_numeric_permission_id(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $this->getJson('/api/v1/permission/permissions/architecto')->assertStatus(404);
         $this->deleteJson('/api/v1/permission/permissions/architecto')->assertStatus(404);

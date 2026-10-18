@@ -54,7 +54,6 @@ jobs:
             composer install --no-interaction --prefer-dist --no-progress
             [ -f .env ] || cp .env.example .env
             php artisan key:generate --force
-            php artisan jwt:secret --force
           '
 
       - name: Validar docker-compose

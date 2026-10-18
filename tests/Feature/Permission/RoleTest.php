@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Permission;
 
-use App\Models\User;
 use Src\Permission\Models\Permission;
 use Src\Permission\Models\Role;
 use Tests\TestCase;
@@ -14,8 +13,8 @@ class RoleTest extends TestCase
      */
     public function test_it_can_list_roles(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->getJson('/api/v1/permission/roles');
 
@@ -34,8 +33,8 @@ class RoleTest extends TestCase
      */
     public function test_it_can_create_role(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->postJson(
             '/api/v1/permission/roles',
@@ -50,6 +49,13 @@ class RoleTest extends TestCase
                 'name' => 'TestRole',
             ],
         ]);
+
+        // Mismo motivo que en `PermissionTest`: el guard del rol es `web`, no el
+        // guard por defecto de la petición (`sanctum` tras `auth:sanctum`).
+        $this->assertDatabaseHas('roles', [
+            'name' => 'TestRole',
+            'guard_name' => 'web',
+        ]);
     }
 
     /**
@@ -57,9 +63,9 @@ class RoleTest extends TestCase
      */
     public function test_it_can_retrieve_role(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $role = Role::create(['name' => 'TestRole']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->getJson("/api/v1/permission/roles/{$role->id}");
 
@@ -76,9 +82,9 @@ class RoleTest extends TestCase
      */
     public function test_it_can_update_role(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $role = Role::create(['name' => 'TestRole']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->putJson(
             "/api/v1/permission/roles/{$role->id}",
@@ -100,9 +106,9 @@ class RoleTest extends TestCase
      */
     public function test_it_can_delete_role(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $role = Role::create(['name' => 'TestRole']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->deleteJson("/api/v1/permission/roles/{$role->id}");
 
@@ -118,10 +124,10 @@ class RoleTest extends TestCase
      */
     public function test_it_can_assign_permissions_to_role(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $role = Role::create(['name' => 'TestRole']);
         $permission = Permission::create(['name' => 'test.permission']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->postJson(
             "/api/v1/permission/roles/{$role->id}/permissions",
@@ -143,9 +149,9 @@ class RoleTest extends TestCase
      */
     public function test_it_validates_permission_assignment(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $role = Role::create(['name' => 'TestRole']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->postJson(
             "/api/v1/permission/roles/{$role->id}/permissions",
@@ -160,8 +166,8 @@ class RoleTest extends TestCase
      */
     public function test_it_returns_404_for_nonexistent_role(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->getJson('/api/v1/permission/roles/99999');
 
@@ -173,9 +179,9 @@ class RoleTest extends TestCase
      */
     public function test_it_can_assign_role_to_user(): void
     {
-        $user = User::factory()->create();
+        $user = adminUser();
         $role = Role::create(['name' => 'TestRole']);
-        $this->actingAs($user, 'api');
+        $this->actingAs($user);
 
         $response = $this->postJson(
             "/api/v1/permission/users/{$user->id}/roles",
@@ -194,8 +200,8 @@ class RoleTest extends TestCase
      */
     public function test_it_validates_role_assignment(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $response = $this->postJson(
             "/api/v1/permission/users/{$user->id}/roles",
@@ -211,8 +217,8 @@ class RoleTest extends TestCase
      */
     public function test_it_returns_404_for_a_non_numeric_role_id(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user, 'api');
+        $user = adminUser();
+        $this->actingAs($user);
 
         $this->getJson('/api/v1/permission/roles/architecto')->assertStatus(404);
         $this->deleteJson('/api/v1/permission/roles/architecto')->assertStatus(404);

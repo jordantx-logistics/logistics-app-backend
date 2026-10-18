@@ -1,14 +1,10 @@
 <?php
 
-use App\Models\User;
 use Src\Organization\Models\Agency;
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
-    $this->token = auth('api')->login($this->user);
-    $this->headers = [
-        'Authorization' => "Bearer {$this->token}",
-    ];
+    $this->user = adminUser();
+    $this->headers = tokenHeadersFor($this->user);
 });
 
 it('can list agencies', function () {
@@ -56,4 +52,63 @@ it('validates unique code when creating agency', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['code'], 'data');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Ámbito por agencia (criterio 5)
+|--------------------------------------------------------------------------
+|
+| Un rol nacional (`admin`, `analyst`) opera sin filtro; el resto queda acotado
+| a `agency_user`. Es el aislamiento A/B de la Fase 1.
+|
+*/
+
+it('acota el listado a las agencias del usuario', function () {
+    $agenciaA = Agency::factory()->create(['name' => 'Agencia A']);
+    Agency::factory()->create(['name' => 'Agencia B']);
+
+    $supervisor = adminUser();
+    $supervisor->removeRole('admin');
+    $supervisor->assignRole('agency-supervisor');
+    $supervisor->agencies()->attach($agenciaA);
+
+    $this->actingAs($supervisor)
+        ->getJson('/api/v1/organization/agencies')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $agenciaA->id);
+});
+
+it('deja que un rol nacional vea todas las agencias', function () {
+    Agency::factory()->count(3)->create();
+
+    $this->actingAs(adminUser())
+        ->getJson('/api/v1/organization/agencies')
+        ->assertOk()
+        ->assertJsonCount(3, 'data');
+});
+
+it('no deja ver nada a un usuario operativo sin agencia asignada', function () {
+    Agency::factory()->count(2)->create();
+
+    $user = adminUser();
+    $user->removeRole('admin');
+    $user->assignRole('agency-supervisor');
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/organization/agencies')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
+it('responde 403 sin el permiso exigido por la ruta', function () {
+    Agency::factory()->count(2)->create();
+
+    $user = adminUser();
+    $user->removeRole('admin');
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/organization/agencies')
+        ->assertForbidden();
 });

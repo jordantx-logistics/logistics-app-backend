@@ -3,30 +3,26 @@
 namespace Src\Auth\UseCases;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Login web: sesión de Laravel en el guard `web` (cookie HttpOnly + CSRF que
+ * añade `EnsureFrontendRequestsAreStateful` para las peticiones de la SPA).
+ *
+ * Las apps/PDA no pasan por aquí: piden un token con `IssueTokenUseCase`.
+ */
 class LoginUseCase
 {
-    /**
-     * @return array{user: User, token: string, expires_in: int}
-     */
-    public function execute(array $credentials): array
+    public function execute(array $credentials): User
     {
-        $token = auth('api')->attempt([
-            'email' => $credentials['email'],
-            'password' => $credentials['password'],
-        ]);
-
-        if (! $token) {
+        if (! Auth::guard('web')->attempt($credentials)) {
+            // Mensaje neutro: no revela si el email existe.
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        return [
-            'user' => auth('api')->user(),
-            'token' => $token,
-            'expires_in' => auth('api')->factory()->getTTL() * 60,
-        ];
+        return Auth::guard('web')->user();
     }
 }

@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
-use Throwable;
 
 /**
  * Deja una línea de log por petición con método, ruta, estado y duración.
@@ -39,22 +38,14 @@ class LogHttpRequest
     }
 
     /**
-     * Las rutas usan el guard `api` (JWT), que lanza si no hay token en vez de
-     * devolver `null`; por eso se comprueba el token primero. El guard por
-     * defecto es `web` (deuda de Fase 1), así que se consulta `api`.
+     * El usuario se lee **después** de `$next`: si la ruta lleva `auth:sanctum`,
+     * Sanctum ya resolvió la sesión o el bearer y `$request->user()` devuelve el
+     * usuario. Con el guard JWT (`api`) de la Fase 0 la comprobación era otra;
+     * ese guard ya no existe.
      */
     private function userIdFrom(Request $request): ?int
     {
-        if ($request->bearerToken() === null) {
-            return null;
-        }
-
-        try {
-            $user = $request->user('api');
-        } catch (Throwable) {
-            // Token ausente, malformado o caducado: no hay usuario que registrar.
-            return null;
-        }
+        $user = $request->user();
 
         return $user === null ? null : (int) $user->getAuthIdentifier();
     }

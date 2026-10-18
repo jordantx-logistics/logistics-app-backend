@@ -3,7 +3,7 @@
 namespace Src\Permission\UseCases;
 
 use App\Models\User;
-use Spatie\Permission\Models\Permission;
+use Src\Permission\Models\Permission;
 
 /**
  * UseCase para eliminar un permiso.

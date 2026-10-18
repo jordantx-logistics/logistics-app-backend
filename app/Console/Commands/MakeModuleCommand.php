@@ -65,7 +65,7 @@ class MakeModuleCommand extends Command
         }
 
         // Create basic routes.php
-        $routesContent = "<?php\n\nuse Illuminate\Support\Facades\Route;\n\n// Route::prefix('api/v1/...')->middleware('auth:api')->group(function () {\n//    \n// });\n";
+        $routesContent = "<?php\n\nuse Illuminate\Support\Facades\Route;\n\n// Route::prefix('api/v1/...')->middleware(['auth:sanctum', 'permission:recurso.accion'])->group(function () {\n//    \n// });\n";
         File::put("{$basePath}/routes.php", $routesContent);
         $this->info("Created file: src/{$parsedName}/routes.php");
 

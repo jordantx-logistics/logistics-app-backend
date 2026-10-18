@@ -13,8 +13,8 @@
         "laravel/framework": "^13.0",
         "laravel/horizon": "^5.50",
         "laravel/octane": "^2.22",
+        "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
-        "php-open-source-saver/jwt-auth": "^2.9",
         "promphp/prometheus_client_php": "^2.15",
         "spatie/laravel-permission": "^7.3"
     },
@@ -47,7 +47,6 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
-            "@php artisan jwt:secret",
             "@php artisan migrate --force"
         ],
         "test": [

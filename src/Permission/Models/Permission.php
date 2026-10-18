@@ -15,4 +15,13 @@ use Spatie\Permission\Models\Permission as SpatiePermission;
 class Permission extends SpatiePermission
 {
     use HasFactory;
+
+    /**
+     * Guard por defecto de los permisos (`web`), por el mismo motivo que en
+     * `Role`: dentro de una petición `config('auth.defaults.guard')` es
+     * `sanctum`.
+     *
+     * @var string
+     */
+    protected $guard_name = 'web';
 }

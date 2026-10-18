@@ -6,8 +6,11 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 use Src\Shared\Exceptions\BusinessRuleException;
 use Src\System\Middleware\AssignRequestId;
+use Src\System\Middleware\EnforcePermission;
 use Src\System\Middleware\LogHttpRequest;
 use Src\System\Middleware\RecordHttpMetrics;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -30,6 +33,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(AssignRequestId::class);
         $middleware->append(LogHttpRequest::class);
         $middleware->append(RecordHttpMetrics::class);
+
+        // Spatie v7 ya no registra sus alias: se declaran aquí. `permission`
+        // pasa por `EnforcePermission`, que respeta el interruptor
+        // `AUTHZ_ENFORCE` (rollback de la Fase 1, no permanente).
+        $middleware->alias([
+            'role' => RoleMiddleware::class,
+            'permission' => EnforcePermission::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
+        ]);
+
+        // Sesión SPA: para las peticiones que vienen del frontend
+        // (`SANCTUM_STATEFUL_DOMAINS`) añade al grupo `api` el arranque de
+        // sesión y las cookies; para el resto (apps/PDA con bearer) es un no-op.
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request) {

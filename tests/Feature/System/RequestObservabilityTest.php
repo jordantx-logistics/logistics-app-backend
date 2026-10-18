@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Contracts\Log\ContextLogProcessor;
 use Illuminate\Support\Facades\Context;
 use Monolog\Level;
@@ -31,12 +30,11 @@ it('descarta un X-Request-Id con formato inesperado', function () {
 });
 
 it('guarda el request_id y el usuario en el contexto de la petición', function () {
-    $user = User::factory()->create();
-    $token = auth('api')->login($user);
+    $user = adminUser();
 
     $this->withHeaders([
         AssignRequestId::HEADER => 'req-42',
-        'Authorization' => "Bearer {$token}",
+        ...tokenHeadersFor($user),
     ])->getJson('/api/v1/permission/roles')->assertOk();
 
     expect(Context::get('request_id'))->toBe('req-42')
@@ -44,8 +42,8 @@ it('guarda el request_id y el usuario en el contexto de la petición', function 
 });
 
 it('no rompe el registro de peticiones sin autenticar', function () {
-    // El guard `api` (JWT) lanza si se le pide el usuario sin token; el
-    // middleware debe seguir registrando la línea y no convertir el 401 en 500.
+    // Sin token, Sanctum no encuentra usuario; el middleware debe seguir
+    // registrando la línea y no convertir el 401 en 500.
     $this->getJson('/api/v1/permission/roles')
         ->assertUnauthorized()
         ->assertJsonPath('message', 'Unauthenticated.');

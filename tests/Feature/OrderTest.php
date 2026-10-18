@@ -1,14 +1,12 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Support\Str;
 use Src\Customer\Models\Person;
 use Src\Organization\Models\Agency;
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
-    $this->token = auth('api')->login($this->user);
-    $this->headers = ['Authorization' => "Bearer {$this->token}"];
+    $this->user = adminUser();
+    $this->headers = tokenHeadersFor($this->user);
 
     $this->sender = Person::factory()->create();
     $this->receiver = Person::factory()->create();

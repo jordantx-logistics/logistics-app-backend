@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -32,7 +33,14 @@ class ModuleServiceProvider extends ServiceProvider
         sort($modules);
 
         foreach ($modules as $routeFile) {
-            $this->loadRoutesFrom($routeFile);
+            // Todas las rutas de módulo viven en el grupo `api`: así heredan
+            // `SubstituteBindings` (route model binding) y, sobre todo, el
+            // middleware `EnsureFrontendRequestsAreStateful` de Sanctum que
+            // arranca la sesión cuando la petición viene del frontend. Los
+            // ficheros de ruta no repiten `->middleware('api')`.
+            Route::middleware('api')->group(function () use ($routeFile) {
+                $this->loadRoutesFrom($routeFile);
+            });
         }
     }
 

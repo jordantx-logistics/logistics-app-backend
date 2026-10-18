@@ -1,11 +1,8 @@
 <?php
 
-use App\Models\User;
-
 beforeEach(function () {
-    $this->user = User::factory()->create();
-    $this->token = auth('api')->login($this->user);
-    $this->headers = ['Authorization' => "Bearer {$this->token}"];
+    $this->user = adminUser();
+    $this->headers = tokenHeadersFor($this->user);
 });
 
 it('can create a person', function () {

@@ -43,5 +43,9 @@ class DatabaseSeeder extends Seeder
         if ($user->email_verified_at === null) {
             $user->forceFill(['email_verified_at' => now()])->save();
         }
+
+        // Sin rol, el middleware de permisos dejaría al admin fuera de todo:
+        // `admin` es el rol del catálogo que agrupa los permisos.
+        $user->assignRole('admin');
     }
 }

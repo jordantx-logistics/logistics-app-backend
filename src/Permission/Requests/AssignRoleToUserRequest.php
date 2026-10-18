@@ -4,7 +4,7 @@ namespace Src\Permission\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Spatie\Permission\Models\Role;
+use Src\Permission\Models\Role;
 
 /**
  * FormRequest para validar la asignación de un rol a un usuario.

@@ -5,7 +5,7 @@ namespace Src\Permission\UseCases;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Spatie\Permission\Models\Role;
+use Src\Permission\Models\Role;
 
 /**
  * UseCase para listar roles.

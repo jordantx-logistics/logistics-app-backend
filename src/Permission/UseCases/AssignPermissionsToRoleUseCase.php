@@ -3,8 +3,8 @@
 namespace Src\Permission\UseCases;
 
 use App\Models\User;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+use Src\Permission\Models\Permission;
+use Src\Permission\Models\Role;
 use Src\Permission\Requests\AssignPermissionsToRoleRequest;
 
 /**

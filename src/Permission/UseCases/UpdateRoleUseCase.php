@@ -3,7 +3,7 @@
 namespace Src\Permission\UseCases;
 
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use Src\Permission\Models\Role;
 use Src\Permission\Requests\UpdateRoleRequest;
 
 /**
