@@ -61,6 +61,21 @@ curl -s -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:8000/metrics
 - Series expuestas: `http_requests_total`, `http_request_duration_seconds`, `db_connections_used` (gauge leído en el scrape) y `octane_workers_busy` (peticiones en curso).
 - El exporter nunca puede tumbar una petición: si el almacén falla se registra `metrics_unavailable` y la petición continúa.
 
+## IA: Laravel Boost + MCP
+
+`laravel/boost` está en `require-dev`. Sus guías viven en `AGENTS.md`, las skills en `.agents/skills/` y la configuración en `boost.json` (agentes `gemini` y `opencode`, `mcp: true`).
+
+La conexión MCP con OpenCode está en `opencode.json`. El servidor MCP de Boost es **stdio**, y como no hay PHP en el host se lanza dentro del contenedor:
+
+```jsonc
+"command": ["docker", "compose", "exec", "-T", "app", "php", "artisan", "boost:mcp"]
+```
+
+- Requiere el contenedor `app` levantado. Si se para a mitad de sesión, el servidor MCP muere: `docker compose up -d app` y `opencode service restart`.
+- El `-T` es obligatorio: sin él `docker compose exec` no asigna TTY y el JSON-RPC no circula por stdin/stdout.
+- **No ejecutes `php artisan boost:install --mcp`**: Boost escribe el formato V1 (`mcp.laravel-boost` con `enabled` y el PHP del host), y OpenCode V2 espera `mcp.servers.*` con `disabled`. Si lo ejecutas, deja `opencode.json` como está versionado.
+- Herramientas expuestas: `application-info`, `database-connections`, `database-schema`, `database-query`, `search-docs`, `read-log-entries`, `last-error`, `browser-logs`, `get-absolute-url`.
+
 ## Ramas
 
 | Rama | Uso |
