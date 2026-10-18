@@ -29,15 +29,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Preparar Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # El backend se ejecuta solo con Docker: la imagen es el artefacto que se
       # despliega, y cada paso corre dentro de ella (el runner no instala PHP).
       - name: Construir la imagen
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
@@ -94,7 +94,7 @@ jobs:
       # ADR-0008: el contrato OpenAPI viaja como artefacto del build y de ahí lo
       # consume el frontend para generar sus tipos (Fase 1).
       - name: Publicar el contrato
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openapi
           path: storage/app/private/scribe/openapi.yaml
