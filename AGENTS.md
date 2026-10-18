@@ -108,6 +108,7 @@ La documentación generada (`.scribe/`, `resources/views/scribe/`, `public/vendo
 
 - Feature tests auto-use `RefreshDatabase` desde `tests/TestCase.php` (así aplica también a las clases de test con estilo PHPUnit, ya que los traits registrados en `tests/Pest.php` no llegan a esas clases).
 - `phpunit.xml` pins `DB_CONNECTION=sqlite` / `DB_DATABASE=:memory:` and `QUEUE_CONNECTION=sync` — don't override these in individual tests.
+- La suite es **hermética**: corre sin servicios (SQLite `:memory:`, caché/sesión `array`, colas `sync`) y el CI la ejecuta con `--network none`. Un test no puede depender de MySQL/Redis: mockea la dependencia (ver `HealthTest` con `Redis::shouldReceive`) o usa una ruta que no toque nada (`/up`), nunca `/api/v1/health`, que comprueba dependencias de verdad.
 - `BCRYPT_ROUNDS=4` in tests — don't benchmark hashing.
 
 ## Conventions

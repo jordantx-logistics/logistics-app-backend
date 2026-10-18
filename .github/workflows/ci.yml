@@ -82,9 +82,10 @@ jobs:
       - name: Estilo (Pint)
         run: docker run --rm -v "$GITHUB_WORKSPACE":/var/www "$IMAGE" sh -c './vendor/bin/pint --test'
 
-      # La suite va con SQLite en memoria (`phpunit.xml`): no necesita servicios.
+      # La suite va con SQLite en memoria (`phpunit.xml`) y sin red: los tests no
+      # dependen de MySQL/Redis, así que si alguno lo hiciera se vería aquí.
       - name: Tests (Pest)
-        run: docker run --rm -v "$GITHUB_WORKSPACE":/var/www "$IMAGE" sh -c 'php artisan test'
+        run: docker run --rm --network none -v "$GITHUB_WORKSPACE":/var/www "$IMAGE" sh -c 'php artisan test'
 
       # MySQL es el motor real: las migraciones y los seeders se validan contra
       # él y no solo contra SQLite.

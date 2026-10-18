@@ -63,11 +63,13 @@ it('responde 401 JSON aunque el cliente no pida JSON', function () {
 it('registra una línea por petición con ruta, estado y duración', function () {
     Log::spy();
 
-    $this->getJson('/api/v1/health');
+    // `/up` es liveness puro: la línea se comprueba sin MySQL ni Redis, que es
+    // como corre la suite (en CI el contenedor no alcanza los servicios).
+    $this->get('/up');
 
     Log::shouldHaveReceived('info')->with('http_request', Mockery::on(
         fn (array $context) => $context['method'] === 'GET'
-            && $context['route'] === 'api/v1/health'
+            && $context['route'] === 'up'
             && $context['status'] === 200
             && is_float($context['duration_ms'])
     ))->once();

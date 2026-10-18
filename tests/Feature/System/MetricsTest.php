@@ -1,15 +1,21 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use Src\System\Services\Metrics\DatabaseConnectionsGauge;
 
 it('expone el contador y el histograma de las peticiones atendidas', function () {
-    $this->getJson('/api/v1/health')->assertOk();
+    // Ruta propia y sin dependencias: el test comprueba el exporter, no el
+    // estado de MySQL/Redis. La suite corre sin servicios (en CI no hay red
+    // hacia `redis`/`mysql`), así que no puede apoyarse en `/api/v1/health`.
+    Route::get('/probe', fn () => response()->json(['ok' => true]));
+
+    $this->getJson('/probe')->assertOk();
 
     $body = $this->get('/metrics')->assertOk()->getContent();
 
     expect($body)
         ->toContain('http_requests_total{')
-        ->toContain('route="api/v1/health"')
+        ->toContain('route="probe"')
         ->toContain('method="GET"')
         ->toContain('status="200"')
         ->toContain('env="testing"')
