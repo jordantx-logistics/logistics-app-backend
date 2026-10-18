@@ -60,11 +60,16 @@ services:
       APP_ROLE: horizon
     volumes:
       - .:/var/www
-    # Ni horizon ni scheduler sirven HTTP: el healthcheck que heredan de la
-    # imagen base (el `/metrics` de Caddy en :2019) no aplica. El rol web sí
-    # lo redefine con `/up`.
+    # Horizon sí sabe decir si está vivo: `horizon:status` consulta el estado
+    # que publica el supervisor en Redis. El healthcheck que hereda de la
+    # imagen base (el `/metrics` de Caddy en :2019) no aplica porque no sirve
+    # HTTP; el scheduler, que no tiene comando de estado, lo desactiva.
     healthcheck:
-      disable: true
+      test: ["CMD", "php", "artisan", "horizon:status"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       mysql:
         condition: service_healthy

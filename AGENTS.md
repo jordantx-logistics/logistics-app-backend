@@ -11,7 +11,7 @@ Laravel 13 + PHP 8.3 REST API. JWT auth (`php-open-source-saver/jwt-auth`), `spa
 El backend se ejecuta **solo con Docker** (Octane sobre FrankenPHP). No uses PHP/Composer del host.
 Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 
-- `docker compose up -d --build` — levanta app (Octane), scheduler, nginx, mysql, redis y mailpit. `horizon` queda tras el perfil homónimo (llega en la Fase 1): `docker compose --profile horizon up -d horizon`.
+- `docker compose up -d --build` — levanta app (Octane), scheduler, nginx, mysql, redis y mailpit. El worker de colas (`horizon`, Fase 1) va tras su propio perfil: `docker compose --profile horizon up -d horizon` (panel en `http://localhost:8000/horizon`).
 - `docker compose exec app composer install` — instala dependencias (solo la primera vez; `vendor/` y `.env` no se versionan).
 - `docker compose exec app php artisan key:generate` — genera `APP_KEY` (solo la primera vez).
 - `docker compose exec app php artisan jwt:secret` — secreto JWT (solo la primera vez, tras `key:generate`).
@@ -97,6 +97,17 @@ El canal por defecto es `json` (`config/logging.php`): una línea JSON por regis
 - El almacén es Redis (`METRICS_STORAGE`) para que el contador sea común a todos los workers de Octane; en tests es `in-memory`. `CollectorRegistry` está en `config/octane.php` → `warm` para no abrir una conexión de Redis por petición.
 - Acceso: con `METRICS_TOKEN` hay que enviarlo (`Authorization: Bearer <token>` o `?token=`); sin token solo se atiende desde red privada/loopback. `METRICS_ENABLED=false` deja el endpoint en 404 y el exporter apagado.
 - El exporter nunca puede cambiar una respuesta: si el almacén falla se registra `metrics_unavailable` y la petición sigue.
+
+### Colas (Horizon)
+
+Horizon (Fase 1) gestiona los workers sobre **Redis**. El worker es el servicio `horizon` (perfil homónimo) y el panel lo sirve el rol **web**, así que se ve en `http://localhost:8000/horizon`:
+
+- `docker compose --profile horizon up -d horizon` — arranca el worker. Sin él los eventos que escriben los UseCases se quedan en Redis, en cola.
+- `docker compose exec horizon php artisan horizon:status` — `0` corriendo, `1` pausado, `2` inactivo. Es el `healthcheck` del servicio: un Horizon pausado aparece como `unhealthy`, porque no procesa.
+- Colas `high`, `default`, `reports`, `sync` con `balance: auto` (`config/horizon.php`), con juego distinto por entorno: local las cuatro en un supervisor, staging `high`/`default`, producción las cuatro con más procesos.
+- `routes/console.php` agenda `horizon:snapshot` cada 5 minutos —el paquete registra el comando pero **no** lo programa—; lo ejecuta el rol `scheduler` y alimenta las gráficas del panel (más adelante, los gauges de cola de Prometheus).
+- Acceso: en local entra cualquiera; fuera de local, solo los emails de `HORIZON_ALLOWED_EMAILS` (vacía = nadie). En staging/producción la barrera de verdad es el borde (Cloudflare Access) y el panel no se publica. La gate vive en `app/Providers/HorizonServiceProvider.php` y `tests/Feature/System/HorizonTest.php` la fija.
+- Al instalar o actualizar un paquete hace falta `php artisan octane:reload`: los workers de Octane llevan la aplicación en memoria y las rutas nuevas (por ejemplo `/horizon`) no existen hasta recargar.
 
 ### API docs
 

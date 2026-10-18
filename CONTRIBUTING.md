@@ -9,7 +9,7 @@ Este proyecto **no** se ejecuta con PHP/Composer instalados en el host. Todo pas
 
 ```bash
 # Levantar la infraestructura local (app/Octane, scheduler, nginx, mysql, redis, mailpit)
-# `horizon` es de la Fase 1 y va tras perfil: docker compose --profile horizon up -d horizon
+# El worker de colas va tras perfil: docker compose --profile horizon up -d horizon
 docker compose up -d --build
 
 # Dependencias y arranque (solo la primera vez)
@@ -21,6 +21,7 @@ docker compose exec app php artisan migrate --seed
 docker compose exec app php artisan test
 docker compose exec app ./vendor/bin/pint
 docker compose exec app php artisan scribe:generate   # la doc generada no se versiona
+docker compose exec horizon php artisan horizon:status   # panel: http://localhost:8000/horizon
 docker compose logs -f app
 ```
 
