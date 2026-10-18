@@ -80,8 +80,16 @@ jobs:
       - name: Migraciones y seeders sobre MySQL
         run: docker compose run --rm app php artisan migrate --seed --force
 
+      # El runner publica el artefacto como usuario sin privilegios, y Scribe
+      # crea `storage/app/private/scribe` con la visibilidad **privada** del
+      # disco `local` de Laravel (0700, root): sin ese `chmod`, el paso de
+      # publicación no puede ni leer el contrato (`EACCES` en el `lstat`).
       - name: Generar el contrato OpenAPI
-        run: docker compose run --rm app php artisan scribe:generate
+        run: |
+          docker compose run --rm app sh -c '
+            php artisan scribe:generate
+            chmod -R a+rX storage/app/private/scribe
+          '
 
       # ADR-0008: el contrato OpenAPI viaja como artefacto del build y de ahí lo
       # consume el frontend para generar sus tipos (Fase 1).

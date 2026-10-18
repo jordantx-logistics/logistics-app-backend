@@ -140,6 +140,8 @@ Los pasos que necesitan servicios levantan **el mismo `docker-compose.yml` que e
 | Migraciones sobre MySQL | `php artisan migrate --seed` contra el MySQL 8.0 del compose, no solo SQLite. |
 | Contrato | `php artisan scribe:generate` sobre el stack levantado y subida del artefacto `openapi` (`storage/app/private/scribe/openapi.yaml`), base de ADR-0008. |
 
+Ojo con una particularidad del contrato: se genera en el disco **privado** de Laravel (`storage/app/private/scribe` sale en modo `0700`), y quien publica el artefacto es un usuario sin privilegios del runner, así que el paso ajusta la visibilidad de ese directorio (`chmod -R a+rX`). Sin eso la subida falla con `EACCES`.
+
 Para reproducir cualquier paso: es el mismo comando dentro del contenedor, por ejemplo
 
 ```bash
