@@ -128,15 +128,17 @@ docker compose exec app php artisan scribe:generate   # el contrato OpenAPI es a
 
 `.github/workflows/ci.yml` corre en cada push a `develop`/`main` y en cada PR (ADR-0010). Como el backend se ejecuta solo con Docker, **todo pasa dentro de la imagen**: el runner no instala PHP.
 
+Los pasos que necesitan servicios levantan **el mismo `docker-compose.yml` que el entorno local** (`docker compose up -d --wait mysql redis`), así que las versiones y los hostnames (`mysql`, `redis`) son idénticos a los de desarrollo.
+
 | Paso | Qué comprueba |
 |---|---|
 | Construir la imagen | Que el `Dockerfile` compila (es el artefacto que se despliega). |
 | Dependencias y entorno | `composer install` con el `composer.lock`, `.env` + `APP_KEY` + `JWT_SECRET` (no van versionados). |
 | Validar docker-compose | `docker compose config --quiet`. |
 | Estilo | `./vendor/bin/pint --test`. |
-| Tests | `php artisan test` (Pest, SQLite en memoria). |
-| Migraciones sobre MySQL | `php artisan migrate --seed` contra un MySQL 8.0 real, no solo SQLite. |
-| Contrato | `php artisan scribe:generate` y subida del artefacto `openapi` (`storage/app/private/scribe/openapi.yaml`), base de ADR-0008. |
+| Tests | `php artisan test` (Pest, SQLite en memoria) **sin red** (`--network none`): la suite no puede depender de MySQL ni de Redis. |
+| Migraciones sobre MySQL | `php artisan migrate --seed` contra el MySQL 8.0 del compose, no solo SQLite. |
+| Contrato | `php artisan scribe:generate` sobre el stack levantado y subida del artefacto `openapi` (`storage/app/private/scribe/openapi.yaml`), base de ADR-0008. |
 
 Para reproducir cualquier paso: es el mismo comando dentro del contenedor, por ejemplo
 

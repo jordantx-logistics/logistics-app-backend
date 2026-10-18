@@ -9,7 +9,9 @@ services:
   app:
     build:
       context: .
-    image: logistics-app-backend:local
+    # El tag se puede pisar con `APP_IMAGE` (el CI construye la suya y le dice a
+    # compose que use esa), pero por defecto es la imagen de desarrollo.
+    image: ${APP_IMAGE:-logistics-app-backend:local}
     environment:
       APP_ROLE: web
       OCTANE_WORKERS: "${OCTANE_WORKERS:-2}"
@@ -51,7 +53,7 @@ services:
     # definido pero fuera del `docker compose up` por defecto.
     #   docker compose --profile horizon up -d horizon
     profiles: ["horizon"]
-    image: logistics-app-backend:local
+    image: ${APP_IMAGE:-logistics-app-backend:local}
     command: ["php", "artisan", "horizon"]
     restart: unless-stopped
     environment:
@@ -72,7 +74,7 @@ services:
       - logistics-network
 
   scheduler:
-    image: logistics-app-backend:local
+    image: ${APP_IMAGE:-logistics-app-backend:local}
     environment:
       APP_ROLE: scheduler
     volumes:

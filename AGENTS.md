@@ -17,13 +17,13 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose exec app php artisan jwt:secret` — secreto JWT (solo la primera vez, tras `key:generate`).
 - `docker compose exec app php artisan test` — suite Pest. Con filtro: `... php artisan test --filter=OrderTest` o `... php artisan test tests/Feature/OrderTest.php`.
 - `docker compose exec app ./vendor/bin/pint` — formatea PHP (Laravel Pint).
-- `docker compose exec app php artisan migrate` / `php artisan migrate:fresh --seed`.
+- `docker compose exec app php artisan migrate` / `php artisan migrate:fresh --seed` — el contenedor tiene que estar en la red de compose (los servicios se llaman `mysql` y `redis` en `.env`), no vale un `docker run` suelto: la migración de `spatie/laravel-permission` vacía su caché de permisos, así que `migrate` necesita el almacén de caché vivo (Redis en local/prod; `array` en tests, que es lo que fija `phpunit.xml`).
 - `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Adapters,Controllers,Events,Exceptions,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` automáticamente.
 - `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
 - `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código.
 - `docker compose logs -f app` — logs JSON del servicio web.
 - `docker compose build app` — obligatorio tras tocar `Dockerfile` o `docker/entrypoint.sh` (se copian en la imagen, no están montados).
-- CI (`.github/workflows/ci.yml`) hace lo mismo **dentro de la imagen**: `pint --test`, `php artisan test`, `migrate --seed` sobre MySQL 8 y `scribe:generate` (el OpenAPI se publica como artefacto `openapi`).
+- CI (`.github/workflows/ci.yml`) hace lo mismo **dentro de la imagen** y con el **mismo `docker-compose.yml`** que el entorno local: `pint --test`, `php artisan test` (sin red, `--network none`), `migrate --seed` sobre MySQL 8 y `scribe:generate` (el OpenAPI se publica como artefacto `openapi`). El CI construye su imagen con `APP_IMAGE`, que es el tag que compose usa para los servicios `app`/`horizon`/`scheduler`.
 
 Los assets (Vite) aún no se compilan dentro del contenedor; se resolverá en una fase posterior.
 
