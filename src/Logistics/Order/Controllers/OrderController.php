@@ -52,7 +52,7 @@ class OrderController extends Controller
      * Registers a new order in the system, taking into account idempotency, customer and agency validations, and applies dynamic tariff pricing.
      * Fires a background event when successful.
      *
-     * @apiResource Src\Logistics\Order\Resources\OrderResource
+     * @apiResource Src\Logistics\Order\Resources\OrderResource status=201
      *
      * @apiResourceModel Src\Logistics\Order\Models\Order
      *

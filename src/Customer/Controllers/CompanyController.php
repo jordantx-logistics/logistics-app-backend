@@ -39,7 +39,7 @@ class CompanyController extends Controller
      *
      * Creates a new company record, typically requiring RUC formatting and business names.
      *
-     * @apiResource Src\Customer\Resources\CompanyResource
+     * @apiResource Src\Customer\Resources\CompanyResource status=201
      *
      * @apiResourceModel Src\Customer\Models\Company
      *

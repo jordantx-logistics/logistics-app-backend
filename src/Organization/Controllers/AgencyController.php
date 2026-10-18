@@ -52,7 +52,7 @@ class AgencyController extends Controller
      *
      * Registers a new branch location where packages can be originated or received.
      *
-     * @apiResource Src\Organization\Resources\AgencyResource
+     * @apiResource Src\Organization\Resources\AgencyResource status=201
      *
      * @apiResourceModel Src\Organization\Models\Agency
      *

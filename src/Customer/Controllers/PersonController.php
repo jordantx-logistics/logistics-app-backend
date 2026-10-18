@@ -39,7 +39,7 @@ class PersonController extends Controller
      *
      * Creates a new person record in the database using their personal document (e.g. DNI).
      *
-     * @apiResource Src\Customer\Resources\PersonResource
+     * @apiResource Src\Customer\Resources\PersonResource status=201
      *
      * @apiResourceModel Src\Customer\Models\Person
      *

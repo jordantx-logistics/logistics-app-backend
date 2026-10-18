@@ -55,7 +55,7 @@ class PermissionController extends Controller
     /**
      * Create a new permission
      *
-     * @apiResource Src\Permission\Resources\PermissionResource
+     * @apiResource Src\Permission\Resources\PermissionResource status=201
      *
      * @apiResourceModel Src\Permission\Models\Permission
      */

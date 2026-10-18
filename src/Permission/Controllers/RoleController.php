@@ -60,7 +60,7 @@ class RoleController extends Controller
     /**
      * Create a new role
      *
-     * @apiResource Src\Permission\Resources\RoleResource
+     * @apiResource Src\Permission\Resources\RoleResource status=201
      *
      * @apiResourceModel Src\Permission\Models\Role
      */
