@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Str;
 use Src\Customer\Models\Person;
+use Src\Logistics\Order\Models\Order;
 use Src\Organization\Models\Agency;
 
 beforeEach(function () {
@@ -86,4 +87,121 @@ it('blocks rules invalidation for overweight', function () {
 
     $response->assertStatus(422)
         ->assertJsonPath('data.error_code', 'WEIGHT_EXCEEDED');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Listado de órdenes (Fase 1 §5.6)
+|--------------------------------------------------------------------------
+|
+| El listado es nuevo: permiso propio (`orders.view`, separado de
+| `orders.create`), ámbito de agencia y paginación estándar del spec
+| (`data` + `meta` + `links`).
+|
+*/
+
+/** Crea una orden directamente, sin pasar por el POST (ya cubierto arriba). */
+function makeOrder(array $attributes = []): Order
+{
+    static $sequence = 0;
+
+    return Order::create(array_merge([
+        'idempotency_key' => Str::uuid()->toString(),
+        'sender_id' => 1,
+        'receiver_id' => 1,
+        'weight_kg' => 10,
+        'total_amount' => 30,
+        'status' => 'pending',
+        'created_by' => 1,
+        // Agencias por defecto distintas en cada llamada, para que un test que
+        // no pase `origin_agency_id` no dependa de fixtures de otro.
+        'origin_agency_id' => ++$sequence,
+        'destination_agency_id' => ++$sequence,
+    ], $attributes));
+}
+
+it('lista las órdenes paginadas, de la más reciente a la más antigua', function () {
+    makeOrder(['origin_agency_id' => $this->origin->id, 'destination_agency_id' => $this->destination->id]);
+    $segunda = makeOrder(['origin_agency_id' => $this->origin->id, 'destination_agency_id' => $this->destination->id]);
+    $tercera = makeOrder(['origin_agency_id' => $this->origin->id, 'destination_agency_id' => $this->destination->id]);
+
+    $response = $this->withHeaders($this->headers)
+        ->getJson('/api/v1/logistics/orders?per_page=2');
+
+    $response->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.id', $tercera->id)
+        ->assertJsonPath('data.1.id', $segunda->id)
+        ->assertJsonPath('meta.total', 3)
+        ->assertJsonPath('meta.per_page', 2)
+        ->assertJsonPath('meta.last_page', 2)
+        ->assertJsonStructure([
+            'success',
+            'message',
+            'data' => [
+                '*' => [
+                    'id', 'ticket_number', 'ticket_code', 'status', 'weight_kg',
+                    'total_amount', 'sender_id', 'receiver_id',
+                    'origin_agency_id', 'destination_agency_id', 'created_at',
+                ],
+            ],
+            'meta' => ['current_page', 'per_page', 'total', 'last_page', 'from', 'to'],
+            'links' => ['first', 'last', 'prev', 'next'],
+        ]);
+});
+
+it('limita per_page al máximo permitido', function () {
+    $this->withHeaders($this->headers)
+        ->getJson('/api/v1/logistics/orders?per_page=1000')
+        ->assertOk()
+        ->assertJsonPath('meta.per_page', 100);
+});
+
+it('acota el listado a las órdenes que tocan las agencias del usuario', function () {
+    $agenciaA = Agency::factory()->create();
+    $agenciaB = Agency::factory()->create();
+
+    $saleDeA = makeOrder(['origin_agency_id' => $agenciaA->id, 'destination_agency_id' => $agenciaB->id]);
+    $llegaA = makeOrder(['origin_agency_id' => $agenciaB->id, 'destination_agency_id' => $agenciaA->id]);
+    makeOrder(['origin_agency_id' => $agenciaB->id, 'destination_agency_id' => $agenciaB->id]);
+
+    $supervisor = adminUser();
+    $supervisor->removeRole('admin');
+    $supervisor->assignRole('agency-supervisor');
+    $supervisor->agencies()->attach($agenciaA);
+
+    $this->actingAs($supervisor)
+        ->getJson('/api/v1/logistics/orders')
+        ->assertOk()
+        // Origen o destino: la orden cuenta para las dos agencias que toca.
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.id', $llegaA->id)
+        ->assertJsonPath('data.1.id', $saleDeA->id);
+});
+
+it('no deja ver órdenes a un usuario operativo sin agencia asignada', function () {
+    makeOrder(['origin_agency_id' => $this->origin->id, 'destination_agency_id' => $this->destination->id]);
+
+    $user = adminUser();
+    $user->removeRole('admin');
+    $user->assignRole('agency-supervisor');
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/logistics/orders')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
+it('responde 403 al listar órdenes sin orders.view', function () {
+    $user = adminUser();
+    $user->removeRole('admin');
+    $user->assignRole('cashier'); // Sin permisos todavía
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/logistics/orders')
+        ->assertForbidden();
+});
+
+it('exige sesión para listar órdenes', function () {
+    $this->getJson('/api/v1/logistics/orders')->assertUnauthorized();
 });

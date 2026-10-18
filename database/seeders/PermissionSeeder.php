@@ -32,6 +32,7 @@ class PermissionSeeder extends Seeder
      * @var list<string>
      */
     public const PERMISSIONS = [
+        'orders.view',
         'orders.create',
         'agencies.view',
         'agencies.manage',
@@ -56,19 +57,20 @@ class PermissionSeeder extends Seeder
 
         // Operación de su agencia (el filtro por agencia es el scope `forAgencies`).
         'agency-supervisor' => [
-            'orders.create',
+            'orders.view', 'orders.create',
             'agencies.view', 'agencies.manage',
             'persons.view', 'persons.manage',
             'companies.view', 'companies.manage',
         ],
 
         'counter' => [
-            'orders.create',
+            'orders.view', 'orders.create',
             'persons.view', 'persons.manage',
             'companies.view', 'companies.manage',
         ],
 
         'customer-service' => [
+            'orders.view',
             'persons.view',
             'companies.view',
         ],

@@ -4,9 +4,11 @@ namespace Src\Logistics\Order\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Src\Logistics\Order\Requests\CreateOrderRequest;
 use Src\Logistics\Order\Resources\OrderResource;
 use Src\Logistics\Order\UseCases\CreateOrderUseCase;
+use Src\Logistics\Order\UseCases\ListOrdersUseCase;
 
 /**
  * @group Logistics - Orders
@@ -15,6 +17,35 @@ use Src\Logistics\Order\UseCases\CreateOrderUseCase;
  */
 class OrderController extends Controller
 {
+    /**
+     * List Logistics Orders
+     *
+     * Returns the orders visible to the authenticated user, newest first, paginated with `page` and `per_page` (max 100).
+     *
+     * @apiResourceCollection Src\Logistics\Order\Resources\OrderResource
+     *
+     * @apiResourceModel Src\Logistics\Order\Models\Order paginate=15
+     *
+     * @apiResourceAdditional success=true message="Orders retrieved successfully."
+     */
+    public function index(Request $request, ListOrdersUseCase $useCase): JsonResponse
+    {
+        $perPage = min(
+            max($request->integer('per_page', ListOrdersUseCase::DEFAULT_PER_PAGE), 1),
+            ListOrdersUseCase::MAX_PER_PAGE,
+        );
+
+        $orders = $useCase->execute($request->user(), $perPage);
+
+        // El recurso envuelve el paginador: `successPaginated` solo añade el
+        // sobre, porque `data`/`meta`/`links` los emite Laravel (y así lo
+        // documenta Scribe con el `paginate=15` del docblock).
+        return $this->successPaginated(
+            resource: OrderResource::collection($orders),
+            message: 'Orders retrieved successfully.',
+        );
+    }
+
     /**
      * Create Logistics Order
      *

@@ -2,6 +2,7 @@
 
 namespace Src\Logistics\Order\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Src\Shared\Traits\HasTicketIdentifiers;
@@ -46,5 +47,27 @@ class Order extends Model
     public function getTicketPrefix(): string
     {
         return 'ORD';
+    }
+
+    /**
+     * Acota la consulta a las órdenes que tocan alguna de esas agencias,
+     * por origen o por destino (`spec/02-objetivo/04-autorizacion.md`, ámbito
+     * por agencia).
+     *
+     * Un array vacío no ve nada: un usuario operativo sin ámbito es un error de
+     * configuración, no un nacional. El bypass de los roles nacionales
+     * (`admin`, `analyst`) lo decide quien consulta, con `hasNationalScope()`.
+     *
+     * @param  Builder<Order>  $query
+     * @param  list<int>  $ids
+     * @return Builder<Order>
+     */
+    public function scopeForAgencies(Builder $query, array $ids): Builder
+    {
+        return $query->where(
+            fn (Builder $query) => $query
+                ->whereIn('origin_agency_id', $ids)
+                ->orWhereIn('destination_agency_id', $ids),
+        );
     }
 }
