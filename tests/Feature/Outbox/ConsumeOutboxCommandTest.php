@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -149,4 +150,20 @@ it('respeta el límite de eventos por pasada', function () {
 
     expect(OutboxEvent::query()->where('status', OutboxEvent::STATUS_PROCESSED)->count())->toBe(2)
         ->and(OutboxEvent::query()->where('status', OutboxEvent::STATUS_PENDING)->count())->toBe(1);
+});
+
+it('agenda el consumidor y los gauges de cola en el scheduler', function () {
+    // Sub-minuto con `repeatSeconds` (no con un cron de 6 campos): el evento se
+    // repite dentro del minuto, que es lo que sostiene el SLO de 5 s. Lo
+    // ejecuta el rol `scheduler` con `schedule:work` (ver el aviso de
+    // `07-devops/04` sobre el `schedule:run` por cron de DOKS).
+    $events = collect(app(Schedule::class)->events());
+
+    $consumer = $events->firstWhere(fn ($event) => str_contains($event->command ?? '', 'outbox:consume'));
+    $gauges = $events->firstWhere(fn ($event) => str_contains($event->command ?? '', 'metrics:collect'));
+
+    expect($consumer)->not->toBeNull()
+        ->and($consumer->expression)->toBe('* * * * *')
+        ->and($consumer->repeatSeconds)->toBe(5)
+        ->and($gauges->repeatSeconds)->toBe(15);
 });
