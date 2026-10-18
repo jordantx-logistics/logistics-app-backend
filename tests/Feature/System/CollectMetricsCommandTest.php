@@ -81,3 +81,11 @@ it('publica el backlog y la antigüedad del evento pendiente más viejo', functi
         ->toContain('outbox_pending_total{env="testing"} 1')
         ->toMatch('/outbox_pending_age_seconds\{env="testing"\} 12[0-9]/');
 });
+
+it('mide las mismas colas que supervisa Horizon', function () {
+    // `outbox.queues` decide qué gauges publica `metrics:collect`. Si Horizon
+    // pasa a supervisar otra cola y no se añade aquí, su backlog deja de verse
+    // sin que nada falle.
+    expect(collect(config('outbox.queues'))->sort()->values()->all())
+        ->toBe(collect(config('horizon.defaults.supervisor-1.queue'))->sort()->values()->all());
+});
