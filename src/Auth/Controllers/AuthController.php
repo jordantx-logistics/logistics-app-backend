@@ -165,6 +165,14 @@ class AuthController extends Controller
      * Consumes the token from the email and sets the new password. Revokes
      * every access token of the user.
      *
+     * `password_confirmation` is required by the validation rules (`confirmed`)
+     * but Scribe does not infer it from them, so it is declared by hand.
+     *
+     * @bodyParam token string required Token received by email. Example: 7a1f0c9d
+     * @bodyParam email string required Account email. Example: admin@test.com
+     * @bodyParam password string required New password (at least 8 characters). Example: NuevaClave123
+     * @bodyParam password_confirmation string required Repeat of the new password. Example: NuevaClave123
+     *
      * @response 200 {"success": true, "message": "Password reset successfully."}
      */
     public function resetPassword(ResetPasswordRequest $request, ResetPasswordUseCase $useCase): JsonResponse
