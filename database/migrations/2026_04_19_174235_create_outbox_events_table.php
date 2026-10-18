@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('event_type');
             $table->json('payload');
-            $table->string('status', 20)->default('pending'); // pending, processing, completed, failed
+            $table->string('status', 20)->default('pending'); // pending, processing, processed, failed
             $table->integer('attempts')->default(0);
             $table->text('error')->nullable();
             $table->timestamps();

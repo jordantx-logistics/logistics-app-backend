@@ -15,4 +15,11 @@ class EloquentCustomerDirectory implements CustomerDirectory
     {
         return Person::query()->whereKey($id)->exists();
     }
+
+    public function personEmail(int $id): ?string
+    {
+        $email = Person::query()->whereKey($id)->value('email');
+
+        return is_string($email) ? $email : null;
+    }
 }

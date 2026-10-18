@@ -49,6 +49,8 @@ class MakeModuleCommand extends Command
             'Controllers',
             'Events',
             'Exceptions',
+            'Jobs',
+            'Mail',
             'Models',
             'Requests',
             'Resources',

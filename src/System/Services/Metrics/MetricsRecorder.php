@@ -23,6 +23,14 @@ final class MetricsRecorder
 
     private readonly Gauge $databaseConnections;
 
+    private readonly Gauge $queueBacklog;
+
+    private readonly Counter $queueFailures;
+
+    private readonly Gauge $outboxPending;
+
+    private readonly Gauge $outboxPendingAge;
+
     /**
      * @param  float[]  $buckets  cortes del histograma de latencia, en segundos
      */
@@ -65,6 +73,39 @@ final class MetricsRecorder
             'Conexiones abiertas en el servidor de base de datos.',
             ['pool', 'env'],
         );
+
+        /*
+         * Las tres siguientes las alimenta `metrics:collect` desde el rol
+         * `scheduler`: leerlas por petición costaría una consulta por scrape en
+         * cada worker de Octane.
+         */
+        $this->queueBacklog = $registry->getOrRegisterGauge(
+            '',
+            'queue_backlog',
+            'Jobs esperando en cada cola.',
+            ['queue', 'env'],
+        );
+
+        $this->queueFailures = $registry->getOrRegisterCounter(
+            '',
+            'queue_failed_total',
+            'Jobs fallidos por cola (acumulado, nunca decrece).',
+            ['queue', 'env'],
+        );
+
+        $this->outboxPending = $registry->getOrRegisterGauge(
+            '',
+            'outbox_pending_total',
+            'Eventos del outbox pendientes de publicar.',
+            ['env'],
+        );
+
+        $this->outboxPendingAge = $registry->getOrRegisterGauge(
+            '',
+            'outbox_pending_age_seconds',
+            'Antigüedad del evento pendiente más viejo, en segundos.',
+            ['env'],
+        );
     }
 
     public function requestStarted(): void
@@ -90,5 +131,27 @@ final class MetricsRecorder
     public function recordDatabaseConnections(float $used, string $pool = 'default'): void
     {
         $this->databaseConnections->set($used, [$pool, $this->environment]);
+    }
+
+    public function recordQueueBacklog(string $queue, float $size): void
+    {
+        $this->queueBacklog->set($size, [$queue, $this->environment]);
+    }
+
+    /**
+     * Suma solo los fallos nuevos: el contador es monótono y `rate()` debe dar
+     * la tasa real, no el acumulado de la tabla.
+     */
+    public function recordQueueFailures(string $queue, int $newFailures): void
+    {
+        if ($newFailures > 0) {
+            $this->queueFailures->incBy($newFailures, [$queue, $this->environment]);
+        }
+    }
+
+    public function recordOutboxBacklog(int $pending, int $oldestSeconds): void
+    {
+        $this->outboxPending->set($pending, [$this->environment]);
+        $this->outboxPendingAge->set($oldestSeconds, [$this->environment]);
     }
 }

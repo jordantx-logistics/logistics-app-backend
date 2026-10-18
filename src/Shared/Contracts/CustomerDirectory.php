@@ -17,4 +17,10 @@ interface CustomerDirectory
      * ¿Existe una persona (cliente natural) con ese id?
      */
     public function personExists(int $id): bool;
+
+    /**
+     * Email de contacto de la persona, si lo tiene (en `persons` es opcional).
+     * Lo usa el correo de confirmación de la orden.
+     */
+    public function personEmail(int $id): ?string;
 }

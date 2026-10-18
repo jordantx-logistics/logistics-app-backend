@@ -22,6 +22,7 @@ docker compose exec app php artisan test
 docker compose exec app ./vendor/bin/pint
 docker compose exec app php artisan scribe:generate   # la doc generada no se versiona
 docker compose exec horizon php artisan horizon:status   # panel: http://localhost:8000/horizon
+docker compose exec scheduler php artisan outbox:consume  # el scheduler ya lo hace cada 5 s
 docker compose logs -f app
 ```
 
@@ -60,6 +61,7 @@ curl -s -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:8000/metrics
 
 - Acceso: con `METRICS_TOKEN` se exige el token; sin él solo se atiende desde red privada (dentro del clúster). `METRICS_ENABLED=false` apaga el endpoint (404).
 - Series expuestas: `http_requests_total`, `http_request_duration_seconds`, `db_connections_used` (gauge leído en el scrape) y `octane_workers_busy` (peticiones en curso).
+- Las de cola y outbox —`queue_backlog{queue}`, `queue_failed_total{queue}`, `outbox_pending_total` y `outbox_pending_age_seconds`— las calcula el comando `metrics:collect`, que agenda el rol `scheduler` cada 15 s: leerlas por petición costaría una consulta por scrape en cada worker de Octane.
 - El exporter nunca puede tumbar una petición: si el almacén falla se registra `metrics_unavailable` y la petición continúa.
 
 ## IA: Laravel Boost + MCP
@@ -108,7 +110,9 @@ Los cambios incompatibles de API no rompen `api/v1/` en caliente: se versionan (
 - Lógica de negocio en `src/<Contexto>/` (PSR-4 `Src\`); `app/` solo scaffolding.
 - Toda operación de negocio es un **UseCase**; los controladores son finos.
 - Validaciones de negocio en **Rules** dentro del `RulesPipeline`.
-- Estado de cambio se escribe en `outbox_events` dentro de la transacción (patrón outbox).
+- Estado de cambio se escribe en `outbox_events` dentro de la transacción (patrón outbox); el consumidor (`outbox:consume`, rol `scheduler`) los publica en las colas. No se despachan jobs desde un UseCase.
+- Qué jobs consume cada `event_type` se decide en `app/Providers/DomainServiceProvider.php` (`OutboxEventMap`), el único sitio que puede juntar contextos.
+- Cada job del outbox es **idempotente** con `ProcessedEvents::once($eventId, self::class, ...)`: el outbox garantiza *at-least-once*.
 - Respuestas siempre con `$this->success(...)` / `$this->error(...)`.
 - Rutas protegidas con `auth:api` (JWT) y permisos de `spatie/laravel-permission`.
 - Un contexto **no** importa modelos de otro contexto: se comunica por interfaz de dominio o evento (ADR-0006 y ADR-0001).

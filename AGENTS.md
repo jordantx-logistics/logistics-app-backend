@@ -18,9 +18,11 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose exec app php artisan test` — suite Pest. Con filtro: `... php artisan test --filter=OrderTest` o `... php artisan test tests/Feature/OrderTest.php`.
 - `docker compose exec app ./vendor/bin/pint` — formatea PHP (Laravel Pint).
 - `docker compose exec app php artisan migrate` / `php artisan migrate:fresh --seed` — el contenedor tiene que estar en la red de compose (los servicios se llaman `mysql` y `redis` en `.env`), no vale un `docker run` suelto: la migración de `spatie/laravel-permission` vacía su caché de permisos, así que `migrate` necesita el almacén de caché vivo (Redis en local/prod; `array` en tests, que es lo que fija `phpunit.xml`).
-- `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Adapters,Controllers,Events,Exceptions,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` automáticamente.
+- `docker compose exec app php artisan make:module Logistics/Shipment` — generador propio (ver `app/Console/Commands/MakeModuleCommand.php`); crea `src/<Name>/{Adapters,Controllers,Events,Exceptions,Jobs,Mail,Models,Requests,Resources,Rules,Services,UseCases}` + `routes.php`. No hace falta registrar nada más: `ModuleServiceProvider` descubre los `routes.php` y los comandos de `Console/Commands` automáticamente.
 - `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
-- `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código.
+- `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código. Vale igual para `scheduler` y `horizon`: también aguantan la aplicación en memoria, así que un comando o un job nuevos no existen hasta reiniciarlos.
+- `docker compose exec scheduler php artisan outbox:consume` — publica en las colas los eventos pendientes del outbox (lo agenda el rol `scheduler` cada 5 s; a mano sirve para depurar, con `--limit=N`).
+- `docker compose exec scheduler php artisan metrics:collect` — recalcula los gauges de cola y outbox (agendado cada 15 s).
 - `docker compose logs -f app` — logs JSON del servicio web.
 - `docker compose build app` — obligatorio tras tocar `Dockerfile` o `docker/entrypoint.sh` (se copian en la imagen, no están montados).
 - CI (`.github/workflows/ci.yml`) hace lo mismo **dentro de la imagen** y con el **mismo `docker-compose.yml`** que el entorno local: `pint --test`, `php artisan test` (sin red, `--network none`), `migrate --seed` sobre MySQL 8 y `scribe:generate` (el OpenAPI se publica como artefacto `openapi`). El CI construye su imagen con `APP_IMAGE`, que es el tag que compose usa para los servicios `app`/`horizon`/`scheduler`.
@@ -35,10 +37,12 @@ Business code lives in **`src/`** (PSR-4 `Src\\`), NOT `app/`. `app/` only holds
 
 ```
 src/<Module>/
-  Adapters/  Controllers/  Events/  Exceptions/  Models/  Requests/
-  Resources/  Rules/  Services/  UseCases/
+  Adapters/  Console/Commands/  Controllers/  Events/  Exceptions/
+  Jobs/  Mail/  Models/  Requests/  Resources/  Rules/  Services/  UseCases/
   routes.php
 ```
+
+Las carpetas de capa —`Models`, `UseCases`, `Jobs`, `Console`…— son las que cierran el nombre del contexto; la lista vive en `tests/Feature/Architecture/ContextBoundariesTest.php`. `ModuleServiceProvider` descubre los `routes.php` y los comandos de `src/*/Console/Commands` y `src/*/*/Console/Commands` sin registro manual.
 
 Current modules: `Auth`, `Customer` (Persons/Companies), `Organization` (Agencies), `Logistics/Order`, `Logistics/Payment`, `System` (health checks), plus cross-cutting `Shared/`.
 
@@ -63,7 +67,7 @@ Controller → FormRequest (validation) → **UseCase** (orchestration) → **Ru
 
 - **UseCases** (`src/*/UseCases/*UseCase.php`) are the single entry point for business operations. Controllers are thin: validate, delegate, respond.
 - **Rules** are pipeline stages with `handle($payload, Closure $next)` run via `Src\Shared\Pipelines\RulesPipeline::run($data, [RuleA::class, RuleB::class])`. They throw `BusinessRuleException` on failure (see `CreateOrderUseCase` for the canonical pattern). Rules are resolved from the container, so a rule that needs another context takes its **port** in the constructor (see `ValidateCustomerExists`).
-- **Outbox pattern**: state-changing UseCases write to `outbox_events` inside the same DB transaction as the domain row. Do not dispatch jobs/events directly from UseCases — write an `OutboxEvent` row and let downstream workers consume it.
+- **Outbox pattern**: state-changing UseCases write to `outbox_events` inside the same DB transaction as the domain row. Do not dispatch jobs/events directly from UseCases — write an `OutboxEvent` row and let the consumer publish it (ver «Outbox (asincronía)»).
 - **Ticket identifiers**: models using `Src\Shared\Traits\HasTicketIdentifiers` auto-populate `ticket_code` and `ticket_number` on `creating`. The model must implement `getTicketPrefix(): string` (e.g. `'ORD'`). Numbers come from the `sequences` table under a `lockForUpdate()`, so tests must use a real DB connection (SQLite `:memory:` is fine).
 
 ### API responses
@@ -94,6 +98,7 @@ El canal por defecto es `json` (`config/logging.php`): una línea JSON por regis
 
 - `RecordHttpMetrics` (global) alimenta `http_requests_total{route,method,status,env}` y `http_request_duration_seconds{route,env}` usando el **patrón** de ruta (`api/v1/orders/{order}`) o `unmatched`: la URL nunca es etiqueta, o cada id abriría una serie temporal.
 - `db_connections_used{pool,env}` se lee en cada scrape (`Threads_connected` de MySQL; `null` en SQLite) y `octane_workers_busy{env}` es una aproximación: peticiones en curso, que se descuadra si un worker muere a mitad (ver `MetricsRecorder`).
+- `queue_backlog{queue,env}`, `queue_failed_total{queue,env}`, `outbox_pending_total{env}` y `outbox_pending_age_seconds{env}` las calcula `metrics:collect` desde el rol `scheduler` cada 15 s (leerlas por petición costaría una consulta por scrape en cada worker): el tamaño de cada cola se le pregunta al driver (`Queue::size`, así el nombre de la clave de Redis es cosa del driver), los fallos se cuentan como contador monótono desde `failed_jobs` (solo las filas nuevas, con el último id visto en caché) y el backlog del outbox sale de `outbox_events`. Un gauge que no se puede leer se omite; nunca tumba el scrape.
 - El almacén es Redis (`METRICS_STORAGE`) para que el contador sea común a todos los workers de Octane; en tests es `in-memory`. `CollectorRegistry` está en `config/octane.php` → `warm` para no abrir una conexión de Redis por petición.
 - Acceso: con `METRICS_TOKEN` hay que enviarlo (`Authorization: Bearer <token>` o `?token=`); sin token solo se atiende desde red privada/loopback. `METRICS_ENABLED=false` deja el endpoint en 404 y el exporter apagado.
 - El exporter nunca puede cambiar una respuesta: si el almacén falla se registra `metrics_unavailable` y la petición sigue.
@@ -108,6 +113,16 @@ Horizon (Fase 1) gestiona los workers sobre **Redis**. El worker es el servicio 
 - `routes/console.php` agenda `horizon:snapshot` cada 5 minutos —el paquete registra el comando pero **no** lo programa—; lo ejecuta el rol `scheduler` y alimenta las gráficas del panel (más adelante, los gauges de cola de Prometheus).
 - Acceso: en local entra cualquiera; fuera de local, solo los emails de `HORIZON_ALLOWED_EMAILS` (vacía = nadie). En staging/producción la barrera de verdad es el borde (Cloudflare Access) y el panel no se publica. La gate vive en `app/Providers/HorizonServiceProvider.php` y `tests/Feature/System/HorizonTest.php` la fija.
 - Al instalar o actualizar un paquete hace falta `php artisan octane:reload`: los workers de Octane llevan la aplicación en memoria y las rutas nuevas (por ejemplo `/horizon`) no existen hasta recargar.
+
+### Outbox (asincronía)
+
+Los UseCases escriben un `OutboxEvent` en la misma transacción que el cambio de dominio; nadie despacha jobs a mano (`spec/02-objetivo/05-asincronia-y-eventos.md`).
+
+- `outbox:consume` (`src/Shared/Console/Commands/ConsumeOutboxCommand.php`) lo agenda el rol `scheduler` cada 5 s —el SLO es `pending` → `processed` con p95 ≤ 5 s—. Reclama el lote con `lockForUpdate` (dos consumidores no publican el mismo evento), lo pasa a `processing` y lo marca `processed` al despacharlo. Si el despacho falla reintenta con backoff exponencial (`config/outbox.php`) y, agotados los intentos, queda `failed` para inspección manual.
+- Un evento atascado en `processing` (el consumidor murió a mitad) vuelve a `pending` pasados `outbox.processing_timeout` segundos. Un `event_type` que nadie consume va directo a `failed`: es un hueco de configuración, reintentarlo no arregla nada.
+- El mapa `event_type` → jobs se compone en `app/Providers/DomainServiceProvider.php` (`Src\Shared\Services\OutboxEventMap`), porque `Shared` no importa contextos (ADR-0006); cada job decide su cola con `onQueue()`.
+- Idempotencia: `ProcessedEvents::once($outboxEventId, self::class, ...)` ejecuta el efecto y anota `(evento, handler)` en `processed_events` dentro de la misma transacción, y el índice único cubre la carrera de dos workers. El outbox es *at-least-once*: el evento se marca `processed` al **publicarse**, no al ejecutarse el job.
+- Jobs de referencia: `GenerateOrderGuidePdfJob` y `SendOrderConfirmationMailJob` en `default`, `ProjectOrderCreatedJob` en `sync` (placeholder de la Fase 4). El de la guía guarda por ahora un borrador HTML en `storage/app/private/orders/<id>/`: el documento definitivo (y el motor PDF) es de la Fase 3.
 
 ### API docs
 

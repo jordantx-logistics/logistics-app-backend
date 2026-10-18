@@ -13,3 +13,13 @@ Artisan::command('inspire', function () {
 // comando pero no lo programa, así que se agenda aquí; lo ejecuta el rol
 // `scheduler` (`php artisan schedule:work`), no la web.
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
+
+// Consumidor del outbox: publica en las colas los eventos que escriben los
+// UseCases. Cada 5 s es lo que pide el SLO de la fase (`order.created` pasa de
+// `pending` a `processed` con p95 ≤ 5 s). No necesita `withoutOverlapping`: dos
+// consumidores a la vez se reparten el lote por `lockForUpdate`.
+Schedule::command('outbox:consume')->everyFiveSeconds();
+
+// Gauges que no se pueden calcular en el scrape (backlog de colas, fallos y
+// antigüedad del evento pendiente más viejo).
+Schedule::command('metrics:collect')->everyFifteenSeconds();
