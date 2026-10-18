@@ -93,7 +93,7 @@ it('guarda el borrador de la guía en el disco privado', function () {
 
     app()->call([$job, 'handle']);
 
-    Storage::disk(GenerateOrderGuidePdfJob::DISK)->assertExists('orders/10/guia-A7F3Q8X4.html');
+    Storage::disk(GenerateOrderGuidePdfJob::DISK)->assertExists('orders/A7F3Q8X4/guia-borrador.html');
 
     expect(Storage::disk(GenerateOrderGuidePdfJob::DISK)->get($job->path()))
         ->toContain('ORD-2026-000010');

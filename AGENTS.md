@@ -122,7 +122,7 @@ Los UseCases escriben un `OutboxEvent` en la misma transacción que el cambio de
 - Un evento atascado en `processing` (el consumidor murió a mitad) vuelve a `pending` pasados `outbox.processing_timeout` segundos. Un `event_type` que nadie consume va directo a `failed`: es un hueco de configuración, reintentarlo no arregla nada.
 - El mapa `event_type` → jobs se compone en `app/Providers/DomainServiceProvider.php` (`Src\Shared\Services\OutboxEventMap`), porque `Shared` no importa contextos (ADR-0006); cada job decide su cola con `onQueue()`.
 - Idempotencia: `ProcessedEvents::once($outboxEventId, self::class, ...)` ejecuta el efecto y anota `(evento, handler)` en `processed_events` dentro de la misma transacción, y el índice único cubre la carrera de dos workers. El outbox es *at-least-once*: el evento se marca `processed` al **publicarse**, no al ejecutarse el job.
-- Jobs de referencia: `GenerateOrderGuidePdfJob` y `SendOrderConfirmationMailJob` en `default`, `ProjectOrderCreatedJob` en `sync` (placeholder de la Fase 4). El de la guía guarda por ahora un borrador HTML en `storage/app/private/orders/<id>/`: el documento definitivo (y el motor PDF) es de la Fase 3.
+- Jobs de referencia: `GenerateOrderGuidePdfJob` y `SendOrderConfirmationMailJob` en `default`, `ProjectOrderCreatedJob` en `sync` (placeholder de la Fase 4). El de la guía guarda por ahora un borrador HTML en `storage/app/private/orders/<ticket_code>/`: el documento definitivo (y el motor PDF) es de la Fase 3.
 
 ### API docs
 

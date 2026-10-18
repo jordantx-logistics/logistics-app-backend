@@ -39,14 +39,15 @@ final class GenerateOrderGuidePdfJob implements ShouldQueue
     }
 
     /**
-     * `orders/<order_id>/guia-<ticket_code>.html`. El `ticket_code` es único,
-     * así que reejecutar el job no pisa la guía de otra orden.
+     * `orders/<ticket_code>/guia-borrador.html`: la estructura que fija
+     * `07-devops/08-respaldo-y-dr.md` para los documentos de una orden. El
+     * `ticket_code` es único, así que dos órdenes no se pisan; y el nombre es
+     * estable para que el documento definitivo lo sustituya sin mover rutas.
      */
     public function path(): string
     {
-        $orderId = (int) ($this->payload['order_id'] ?? 0);
-        $ticket = (string) ($this->payload['ticket_code'] ?? 'sin-ticket');
+        $folder = (string) ($this->payload['ticket_code'] ?? $this->payload['order_id'] ?? 'sin-ticket');
 
-        return "orders/{$orderId}/guia-{$ticket}.html";
+        return "orders/{$folder}/guia-borrador.html";
     }
 }
