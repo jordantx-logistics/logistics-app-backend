@@ -15,4 +15,9 @@ class EloquentAgencyDirectory implements AgencyDirectory
     {
         return Agency::query()->whereKey($id)->exists();
     }
+
+    public function agencyIsActive(int $id): bool
+    {
+        return Agency::query()->whereKey($id)->where('is_active', true)->exists();
+    }
 }

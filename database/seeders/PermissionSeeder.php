@@ -48,6 +48,7 @@ class PermissionSeeder extends Seeder
 
         // Identity (Fase 2): RRHH, marcaciones y dispositivos.
         'employees.manage',
+        'attendance.view',
         'attendance.register',
         'attendance.manage',
         'devices.manage',

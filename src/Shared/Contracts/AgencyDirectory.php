@@ -16,4 +16,12 @@ interface AgencyDirectory
      * ¿Existe una agencia con ese id?
      */
     public function agencyExists(int $id): bool;
+
+    /**
+     * ¿Existe la agencia y está activa?
+     *
+     * Lo exige el alta de empleado (`EMPLOYEE_AGENCY_INVALID`) y, más adelante,
+     * la resolución de tarifas por agencia.
+     */
+    public function agencyIsActive(int $id): bool;
 }
