@@ -2,7 +2,7 @@
 
 namespace Src\Customer\Adapters;
 
-use Src\Customer\Models\Person;
+use Src\Customer\Models\Customer;
 use Src\Shared\Contracts\CustomerDirectory;
 
 /**
@@ -11,14 +11,14 @@ use Src\Shared\Contracts\CustomerDirectory;
  */
 class EloquentCustomerDirectory implements CustomerDirectory
 {
-    public function personExists(int $id): bool
+    public function customerExists(int $id): bool
     {
-        return Person::query()->whereKey($id)->exists();
+        return Customer::query()->whereKey($id)->exists();
     }
 
-    public function personEmail(int $id): ?string
+    public function customerEmail(int $id): ?string
     {
-        $email = Person::query()->whereKey($id)->value('email');
+        $email = Customer::query()->whereKey($id)->value('email');
 
         return is_string($email) ? $email : null;
     }

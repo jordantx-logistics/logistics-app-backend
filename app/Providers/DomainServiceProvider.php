@@ -11,6 +11,7 @@ use Src\Identity\Device\Adapters\EloquentDeviceRegistrar;
 use Src\Identity\Employee\Adapters\EloquentEmployeeDirectory;
 use Src\Identity\Employee\Models\Employee;
 use Src\Identity\Employee\Policies\EmployeePolicy;
+use Src\Logistics\Order\Adapters\EloquentCustomerOrderQuery;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
 use Src\Logistics\Order\Jobs\ProjectOrderCreatedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
@@ -19,6 +20,7 @@ use Src\Organization\Models\Agency;
 use Src\Organization\Policies\AgencyPolicy;
 use Src\Shared\Contracts\AgencyDirectory;
 use Src\Shared\Contracts\CustomerDirectory;
+use Src\Shared\Contracts\CustomerOrderQuery;
 use Src\Shared\Contracts\DeviceRegistrar;
 use Src\Shared\Contracts\EmployeeDirectory;
 use Src\Shared\Services\OutboxEventMap;
@@ -38,6 +40,7 @@ class DomainServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(CustomerDirectory::class, EloquentCustomerDirectory::class);
+        $this->app->singleton(CustomerOrderQuery::class, EloquentCustomerOrderQuery::class);
         $this->app->singleton(AgencyDirectory::class, EloquentAgencyDirectory::class);
         $this->app->singleton(EmployeeDirectory::class, EloquentEmployeeDirectory::class);
         $this->app->singleton(DeviceRegistrar::class, EloquentDeviceRegistrar::class);

@@ -16,13 +16,13 @@ class ValidateCustomerExists
     {
         $senderId = (int) $payload['sender_id'];
 
-        if (! $this->customers->personExists($senderId)) {
+        if (! $this->customers->customerExists($senderId)) {
             throw new BusinessRuleException("Sender with ID {$senderId} not found.", 'SENDER_NOT_FOUND');
         }
 
         $receiverId = (int) $payload['receiver_id'];
 
-        if (! $this->customers->personExists($receiverId)) {
+        if (! $this->customers->customerExists($receiverId)) {
             throw new BusinessRuleException("Receiver with ID {$receiverId} not found.", 'RECEIVER_NOT_FOUND');
         }
 

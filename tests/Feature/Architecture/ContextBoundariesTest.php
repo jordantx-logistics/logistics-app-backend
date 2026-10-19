@@ -83,8 +83,9 @@ it('no importa clases de otro contexto', function () {
 });
 
 it('no declara claves foráneas hacia tablas de otro contexto', function () {
-    // ADR-0006: `orders.sender_id`/`receiver_id` referencian persons y
-    // `payments.order_id` referencia orders, pero sin FOREIGN KEY.
+    // ADR-0006: `orders.sender_id`/`receiver_id` referencian clientes
+    // (`customers`, contexto Customer) y `payments.order_id` referencia orders,
+    // pero sin FOREIGN KEY.
     expect(Schema::getForeignKeys('orders'))->toBe([])
         ->and(Schema::getForeignKeys('payments'))->toBe([]);
 

@@ -32,14 +32,19 @@ class PermissionSeeder extends Seeder
      * @var list<string>
      */
     public const PERMISSIONS = [
+        // Logística (Fase 3).
         'orders.view',
         'orders.create',
+        'orders.update',
+        'orders.confirm',
+        'orders.cancel',
+        'customers.view',
+        'customers.manage',
+        'tariffs.manage',
+        'locations.manage',
+
         'agencies.view',
         'agencies.manage',
-        'persons.view',
-        'persons.manage',
-        'companies.view',
-        'companies.manage',
         'roles.view',
         'roles.manage',
         'permissions.view',
@@ -64,22 +69,26 @@ class PermissionSeeder extends Seeder
 
         // Operación de su agencia (el filtro por agencia es el scope `forAgencies`).
         'agency-supervisor' => [
-            'orders.view', 'orders.create',
+            'orders.view', 'orders.create', 'orders.update', 'orders.confirm', 'orders.cancel',
+            'customers.view', 'customers.manage',
             'agencies.view', 'agencies.manage',
-            'persons.view', 'persons.manage',
-            'companies.view', 'companies.manage',
         ],
 
         'counter' => [
-            'orders.view', 'orders.create',
-            'persons.view', 'persons.manage',
-            'companies.view', 'companies.manage',
+            'orders.view', 'orders.create', 'orders.update',
+            'customers.view', 'customers.manage',
         ],
 
         'customer-service' => [
             'orders.view',
-            'persons.view',
-            'companies.view',
+            'customers.view',
+        ],
+
+        // Nacional de lectura: ve todas las órdenes (`hasNationalScope`) pero no
+        // las toca.
+        'analyst' => [
+            'orders.view',
+            'customers.view',
         ],
 
         // Sin permisos todavía: llegan con su módulo y su fase.
@@ -87,7 +96,6 @@ class PermissionSeeder extends Seeder
         'warehouse-operator' => [],
         'driver' => [],
         'courier' => [],
-        'analyst' => [],
 
         // Marcaciones propias (Fase 2): el único rol operativo que ya tiene
         // permiso; los de RRHH llegan con los endpoints de Identity.
@@ -105,6 +113,11 @@ class PermissionSeeder extends Seeder
         foreach (self::PERMISSIONS as $permission) {
             Permission::findOrCreate($permission, $guard);
         }
+
+        // El catálogo es la fuente de verdad: un permiso retirado (p. ej.
+        // `persons.*`/`companies.*`, que la Fase 3 sustituye por `customers.*`)
+        // se borra para que ningún `routes.php` pueda seguir declarándolo.
+        Permission::query()->whereNotIn('name', self::PERMISSIONS)->delete();
 
         // `findOrCreate` deja la colección de permisos *cargada y vacía* en el
         // registrador de Spatie (la leyó antes de crearlos). Sin invalidarla

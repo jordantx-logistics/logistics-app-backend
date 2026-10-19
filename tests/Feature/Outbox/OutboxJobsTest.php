@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Src\Customer\Models\Person;
+use Src\Customer\Models\Customer;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
 use Src\Logistics\Order\Jobs\ProjectOrderCreatedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
@@ -40,7 +40,7 @@ function makeOrderForJob(int $senderId): Order
 it('envía la confirmación al email del remitente', function () {
     Mail::fake();
 
-    $sender = Person::factory()->create(['email' => 'cliente@ejemplo.test']);
+    $sender = Customer::factory()->create(['email' => 'cliente@ejemplo.test']);
     $order = makeOrderForJob($sender->id);
 
     $job = new SendOrderConfirmationMailJob(1, [
@@ -59,7 +59,7 @@ it('envía la confirmación al email del remitente', function () {
 it('no envía nada si el remitente no tiene email', function () {
     Mail::fake();
 
-    $sender = Person::factory()->create(['email' => null]);
+    $sender = Customer::factory()->create(['email' => null]);
     $order = makeOrderForJob($sender->id);
 
     app()->call([new SendOrderConfirmationMailJob(1, ['order_id' => $order->id]), 'handle']);
@@ -70,7 +70,7 @@ it('no envía nada si el remitente no tiene email', function () {
 it('no reenvía el correo si el evento ya se procesó', function () {
     Mail::fake();
 
-    $sender = Person::factory()->create();
+    $sender = Customer::factory()->create();
     $order = makeOrderForJob($sender->id);
     $payload = ['order_id' => $order->id];
 

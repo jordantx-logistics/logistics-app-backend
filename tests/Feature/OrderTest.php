@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Str;
-use Src\Customer\Models\Person;
+use Src\Customer\Models\Customer;
 use Src\Logistics\Order\Models\Order;
 use Src\Organization\Models\Agency;
 
@@ -9,8 +9,10 @@ beforeEach(function () {
     $this->user = adminUser();
     $this->headers = tokenHeadersFor($this->user);
 
-    $this->sender = Person::factory()->create();
-    $this->receiver = Person::factory()->create();
+    // Desde la Fase 3 el remitente/destinatario es un **cliente** (`customers`),
+    // no una persona: el puerto `CustomerDirectory` resuelve contra el agregado.
+    $this->sender = Customer::factory()->create();
+    $this->receiver = Customer::factory()->create();
     $this->origin = Agency::factory()->create();
     $this->destination = Agency::factory()->create();
 });

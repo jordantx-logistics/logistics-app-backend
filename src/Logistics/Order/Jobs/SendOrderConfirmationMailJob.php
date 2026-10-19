@@ -15,9 +15,9 @@ use Src\Shared\Services\ProcessedEvents;
  * Correo de confirmación al remitente (cola `default`).
  *
  * El payload del evento no trae el email —es dato del contexto `Customer`—, así
- * que se resuelve por el puerto `CustomerDirectory`. Si la persona no tiene
- * email no se envía nada: en `persons` es opcional, y no tenerlo no es un fallo
- * que deba reintentarse.
+ * que se resuelve por el puerto `CustomerDirectory`. Si el cliente no tiene
+ * email no se envía nada: en `customers` es opcional, y no tenerlo no es un
+ * fallo que deba reintentarse.
  */
 final class SendOrderConfirmationMailJob implements ShouldQueue
 {
@@ -43,7 +43,7 @@ final class SendOrderConfirmationMailJob implements ShouldQueue
             return;
         }
 
-        $email = $customers->personEmail((int) $order->sender_id);
+        $email = $customers->customerEmail((int) $order->sender_id);
 
         if ($email === null) {
             Log::info('order.confirmation_skipped', [
