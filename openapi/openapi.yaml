@@ -17,6 +17,18 @@ tags:
     name: 'Customer - Persons'
     description: "\nAPIs for managing individual customers."
   -
+    name: 'Identity - Attendance'
+    description: "\nAPIs para registrar, anular y consultar marcaciones de asistencia (UC-17/UC-18)."
+  -
+    name: 'Identity - Devices'
+    description: "\nAPIs para listar y revocar dispositivos con token (UC-19)."
+  -
+    name: 'Identity - Employees'
+    description: "\nAPIs para gestionar empleados de RRHH (UC-08/UC-09)."
+  -
+    name: 'Identity - Users'
+    description: "\nAPIs para administrar usuarios, su estado y su ámbito de agencia (UC-01, UC-06, UC-07, UC-16)."
+  -
     name: 'Logistics - Orders'
     description: "\nAPIs for managing core logistic orders."
   -
@@ -148,7 +160,15 @@ paths:
                   description: 'Must not be greater than 100 characters.'
                 platform:
                   type: string
-                  description: 'Must not be greater than 50 characters.'
+                  description: 'This field is required when <code>device_uuid</code> is present. Must not be greater than 50 characters.'
+                  nullable: true
+                device_uuid:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                app_version:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
                   nullable: true
               required:
                 - email
@@ -536,6 +556,1493 @@ paths:
                 - document_number
                 - first_name
                 - last_name
+  /api/v1/identity/attendance:
+    get:
+      summary: 'List Attendance'
+      operationId: listAttendance
+      description: 'Lista las marcaciones visibles para el usuario, filtrables por empleado, agencia, estado y rango de fechas.'
+      parameters:
+        -
+          in: query
+          name: employee_id
+          description: 'Filtra por empleado.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filtra por empleado.'
+        -
+          in: query
+          name: agency_id
+          description: 'Filtra por agencia.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filtra por agencia.'
+        -
+          in: query
+          name: status
+          description: 'valid,late,duplicate,voided.'
+          required: false
+          schema:
+            type: string
+            description: 'valid,late,duplicate,voided.'
+        -
+          in: query
+          name: from
+          description: 'Fecha ISO-8601 inferior (inclusive).'
+          required: false
+          schema:
+            type: string
+            description: 'Fecha ISO-8601 inferior (inclusive).'
+        -
+          in: query
+          name: to
+          description: 'Fecha ISO-8601 superior (inclusive).'
+          required: false
+          schema:
+            type: string
+            description: 'Fecha ISO-8601 superior (inclusive).'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, por defecto 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, por defecto 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        employee_id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        type:
+                          type: string
+                        marked_at:
+                          type: string
+                        source:
+                          type: string
+                        device_id:
+                          type: string
+                          nullable: true
+                        latitude:
+                          type: string
+                          nullable: true
+                        longitude:
+                          type: string
+                          nullable: true
+                        ip_address:
+                          type: string
+                        status:
+                          type: string
+                        idempotency_key:
+                          type: string
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Attendance'
+    post:
+      summary: 'Register Attendance'
+      operationId: registerAttendance
+      description: 'Registra una marcación de entrada/salida de un empleado. Es idempotente por `idempotency_key`, por lo que los reintentos offline no duplican registros.'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      employee_id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      marked_at:
+                        type: string
+                      source:
+                        type: string
+                      device_id:
+                        type: string
+                        nullable: true
+                      latitude:
+                        type: string
+                        nullable: true
+                      longitude:
+                        type: string
+                        nullable: true
+                      ip_address:
+                        type: string
+                      status:
+                        type: string
+                      idempotency_key:
+                        type: string
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Attendance'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                employee_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                type:
+                  type: string
+                  description: ''
+                  enum:
+                    - in
+                    - out
+                    - break-start
+                    - break-end
+                marked_at:
+                  type: string
+                  description: 'Must be a valid date.'
+                  nullable: true
+                source:
+                  type: string
+                  description: ''
+                  enum:
+                    - web
+                    - app
+                    - pda
+                    - biometric
+                  nullable: true
+                device_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the devices table.'
+                  nullable: true
+                latitude:
+                  type: number
+                  description: 'Must be between -90 and 90.'
+                  nullable: true
+                longitude:
+                  type: number
+                  description: 'Must be between -180 and 180.'
+                  nullable: true
+                idempotency_key:
+                  type: string
+                  description: 'Must not be greater than 64 characters.'
+              required:
+                - employee_id
+                - agency_id
+                - type
+                - idempotency_key
+  /api/v1/identity/attendance/summary:
+    get:
+      summary: 'Attendance Summary'
+      operationId: attendanceSummary
+      description: 'Consolidado diario por empleado (`attendance_days`), filtrable por empleado y rango de fechas.'
+      parameters:
+        -
+          in: query
+          name: employee_id
+          description: 'Filtra por empleado.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filtra por empleado.'
+        -
+          in: query
+          name: from
+          description: 'Fecha inferior (inclusive).'
+          required: false
+          schema:
+            type: string
+            description: 'Fecha inferior (inclusive).'
+        -
+          in: query
+          name: to
+          description: 'Fecha superior (inclusive).'
+          required: false
+          schema:
+            type: string
+            description: 'Fecha superior (inclusive).'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, por defecto 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, por defecto 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employee_id:
+                          type: integer
+                        work_date:
+                          type: string
+                        first_in_at:
+                          type: string
+                        last_out_at:
+                          type: string
+                        worked_minutes:
+                          type: integer
+                        late_minutes:
+                          type: integer
+                        status:
+                          type: string
+      tags:
+        - 'Identity - Attendance'
+  '/api/v1/identity/attendance/{attendance_id}/void':
+    post:
+      summary: 'Void Attendance'
+      operationId: voidAttendance
+      description: 'Anula una marcación (RRHH). El consolidado del día se recalcula sin ella.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Attendance'
+    parameters:
+      -
+        in: path
+        name: attendance_id
+        description: 'The ID of the attendance.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/identity/devices:
+    get:
+      summary: 'List Devices'
+      operationId: listDevices
+      description: 'Lista los dispositivos del usuario (o los de otro usuario con `user_id` si se tiene `devices.manage`).'
+      parameters:
+        -
+          in: query
+          name: user_id
+          description: 'Dispositivos de otro usuario (requiere `devices.manage`).'
+          required: false
+          schema:
+            type: integer
+            description: 'Dispositivos de otro usuario (requiere `devices.manage`).'
+        -
+          in: query
+          name: status
+          description: 'active,revoked.'
+          required: false
+          schema:
+            type: string
+            description: 'active,revoked.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, por defecto 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, por defecto 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        user_id:
+                          type: integer
+                        device_name:
+                          type: string
+                        platform:
+                          type: string
+                        device_uuid:
+                          type: string
+                        app_version:
+                          type: string
+                        status:
+                          type: string
+                        last_seen_at:
+                          type: string
+                        revoked_at:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Devices'
+  '/api/v1/identity/devices/{device_id}':
+    delete:
+      summary: 'Revoke Device'
+      operationId: revokeDevice
+      description: 'Revoca el dispositivo y sus tokens: la siguiente petición con ese token responde `401`.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Devices'
+    parameters:
+      -
+        in: path
+        name: device_id
+        description: 'The ID of the device.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/identity/employees:
+    get:
+      summary: 'List Employees'
+      operationId: listEmployees
+      description: 'Lista los empleados visibles para el usuario, filtrables por estado, agencia y texto.'
+      parameters:
+        -
+          in: query
+          name: status
+          description: 'active,on_leave,terminated.'
+          required: false
+          schema:
+            type: string
+            description: 'active,on_leave,terminated.'
+        -
+          in: query
+          name: agency_id
+          description: 'Agencia base.'
+          required: false
+          schema:
+            type: integer
+            description: 'Agencia base.'
+        -
+          in: query
+          name: q
+          description: 'Busca por documento o nombre.'
+          required: false
+          schema:
+            type: string
+            description: 'Busca por documento o nombre.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, por defecto 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, por defecto 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        person_id:
+                          type: string
+                          nullable: true
+                        document_type:
+                          type: string
+                        document_number:
+                          type: string
+                        first_name:
+                          type: string
+                        last_name:
+                          type: string
+                        full_name:
+                          type: string
+                        email:
+                          type: string
+                        phone:
+                          type: string
+                        position:
+                          type: string
+                        agency_id:
+                          type: integer
+                        hired_at:
+                          type: string
+                        terminated_at:
+                          type: string
+                          nullable: true
+                        status:
+                          type: string
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Employees'
+    post:
+      summary: 'Create Employee'
+      operationId: createEmployee
+      description: 'Da de alta un empleado de RRHH (UC-08).'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      person_id:
+                        type: string
+                        nullable: true
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      full_name:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      position:
+                        type: string
+                      agency_id:
+                        type: integer
+                      hired_at:
+                        type: string
+                      terminated_at:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Employees'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                person_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                  nullable: true
+                document_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - DNI
+                    - CE
+                    - PASSPORT
+                document_number:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                first_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                last_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                  nullable: true
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+                position:
+                  type: string
+                  description: 'Must not be greater than 80 characters.'
+                agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                hired_at:
+                  type: string
+                  description: 'Must be a valid date.'
+                terminated_at:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>hired_at</code>.'
+                  nullable: true
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - active
+                    - on_leave
+                    - terminated
+                  nullable: true
+              required:
+                - document_type
+                - document_number
+                - first_name
+                - last_name
+                - position
+                - agency_id
+                - hired_at
+  '/api/v1/identity/employees/{employee_id}':
+    get:
+      summary: 'Request Employee Details'
+      operationId: requestEmployeeDetails
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      person_id:
+                        type: string
+                        nullable: true
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      full_name:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      position:
+                        type: string
+                      agency_id:
+                        type: integer
+                      hired_at:
+                        type: string
+                      terminated_at:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Employees'
+    put:
+      summary: 'Modify Employee'
+      operationId: modifyEmployee
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      person_id:
+                        type: string
+                        nullable: true
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      full_name:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      position:
+                        type: string
+                      agency_id:
+                        type: integer
+                      hired_at:
+                        type: string
+                      terminated_at:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Employees'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                person_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                  nullable: true
+                document_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - DNI
+                    - CE
+                    - PASSPORT
+                document_number:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                first_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                last_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                  nullable: true
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+                position:
+                  type: string
+                  description: 'Must not be greater than 80 characters.'
+                agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                hired_at:
+                  type: string
+                  description: 'Must be a valid date.'
+                terminated_at:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>hired_at</code>.'
+                  nullable: true
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - active
+                    - on_leave
+                    - terminated
+                  nullable: true
+              required:
+                - document_type
+                - document_number
+                - first_name
+                - last_name
+                - position
+                - agency_id
+                - hired_at
+    delete:
+      summary: 'Deactivate Employee'
+      operationId: deactivateEmployee
+      description: 'Da de baja al empleado (UC-09): `status = terminated` y desactiva su usuario si lo tuviera.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Employees'
+    parameters:
+      -
+        in: path
+        name: employee_id
+        description: 'The ID of the employee.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/identity/users:
+    get:
+      summary: 'List Users'
+      operationId: listUsers
+      description: 'Lista los usuarios, filtrables por estado, texto (nombre/email) y agencia.'
+      parameters:
+        -
+          in: query
+          name: status
+          description: 'active,suspended,inactive.'
+          required: false
+          schema:
+            type: string
+            description: 'active,suspended,inactive.'
+        -
+          in: query
+          name: q
+          description: 'Busca por nombre o email.'
+          required: false
+          schema:
+            type: string
+            description: 'Busca por nombre o email.'
+        -
+          in: query
+          name: agency_id
+          description: 'Usuarios con esa agencia en su ámbito.'
+          required: false
+          schema:
+            type: integer
+            description: 'Usuarios con esa agencia en su ámbito.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, por defecto 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, por defecto 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        status:
+                          type: string
+                        employee_id:
+                          type: string
+                          nullable: true
+                        must_change_password:
+                          type: boolean
+                        failed_login_attempts:
+                          type: integer
+                        locked_until:
+                          type: string
+                          nullable: true
+                        last_login_at:
+                          type: string
+                          nullable: true
+                        roles:
+                          type: array
+                        agencies:
+                          type: array
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+    post:
+      summary: 'Create User'
+      operationId: createUser
+      description: 'Da de alta un usuario (UC-01). Sin roles, se asigna `employee`.'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      status:
+                        type: string
+                      employee_id:
+                        type: string
+                        nullable: true
+                      must_change_password:
+                        type: boolean
+                      failed_login_attempts:
+                        type: integer
+                      locked_until:
+                        type: string
+                        nullable: true
+                      last_login_at:
+                        type: string
+                        nullable: true
+                      roles:
+                        type: array
+                      agencies:
+                        type: array
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                password:
+                  type: string
+                  description: ''
+                employee_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the employees table.'
+                  nullable: true
+                must_change_password:
+                  type: boolean
+                  description: ''
+                roles:
+                  type: array
+                  description: 'The <code>name</code> of an existing record in the roles table.'
+                  items:
+                    type: string
+                agency_ids:
+                  type: array
+                  description: 'The <code>id</code> of an existing record in the agencies table.'
+                  items:
+                    type: integer
+                primary_agency_id:
+                  type: integer
+                  description: ''
+                  nullable: true
+              required:
+                - name
+                - email
+                - password
+  '/api/v1/identity/users/{user_id}':
+    get:
+      summary: 'Request User Details'
+      operationId: requestUserDetails
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      status:
+                        type: string
+                      employee_id:
+                        type: string
+                        nullable: true
+                      must_change_password:
+                        type: boolean
+                      failed_login_attempts:
+                        type: integer
+                      locked_until:
+                        type: string
+                        nullable: true
+                      last_login_at:
+                        type: string
+                        nullable: true
+                      roles:
+                        type: array
+                      agencies:
+                        type: array
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+    put:
+      summary: 'Modify User'
+      operationId: modifyUser
+      description: 'Actualiza nombre, email o el vínculo con RRHH del usuario.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      status:
+                        type: string
+                      employee_id:
+                        type: string
+                        nullable: true
+                      must_change_password:
+                        type: boolean
+                      failed_login_attempts:
+                        type: integer
+                      locked_until:
+                        type: string
+                        nullable: true
+                      last_login_at:
+                        type: string
+                        nullable: true
+                      roles:
+                        type: array
+                      agencies:
+                        type: array
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                employee_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the employees table.'
+                  nullable: true
+                must_change_password:
+                  type: boolean
+                  description: ''
+    delete:
+      summary: 'Suspend User'
+      operationId: suspendUser
+      description: 'Atajo de UC-06: suspende al usuario sin pasar por el cambio de estado genérico.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+    parameters:
+      -
+        in: path
+        name: user_id
+        description: 'The ID of the user.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/identity/users/{user_id}/status':
+    patch:
+      summary: 'Change User Status'
+      operationId: changeUserStatus
+      description: 'Suspende, reactiva o da de baja al usuario (UC-06). Al desactivarlo se revocan sus tokens.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      status:
+                        type: string
+                      employee_id:
+                        type: string
+                        nullable: true
+                      must_change_password:
+                        type: boolean
+                      failed_login_attempts:
+                        type: integer
+                      locked_until:
+                        type: string
+                        nullable: true
+                      last_login_at:
+                        type: string
+                        nullable: true
+                      roles:
+                        type: array
+                      agencies:
+                        type: array
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - active
+                    - suspended
+                    - inactive
+              required:
+                - status
+    parameters:
+      -
+        in: path
+        name: user_id
+        description: 'The ID of the user.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/identity/users/{user_id}/unlock':
+    post:
+      summary: 'Unlock User'
+      operationId: unlockUser
+      description: 'Limpia el bloqueo por intentos fallidos (UC-07).'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+    parameters:
+      -
+        in: path
+        name: user_id
+        description: 'The ID of the user.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/identity/users/{user_id}/agency-scope':
+    put:
+      summary: 'Assign Agency Scope'
+      operationId: assignAgencyScope
+      description: 'Sincroniza el ámbito de agencia del usuario y su agencia principal (UC-16).'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      status:
+                        type: string
+                      employee_id:
+                        type: string
+                        nullable: true
+                      must_change_password:
+                        type: boolean
+                      failed_login_attempts:
+                        type: integer
+                      locked_until:
+                        type: string
+                        nullable: true
+                      last_login_at:
+                        type: string
+                        nullable: true
+                      roles:
+                        type: array
+                      agencies:
+                        type: array
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Identity - Users'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_ids:
+                  type: array
+                  description: 'The <code>id</code> of an existing record in the agencies table.'
+                  items:
+                    type: integer
+                primary_agency_id:
+                  type: integer
+                  description: ''
+                  nullable: true
+    parameters:
+      -
+        in: path
+        name: user_id
+        description: 'The ID of the user.'
+        required: true
+        schema:
+          type: integer
   /api/v1/logistics/orders:
     get:
       summary: 'List Logistics Orders'
