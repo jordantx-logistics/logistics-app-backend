@@ -45,6 +45,18 @@ class User extends Authenticatable
      */
     private const NATIONAL_ROLES = ['admin', 'analyst'];
 
+    /** Usuario operativo. */
+    public const STATUS_ACTIVE = 'active';
+
+    /** Suspendido por un admin: no autentica, se puede reactivar. */
+    public const STATUS_SUSPENDED = 'suspended';
+
+    /** Baja: no autentica y no vuelve. */
+    public const STATUS_INACTIVE = 'inactive';
+
+    /** @var list<string> */
+    public const STATUSES = [self::STATUS_ACTIVE, self::STATUS_SUSPENDED, self::STATUS_INACTIVE];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -55,6 +67,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'locked_until' => 'datetime',
+            'last_login_at' => 'datetime',
+            'must_change_password' => 'boolean',
         ];
     }
 

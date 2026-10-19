@@ -2,15 +2,14 @@
 
 namespace Src\Identity\User\UseCases;
 
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
+use Src\Identity\User\Services\AuthenticateUserService;
 use Src\Shared\Contracts\DeviceRegistrar;
 
 /**
- * Token opaco para apps/PDA. Verifica las credenciales contra el provider sin
- * abrir sesión (no queremos cookie para un cliente nativo) y guarda el token
- * hasheado en `personal_access_tokens`: el valor en claro solo se devuelve una vez.
+ * Token opaco para apps/PDA. Verifica las credenciales (bloqueo, estado, intentos
+ * fallidos) sin abrir sesión (no queremos cookie para un cliente nativo) y
+ * guarda el token hasheado en `personal_access_tokens`: el valor en claro solo se
+ * devuelve una vez.
  *
  * Si la petición trae `device_uuid`, además da de alta el dispositivo a través
  * del puerto `DeviceRegistrar` (`Identity/Device` no se importa entre
@@ -20,6 +19,7 @@ use Src\Shared\Contracts\DeviceRegistrar;
 class IssueTokenUseCase
 {
     public function __construct(
+        private readonly AuthenticateUserService $authenticator,
         private readonly DeviceRegistrar $devices,
     ) {}
 
@@ -34,17 +34,7 @@ class IssueTokenUseCase
         ?string $deviceUuid = null,
         ?string $appVersion = null,
     ): array {
-        $guard = Auth::guard('web');
-
-        if (! $guard->validate($credentials)) {
-            // Mismo mensaje que el login: no revela si el email existe.
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
-
-        /** @var User $user */
-        $user = $guard->getLastAttempted() ?? User::where('email', $credentials['email'])->firstOrFail();
+        $user = $this->authenticator->authenticate($credentials);
 
         $name = $platform === null || $platform === ''
             ? $deviceName
