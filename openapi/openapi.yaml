@@ -1,0 +1,1538 @@
+openapi: 3.0.3
+info:
+  title: 'Logistics API Documentation'
+  description: 'Documentación Oficial del API Backend (REST) para el Sistema Core de Logística. Incluye facturación, envíos, finanzas y autenticación.'
+  version: 1.0.0
+servers:
+  -
+    url: 'http://localhost:8000'
+tags:
+  -
+    name: Authentication
+    description: "\nAPIs for managing sessions and access tokens (Sanctum)."
+  -
+    name: 'Customer - Companies'
+    description: "\nAPIs for managing corporate customers."
+  -
+    name: 'Customer - Persons'
+    description: "\nAPIs for managing individual customers."
+  -
+    name: 'Logistics - Orders'
+    description: "\nAPIs for managing core logistic orders."
+  -
+    name: 'Organization - Agencies'
+    description: "\nAPIs for managing branch locations."
+  -
+    name: 'Permission - Permisos'
+    description: "\nAPIs para gestionar permisos del sistema."
+  -
+    name: 'Permission - Roles'
+    description: "\nAPIs para gestionar roles del sistema."
+  -
+    name: 'System - Health'
+    description: "\nReadiness del servicio: comprueba base de datos, Redis y colas."
+components:
+  securitySchemes:
+    default:
+      type: http
+      scheme: bearer
+      description: "Para probar los endpoints protegidos, utiliza las siguientes credenciales por defecto:\n\n**Email**: `admin@admin.pe`\n**Password**: `SecureAdmin2026!@#`\n\nEl token se genera automáticamente al hacer login con estas credenciales."
+security:
+  -
+    default: []
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: 'Login (web)'
+      operationId: loginweb
+      description: "Authenticates against the session guard and sets the `HttpOnly` session\ncookie. Requires the CSRF cookie (`GET /sanctum/csrf-cookie`) first."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          email:
+                            type: string
+                      roles:
+                        type: array
+                        items:
+                          type: string
+                      permissions:
+                        type: array
+                        items:
+                          type: string
+                      agencies:
+                        type: array
+                        items:
+                          type: integer
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                password:
+                  type: string
+                  description: ''
+              required:
+                - email
+                - password
+  /api/v1/auth/token:
+    post:
+      summary: 'Issue Token (apps / PDA)'
+      operationId: issueTokenappsPDA
+      description: "Returns an opaque token to send as `Authorization: Bearer <token>`.\nThe plain value is shown only once."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      token_type:
+                        type: string
+                      expires_in:
+                        type: integer
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                password:
+                  type: string
+                  description: ''
+                device_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                platform:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                  nullable: true
+              required:
+                - email
+                - password
+                - device_name
+  /api/v1/auth/forgot-password:
+    post:
+      summary: 'Forgot Password'
+      operationId: forgotPassword
+      description: "Sends the reset link when the email exists. The answer is neutral on\npurpose: it never reveals whether the account exists."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+              required:
+                - email
+  /api/v1/auth/reset-password:
+    post:
+      summary: 'Reset Password'
+      operationId: resetPassword
+      description: "Consumes the token from the email and sets the new password. Revokes\nevery access token of the user.\n\n`password_confirmation` is required by the validation rules (`confirmed`)\nbut Scribe does not infer it from them, so it is declared by hand."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: 'Token received by email.'
+                email:
+                  type: string
+                  description: 'Account email.'
+                password:
+                  type: string
+                  description: 'New password (at least 8 characters).'
+                password_confirmation:
+                  type: string
+                  description: 'Repeat of the new password.'
+              required:
+                - token
+                - email
+                - password
+                - password_confirmation
+  /api/v1/auth/me:
+    get:
+      summary: 'Current User'
+      operationId: currentUser
+      description: 'Returns the authenticated user with roles, permissions and agency scope.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          email:
+                            type: string
+                      roles:
+                        type: array
+                        items:
+                          type: string
+                      permissions:
+                        type: array
+                        items:
+                          type: string
+                      agencies:
+                        type: array
+                        items:
+                          type: integer
+      tags:
+        - Authentication
+  /api/v1/auth/logout:
+    post:
+      summary: Logout
+      operationId: logout
+      description: 'Revokes the current access token (apps) and closes the session (web).'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - Authentication
+  /api/v1/auth/logout-all:
+    post:
+      summary: 'Logout All Devices'
+      operationId: logoutAllDevices
+      description: "Revokes every token of the user. A later request with a revoked token\nanswers 401."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - Authentication
+  /api/v1/customer/companies:
+    get:
+      summary: 'List Corporate Customers'
+      operationId: listCorporateCustomers
+      description: 'Retrieves a list of all registered corporate clients.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        tax_id:
+                          type: string
+                        business_name:
+                          type: string
+                        trade_name:
+                          type: string
+                        address:
+                          type: string
+                        contact_email:
+                          type: string
+                        contact_phone:
+                          type: string
+                        created_at:
+                          type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Companies'
+    post:
+      summary: 'Register Corporate Customer'
+      operationId: registerCorporateCustomer
+      description: 'Creates a new company record, typically requiring RUC formatting and business names.'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      tax_id:
+                        type: string
+                      business_name:
+                        type: string
+                      trade_name:
+                        type: string
+                      address:
+                        type: string
+                      contact_email:
+                        type: string
+                      contact_phone:
+                        type: string
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Companies'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tax_id:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                business_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                trade_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                  nullable: true
+                address:
+                  type: string
+                  description: ''
+                  nullable: true
+                contact_email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  nullable: true
+                contact_phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+              required:
+                - tax_id
+                - business_name
+  /api/v1/customer/persons:
+    get:
+      summary: 'List Individual Customers'
+      operationId: listIndividualCustomers
+      description: 'Retrieves a list of all registered individual clients.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        document_type:
+                          type: string
+                        document_number:
+                          type: string
+                        first_name:
+                          type: string
+                        last_name:
+                          type: string
+                        email:
+                          type: string
+                        phone:
+                          type: string
+                        created_at:
+                          type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Persons'
+    post:
+      summary: 'Register Individual Customer'
+      operationId: registerIndividualCustomer
+      description: 'Creates a new person record in the database using their personal document (e.g. DNI).'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Persons'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                document_type:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                document_number:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                first_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                last_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  nullable: true
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+              required:
+                - document_type
+                - document_number
+                - first_name
+                - last_name
+  /api/v1/logistics/orders:
+    get:
+      summary: 'List Logistics Orders'
+      operationId: listLogisticsOrders
+      description: 'Returns the orders visible to the authenticated user, newest first, paginated with `page` and `per_page` (max 100).'
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, por defecto 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, por defecto 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_number:
+                          type: string
+                        ticket_code:
+                          type: string
+                        status:
+                          type: string
+                        weight_kg:
+                          type: string
+                        total_amount:
+                          type: string
+                        sender_id:
+                          type: integer
+                        receiver_id:
+                          type: integer
+                        origin_agency_id:
+                          type: integer
+                        destination_agency_id:
+                          type: integer
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+    post:
+      summary: 'Create Logistics Order'
+      operationId: createLogisticsOrder
+      description: "Registers a new order in the system, taking into account idempotency, customer and agency validations, and applies dynamic tariff pricing.\nFires a background event when successful."
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      status:
+                        type: string
+                      weight_kg:
+                        type: string
+                      total_amount:
+                        type: string
+                      sender_id:
+                        type: integer
+                      receiver_id:
+                        type: integer
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotency_key:
+                  type: string
+                  description: 'Must not be greater than 64 characters.'
+                sender_id:
+                  type: integer
+                  description: ''
+                receiver_id:
+                  type: integer
+                  description: ''
+                origin_agency_id:
+                  type: integer
+                  description: ''
+                destination_agency_id:
+                  type: integer
+                  description: ''
+                description:
+                  type: string
+                  description: ''
+                  nullable: true
+                weight_kg:
+                  type: number
+                  description: 'Must be at least 0.'
+                volume_m3:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+                declared_value:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+              required:
+                - idempotency_key
+                - sender_id
+                - receiver_id
+                - origin_agency_id
+                - destination_agency_id
+                - weight_kg
+  /api/v1/organization/agencies:
+    get:
+      summary: 'List Agencies'
+      operationId: listAgencies
+      description: 'Retrieves all registered agencies configured in the system.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        code:
+                          type: string
+                        name:
+                          type: string
+                        address:
+                          type: string
+                        phone:
+                          type: string
+                        district:
+                          type: string
+                        is_active:
+                          type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Organization - Agencies'
+    post:
+      summary: 'Create Agency'
+      operationId: createAgency
+      description: 'Registers a new branch location where packages can be originated or received.'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      address:
+                        type: string
+                      phone:
+                        type: string
+                      district:
+                        type: string
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Organization - Agencies'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 'Must not be greater than 10 characters.'
+                name:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  nullable: true
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+                district:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - code
+                - name
+  '/api/v1/organization/agencies/{id}':
+    get:
+      summary: 'Request Agency Details'
+      operationId: requestAgencyDetails
+      description: 'Retrieves detailed geographical and contact information for a specific agency.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      address:
+                        type: string
+                      phone:
+                        type: string
+                      district:
+                        type: string
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Organization - Agencies'
+    put:
+      summary: 'Modify Agency'
+      operationId: modifyAgency
+      description: "Updates an existing agency's contact information, active status, or configured properties."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      address:
+                        type: string
+                      phone:
+                        type: string
+                      district:
+                        type: string
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Organization - Agencies'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 'Must not be greater than 10 characters.'
+                name:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  nullable: true
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+                district:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - code
+                - name
+    delete:
+      summary: 'Delete Agency'
+      operationId: deleteAgency
+      description: 'Removes an agency from the system. (Warning: This action usually requires checking for relational integrity).'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Organization - Agencies'
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the agency.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/permission/permissions:
+    get:
+      summary: 'List all permissions'
+      operationId: listAllPermissions
+      description: "El controlador envuelve la colección (`data.permissions`), y eso no se\npuede inferir de un `@apiResource`: la forma se documenta a mano para que\nel contrato no mienta (`spec/08-calidad/02-contrato-openapi-frontend.md`)."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      permissions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            guard_name:
+                              type: string
+                            created_at:
+                              type: string
+                            updated_at:
+                              type: string
+      tags:
+        - 'Permission - Permisos'
+    post:
+      summary: 'Create a new permission'
+      operationId: createANewPermission
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      guard_name:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Permission - Permisos'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+              required:
+                - name
+  '/api/v1/permission/permissions/{id}':
+    get:
+      summary: 'Retrieve a specific permission'
+      operationId: retrieveASpecificPermission
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      guard_name:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Permission - Permisos'
+    put:
+      summary: 'Update an existing permission'
+      operationId: updateAnExistingPermission
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      guard_name:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Permission - Permisos'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+              required:
+                - name
+    delete:
+      summary: 'Delete a permission'
+      operationId: deleteAPermission
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Permission - Permisos'
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the permission.'
+        required: true
+        schema:
+          type: string
+  /api/v1/permission/roles:
+    get:
+      summary: 'List all roles'
+      operationId: listAllRoles
+      description: "El controlador envuelve la colección (`data.roles`), y eso no se puede\ninferir de un `@apiResource`: la forma se documenta a mano para que el\ncontrato no mienta (`spec/08-calidad/02-contrato-openapi-frontend.md`)."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      roles:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            guard_name:
+                              type: string
+                            permissions:
+                              type: array
+                              items:
+                                type: string
+                            created_at:
+                              type: string
+                            updated_at:
+                              type: string
+      tags:
+        - 'Permission - Roles'
+    post:
+      summary: 'Create a new role'
+      operationId: createANewRole
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      guard_name:
+                        type: string
+                      permissions:
+                        type: array
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Permission - Roles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+              required:
+                - name
+  '/api/v1/permission/roles/{id}':
+    get:
+      summary: 'Retrieve a specific role'
+      operationId: retrieveASpecificRole
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      guard_name:
+                        type: string
+                      permissions:
+                        type: array
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Permission - Roles'
+    put:
+      summary: 'Update an existing role'
+      operationId: updateAnExistingRole
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      guard_name:
+                        type: string
+                      permissions:
+                        type: array
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Permission - Roles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+              required:
+                - name
+    delete:
+      summary: 'Delete a role'
+      operationId: deleteARole
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+      tags:
+        - 'Permission - Roles'
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the role.'
+        required: true
+        schema:
+          type: string
+  '/api/v1/permission/roles/{id}/permissions':
+    post:
+      summary: 'Assign permissions to a role'
+      operationId: assignPermissionsToARole
+      description: 'Sustituye los permisos del rol por los que llegan (`syncPermissions`).'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      guard_name:
+                        type: string
+                      permissions:
+                        type: array
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Permission - Roles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission_ids:
+                  type: array
+                  description: 'Ids de los permisos del catálogo.'
+                  items:
+                    type: integer
+              required:
+                - permission_ids
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the role.'
+        required: true
+        schema:
+          type: string
+  '/api/v1/permission/users/{id}/roles':
+    post:
+      summary: 'Assign a role to a user'
+      operationId: assignARoleToAUser
+      description: ''
+      parameters: []
+      responses:
+        422:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      role_ids:
+                        type: array
+                        items:
+                          type: string
+                  errors:
+                    type: object
+                    properties:
+                      role_ids:
+                        type: array
+                        items:
+                          type: string
+      tags:
+        - 'Permission - Roles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role_ids:
+                  type: object
+                  description: 'Must have at least 1 items.'
+                  properties: []
+              required:
+                - role_ids
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the user.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/health:
+    get:
+      summary: Readiness
+      operationId: readiness
+      description: "Devuelve 200 si todas las dependencias responden y 503 con el detalle por\ndependencia si alguna está caída."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      checks:
+                        type: object
+                        properties:
+                          database:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                              detail:
+                                type: string
+                              latency_ms:
+                                type: number
+                          redis:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                              detail:
+                                type: string
+                              latency_ms:
+                                type: number
+                          queue:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                              detail:
+                                type: string
+                              latency_ms:
+                                type: number
+        503:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      checks:
+                        type: object
+                        properties:
+                          database:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                              detail:
+                                type: string
+                              latency_ms:
+                                type: number
+                          redis:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                              detail:
+                                type: string
+                              latency_ms:
+                                type: number
+                          queue:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                              detail:
+                                type: string
+                              latency_ms:
+                                type: number
+      tags:
+        - 'System - Health'

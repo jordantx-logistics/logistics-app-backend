@@ -90,8 +90,23 @@ jobs:
             chmod -R a+rX storage/app/private/scribe
           '
 
-      # ADR-0008: el contrato OpenAPI viaja como artefacto del build y de ahí lo
-      # consume el frontend para generar sus tipos (Fase 1).
+      # Criterio 10 de la Fase 1: el contrato vive **versionado** en
+      # `openapi/openapi.yaml`. `contract-sync.php` normaliza el spec (elimina
+      # las claves `example`/`examples`, que trae Faker volátil: ids medidos en
+      # la BD, timestamps de `now()`, latencias) y `git diff` falla la build si
+      # Scribe ya no produce lo mismo que está commiteado — o sea, si alguien
+      # tocó docblocks o rutas sin actualizar la copia.
+      - name: Contrato versionado sin deriva
+        run: |
+          docker compose run --rm app php scripts/contract-sync.php
+          git diff --exit-code -- openapi/ || {
+            echo "::error::El contrato OpenAPI cambió sin actualizar la copia versionada. Ejecuta 'php artisan scribe:generate' + 'php scripts/contract-sync.php' y commitea 'openapi/'."
+            exit 1
+          }
+
+      # ADR-0008: el contrato OpenAPI viaja como artefacto del build (copy de
+      # consulta: la fuente canónica con la que genera el frontend es la copia
+      # versionada `openapi/openapi.yaml`).
       - name: Publicar el contrato
         uses: actions/upload-artifact@v7
         with:

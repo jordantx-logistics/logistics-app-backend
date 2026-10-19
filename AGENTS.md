@@ -140,7 +140,9 @@ Los UseCases escriben un `OutboxEvent` en la misma transacción que el cambio de
 
 Scribe generates from controller docblocks (`@group`, `@apiResource`, `@apiResourceModel`, `@apiResourceAdditional`). Config in `config/scribe.php`; output in `.scribe/`.
 
-La documentación generada (`.scribe/`, `resources/views/scribe/`, `public/vendor/scribe/`) **no se versiona**: se regenera con `docker compose exec app php artisan scribe:generate` y el contrato OpenAPI viaja como artefacto de CI. Los ejemplos de respuesta los produce Faker, así que versionarlos solo generaba ruido en cada diff. Consecuencia: `/docs` da error hasta que se ejecute `scribe:generate` una vez en el entorno.
+La documentación de visual (`.scribe/`, `resources/views/scribe/`, `public/vendor/scribe/`) **no se versiona**: se regenera con `docker compose exec app php artisan scribe:generate` (el OpenAPI igualmente viaja como artefacto `openapi` del CI). Los ejemplos de respuesta los produce Faker, así que versionarlos solo generaba ruido en cada diff. Consecuencia: `/docs` da error hasta que se ejecute `scribe:generate` una vez en el entorno.
+
+**El contrato sí tiene copia versionada**: `openapi/openapi.yaml` (criterio 10 de la Fase 1). Tras `scribe:generate`, `php scripts/contract-sync.php` —dentro del contenedor: mismo PHP/`symfony-yaml` en local y CI— la reescribe normalizada, eliminando las claves `example`/`examples` que Faker llena con datos volátiles (ids de la BD local, timestamps de `now()`, latencias medidas en vivo). El CI regenera y falla con `git diff --exit-code -- openapi/` si alguien modifica docblocks o rutas sin actualizar la copia. Dos regeneraciones consecutivas deben producir el mismo archivo byte a byte: si no es así, buscar la causa antes de commitear.
 
 ## Testing
 
