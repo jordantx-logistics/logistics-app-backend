@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Permission;
 
-use Src\Permission\Models\Permission;
+use Src\Identity\Role\Models\Permission;
 use Tests\TestCase;
 
 class PermissionTest extends TestCase

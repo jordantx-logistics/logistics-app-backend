@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Guard;
 use Spatie\Permission\PermissionRegistrar;
-use Src\Permission\Models\Permission;
-use Src\Permission\Models\Role;
+use Src\Identity\Role\Models\Permission;
+use Src\Identity\Role\Models\Role;
 
 /**
  * Catálogo de permisos y roles (idempotente).

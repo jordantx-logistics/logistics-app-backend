@@ -33,7 +33,7 @@ function moduleRouteFiles(): array
 it('descubre los contextos de uno y de dos niveles bajo src', function () {
     $files = moduleRouteFiles();
 
-    expect($files)->toContain(base_path('src/Auth/routes.php'))
+    expect($files)->toContain(base_path('src/Identity/User/routes.php'))
         ->and($files)->toContain(base_path('src/Logistics/Order/routes.php'));
 });
 

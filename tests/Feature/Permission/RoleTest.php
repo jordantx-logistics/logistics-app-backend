@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Permission;
 
-use Src\Permission\Models\Permission;
-use Src\Permission\Models\Role;
+use Src\Identity\Role\Models\Permission;
+use Src\Identity\Role\Models\Role;
 use Tests\TestCase;
 
 class RoleTest extends TestCase
