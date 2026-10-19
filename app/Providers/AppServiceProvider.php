@@ -52,13 +52,14 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * El enlace del correo de recuperación apunta a la SPA, no a una vista
-     * del backend.
+     * del backend. Cuelga de `/auth/reset-password`, como el resto de las
+     * pantallas de sesión.
      */
     private function configurePasswordResetUrl(): void
     {
         ResetPassword::createUrlUsing(function (User $user, string $token): string {
             return sprintf(
-                '%s/reset-password?token=%s&email=%s',
+                '%s/auth/reset-password?token=%s&email=%s',
                 rtrim((string) config('app.frontend_url'), '/'),
                 $token,
                 urlencode($user->getEmailForPasswordReset()),

@@ -168,7 +168,23 @@ it('envía el enlace de recuperación cuando el email existe', function () {
     $this->postJson('/api/v1/auth/forgot-password', ['email' => $user->email])
         ->assertOk();
 
-    Notification::assertSentTo($user, ResetPassword::class);
+    Notification::assertSentTo(
+        $user,
+        ResetPassword::class,
+        function (ResetPassword $notification, array $channels) use ($user): bool {
+            // El enlace apunta a la SPA, bajo `/auth/reset-password`, como el
+            // resto de las pantallas de sesión (`createUrlUsing` en
+            // AppServiceProvider). Ver criterio 1 de la Fase 1 y ADR-0008:
+            // si cambia la URL hay que regenerar el contrato.
+            $mail = $notification->toMail($user);
+
+            expect($mail->actionUrl)
+                ->toContain('/auth/reset-password?token=')
+                ->toContain('email='.urlencode($user->email));
+
+            return true;
+        },
+    );
 });
 
 it('responde igual cuando el email no existe, sin enviar nada', function () {
