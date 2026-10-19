@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Src\Customer\Adapters\EloquentCustomerDirectory;
 use Src\Identity\Attendance\Models\AttendanceRecord;
 use Src\Identity\Attendance\Policies\AttendancePolicy;
+use Src\Identity\Device\Adapters\EloquentDeviceRegistrar;
 use Src\Identity\Employee\Adapters\EloquentEmployeeDirectory;
 use Src\Identity\Employee\Models\Employee;
 use Src\Identity\Employee\Policies\EmployeePolicy;
@@ -18,6 +19,7 @@ use Src\Organization\Models\Agency;
 use Src\Organization\Policies\AgencyPolicy;
 use Src\Shared\Contracts\AgencyDirectory;
 use Src\Shared\Contracts\CustomerDirectory;
+use Src\Shared\Contracts\DeviceRegistrar;
 use Src\Shared\Contracts\EmployeeDirectory;
 use Src\Shared\Services\OutboxEventMap;
 
@@ -38,6 +40,7 @@ class DomainServiceProvider extends ServiceProvider
         $this->app->singleton(CustomerDirectory::class, EloquentCustomerDirectory::class);
         $this->app->singleton(AgencyDirectory::class, EloquentAgencyDirectory::class);
         $this->app->singleton(EmployeeDirectory::class, EloquentEmployeeDirectory::class);
+        $this->app->singleton(DeviceRegistrar::class, EloquentDeviceRegistrar::class);
 
         // Policies: los módulos no tienen provider propio (sus rutas y comandos
         // se descubren solos), así que el registro de quién protege qué modelo

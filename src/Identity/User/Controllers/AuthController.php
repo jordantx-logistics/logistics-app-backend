@@ -81,6 +81,8 @@ class AuthController extends Controller
             ],
             deviceName: $data['device_name'],
             platform: $data['platform'] ?? null,
+            deviceUuid: $data['device_uuid'] ?? null,
+            appVersion: $data['app_version'] ?? null,
         );
 
         return $this->success(
