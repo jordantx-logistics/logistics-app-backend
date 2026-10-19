@@ -17,8 +17,8 @@ use Src\Identity\Role\Models\Role;
  * (`tests/Feature/Architecture/AuthorizationRoutesTest.php` lo comprueba).
  *
  * Los roles son los del spec. Los que todavía no tienen permisos (sus módulos
- * llegan en fases posteriores: caja, almacén, flota, reparto, marcaciones,
- * reportes) quedan creados y vacíos, para poder asignarlos desde ya.
+ * llegan en fases posteriores: caja, almacén, flota, reparto, reportes) quedan
+ * creados y vacíos, para poder asignarlos desde ya.
  *
  * El guard es el que Spatie usa en tiempo de ejecución
  * (`Guard::getDefaultName()` → `config('auth.defaults.guard')`, hoy `web`), así
@@ -45,6 +45,12 @@ class PermissionSeeder extends Seeder
         'permissions.view',
         'permissions.manage',
         'users.manage',
+
+        // Identity (Fase 2): RRHH, marcaciones y dispositivos.
+        'employees.manage',
+        'attendance.register',
+        'attendance.manage',
+        'devices.manage',
     ];
 
     /**
@@ -80,8 +86,11 @@ class PermissionSeeder extends Seeder
         'warehouse-operator' => [],
         'driver' => [],
         'courier' => [],
-        'employee' => [],
         'analyst' => [],
+
+        // Marcaciones propias (Fase 2): el único rol operativo que ya tiene
+        // permiso; los de RRHH llegan con los endpoints de Identity.
+        'employee' => ['attendance.register'],
     ];
 
     public function run(): void

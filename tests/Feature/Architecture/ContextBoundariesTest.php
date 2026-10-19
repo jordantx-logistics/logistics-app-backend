@@ -22,8 +22,8 @@ function contextLayerNames(): array
 {
     return [
         'Adapters', 'Console', 'Contracts', 'Controllers', 'Events', 'Exceptions',
-        'Jobs', 'Logging', 'Mail', 'Middleware', 'Models', 'Pipelines', 'Requests',
-        'Resources', 'Rules', 'Services', 'Traits', 'UseCases',
+        'Jobs', 'Logging', 'Mail', 'Middleware', 'Models', 'Pipelines', 'Policies',
+        'Requests', 'Resources', 'Rules', 'Scope', 'Services', 'Traits', 'UseCases',
     ];
 }
 

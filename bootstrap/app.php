@@ -13,6 +13,7 @@ use Src\System\Middleware\AssignRequestId;
 use Src\System\Middleware\EnforcePermission;
 use Src\System\Middleware\LogHttpRequest;
 use Src\System\Middleware\RecordHttpMetrics;
+use Src\System\Middleware\ResolveAgencyScope;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -47,6 +48,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // (`SANCTUM_STATEFUL_DOMAINS`) añade al grupo `api` el arranque de
         // sesión y las cookies; para el resto (apps/PDA con bearer) es un no-op.
         $middleware->statefulApi();
+
+        // Ámbito de agencia: al final del grupo `api`, con la sesión ya
+        // arrancada y el token (Bearer) resoluble, para que los casos de uso
+        // reciban `AgencyScope` sin volver a resolver el usuario (Fase 2).
+        $middleware->api(append: [ResolveAgencyScope::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request) {

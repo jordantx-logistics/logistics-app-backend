@@ -2,12 +2,15 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Src\Customer\Adapters\EloquentCustomerDirectory;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
 use Src\Logistics\Order\Jobs\ProjectOrderCreatedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
 use Src\Organization\Adapters\EloquentAgencyDirectory;
+use Src\Organization\Models\Agency;
+use Src\Organization\Policies\AgencyPolicy;
 use Src\Shared\Contracts\AgencyDirectory;
 use Src\Shared\Contracts\CustomerDirectory;
 use Src\Shared\Services\OutboxEventMap;
@@ -28,6 +31,11 @@ class DomainServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CustomerDirectory::class, EloquentCustomerDirectory::class);
         $this->app->singleton(AgencyDirectory::class, EloquentAgencyDirectory::class);
+
+        // Policies: los módulos no tienen provider propio (sus rutas y comandos
+        // se descubren solos), así que el registro de quién protege qué modelo
+        // vive aquí, junto al resto del cableado.
+        Gate::policy(Agency::class, AgencyPolicy::class);
 
         $this->app->singleton(OutboxEventMap::class, fn (): OutboxEventMap => new OutboxEventMap([
             // `order.created` → Core (`spec/02-objetivo/05-asincronia-y-eventos.md`).

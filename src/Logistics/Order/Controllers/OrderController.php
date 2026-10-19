@@ -38,7 +38,9 @@ class OrderController extends Controller
             ListOrdersUseCase::MAX_PER_PAGE,
         );
 
-        $orders = $useCase->execute($request->user(), $perPage);
+        // El ámbito de agencia lo resuelve el middleware `ResolveAgencyScope`
+        // (grupo `api`) y lo recibe el caso de uso por constructor.
+        $orders = $useCase->execute($perPage);
 
         // El recurso envuelve el paginador: `successPaginated` solo añade el
         // sobre, porque `data`/`meta`/`links` los emite Laravel (y así lo

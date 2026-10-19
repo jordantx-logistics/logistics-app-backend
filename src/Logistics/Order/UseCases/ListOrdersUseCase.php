@@ -2,17 +2,17 @@
 
 namespace Src\Logistics\Order\UseCases;
 
-use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Src\Logistics\Order\Models\Order;
+use Src\Shared\Scope\AgencyScope;
 
 /**
  * Listado de órdenes, de la más reciente a la más antigua.
  *
- * El usuario llega por parámetro y no se inyecta en el constructor: el
- * contenedor resolvería `App\Models\User` como un modelo vacío y el ámbito de
- * agencia se perdería en silencio. Lo pide el controlador a `$request->user()`,
- * igual que hace el listado de agencias.
+ * El ámbito de agencia llega por constructor: lo deja el middleware
+ * `Src\System\Middleware\ResolveAgencyScope` en el contenedor a partir del
+ * usuario autenticado, así el caso de uso no depende de `App\Models\User` ni de
+ * la petición.
  */
 class ListOrdersUseCase
 {
@@ -22,18 +22,19 @@ class ListOrdersUseCase
     /** Tope de `per_page`: el listado no puede pedir la tabla entera. */
     public const MAX_PER_PAGE = 100;
 
+    public function __construct(
+        private readonly AgencyScope $scope,
+    ) {}
+
     /**
      * @return LengthAwarePaginator<int, Order>
      */
-    public function execute(User $user, int $perPage = self::DEFAULT_PER_PAGE): LengthAwarePaginator
+    public function execute(int $perPage = self::DEFAULT_PER_PAGE): LengthAwarePaginator
     {
         return Order::query()
-            // Ámbito de agencia: un rol nacional (`admin`, `analyst`) ve todas;
-            // el resto, solo las órdenes que tocan alguna de sus agencias.
-            ->when(
-                ! $user->hasNationalScope(),
-                fn ($query) => $query->forAgencies($user->agencyIds()),
-            )
+            // Un rol nacional (`admin`, `analyst`) ve todas; el resto, solo las
+            // órdenes que tocan alguna de sus agencias.
+            ->forAgencyScope($this->scope)
             ->orderByDesc('id')
             ->paginate($perPage);
     }

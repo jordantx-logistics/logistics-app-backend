@@ -10,10 +10,23 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Knuckles\Scribe\Scribe;
+use Src\Shared\Scope\AgencyScope;
 use Symfony\Component\HttpFoundation\Request;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Ámbito de agencia por defecto.
+     *
+     * Fuera de una petición autenticada no hay ámbito, y «sin ámbito» es «no ver
+     * nada»: el valor por defecto nunca deja pasar de más. El middleware
+     * `ResolveAgencyScope` lo reescribe en cada petición del grupo `api`.
+     */
+    public function register(): void
+    {
+        $this->app->scoped(AgencyScope::class, fn (): AgencyScope => AgencyScope::none());
+    }
+
     /**
      * Bootstrap any application services.
      */

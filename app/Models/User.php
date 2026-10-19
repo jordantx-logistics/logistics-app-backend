@@ -87,4 +87,16 @@ class User extends Authenticatable
     {
         return $this->hasAnyRole(self::NATIONAL_ROLES);
     }
+
+    /**
+     * ¿Es superadmin? Solo el rol `admin`.
+     *
+     * Se distingue de `hasNationalScope()` en que también bypassa las reglas
+     * por registro de las policies (un `analyst` ve todo el país, pero no
+     * administra): `AgencyPolicy::create` solo lo deja pasar a un superadmin.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
 }

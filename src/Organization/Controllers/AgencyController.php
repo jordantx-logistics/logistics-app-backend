@@ -4,10 +4,10 @@ namespace Src\Organization\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Src\Organization\Models\Agency;
 use Src\Organization\Requests\AgencyRequest;
 use Src\Organization\Resources\AgencyResource;
+use Src\Shared\Scope\AgencyScope;
 
 /**
  * @group Organization - Agencies
@@ -27,17 +27,15 @@ class AgencyController extends Controller
      *
      * @apiResourceAdditional success=true message="Agencies retrieved successfully."
      */
-    public function index(Request $request): JsonResponse
+    public function index(AgencyScope $scope): JsonResponse
     {
-        $user = $request->user();
+        $this->authorize('viewAny', Agency::class);
 
-        // Ámbito de agencia: un rol nacional (`admin`, `analyst`) ve todas; el
-        // resto, solo las suyas (`agencyIds()`), y sin agencia no ve ninguna.
+        // Ámbito de agencia: lo resuelve el middleware `ResolveAgencyScope`. Un
+        // rol nacional (`admin`, `analyst`) llega sin filtro; el resto, con sus
+        // agencias (y sin agencia no ve ninguna).
         $agencies = Agency::query()
-            ->when(
-                ! $user->hasNationalScope(),
-                fn ($query) => $query->forAgencies($user->agencyIds()),
-            )
+            ->forAgencyScope($scope)
             ->orderBy('name')
             ->get();
 
@@ -60,6 +58,8 @@ class AgencyController extends Controller
      */
     public function store(AgencyRequest $request): JsonResponse
     {
+        $this->authorize('create', Agency::class);
+
         $agency = Agency::create($request->validated());
 
         return $this->success(
@@ -82,6 +82,8 @@ class AgencyController extends Controller
      */
     public function show(Agency $agency): JsonResponse
     {
+        $this->authorize('view', $agency);
+
         return $this->success(
             data: AgencyResource::make($agency),
             message: 'Agency details retrieved successfully.'
@@ -101,6 +103,8 @@ class AgencyController extends Controller
      */
     public function update(AgencyRequest $request, Agency $agency): JsonResponse
     {
+        $this->authorize('update', $agency);
+
         $agency->update($request->validated());
 
         return $this->success(
@@ -118,6 +122,8 @@ class AgencyController extends Controller
      */
     public function destroy(Agency $agency): JsonResponse
     {
+        $this->authorize('delete', $agency);
+
         // Example logic: softly deactivate instead of deleting
         $agency->update(['is_active' => false]);
 
