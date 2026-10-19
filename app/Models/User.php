@@ -65,7 +65,7 @@ class User extends Authenticatable
      */
     public function agencies(): BelongsToMany
     {
-        return $this->belongsToMany(Agency::class, 'agency_user');
+        return $this->belongsToMany(Agency::class, 'agency_user')->withPivot('is_primary');
     }
 
     /**

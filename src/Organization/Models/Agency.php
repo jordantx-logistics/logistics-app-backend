@@ -13,16 +13,23 @@ class Agency extends Model
     protected $fillable = [
         'code',
         'name',
+        'type',
+        'parent_agency_id',
         'address',
         'phone',
         'district',
+        'province',
+        'department',
+        'timezone',
         'is_active',
+        'opened_at',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'opened_at' => 'date',
         ];
     }
 

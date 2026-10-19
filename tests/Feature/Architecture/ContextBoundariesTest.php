@@ -91,3 +91,25 @@ it('no declara claves foráneas hacia tablas de otro contexto', function () {
     expect(Schema::hasColumns('orders', ['sender_id', 'receiver_id', 'origin_agency_id', 'destination_agency_id', 'created_by']))->toBeTrue()
         ->and(Schema::hasColumns('payments', ['order_id', 'processed_by']))->toBeTrue();
 });
+
+it('deja las referencias de Identity a agencies sin clave foránea', function () {
+    // `agencies` es de Organization: Identity guarda el id como columna
+    // indexada (Fase 2). El pivote no lleva ninguna FK —sus dos lados son
+    // contextos distintos— y los empleados tampoco (`person_id` → Core,
+    // `agency_id` → Organization).
+    expect(Schema::getForeignKeys('agency_user'))->toBe([])
+        ->and(Schema::getForeignKeys('employees'))->toBe([]);
+
+    expect(Schema::hasColumns('agency_user', ['user_id', 'agency_id', 'is_primary']))->toBeTrue()
+        ->and(Schema::hasColumns('employees', ['person_id', 'agency_id', 'status']))->toBeTrue();
+
+    // Dentro de Identity sí hay FK: una marcación solo puede apuntar a tablas
+    // del propio contexto (empleados y dispositivos).
+    $foreignTables = collect(Schema::getForeignKeys('attendance_records'))
+        ->pluck('foreign_table')
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($foreignTables)->toBe(['devices', 'employees']);
+});
