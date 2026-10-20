@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Src\Logistics\Order\Models\Order;
+use Src\Logistics\Order\Requests\CancelOrderRequest;
 use Src\Logistics\Order\Requests\CreateOrderRequest;
 use Src\Logistics\Order\Requests\QuoteOrderRequest;
 use Src\Logistics\Order\Requests\UpdateDeliveryRequest;
@@ -190,11 +191,9 @@ class OrderController extends Controller
      *
      * @apiResourceAdditional success=true message="Order cancelled successfully."
      */
-    public function cancel(int $order, Request $request, AgencyScope $scope, CancelOrderUseCase $useCase): JsonResponse
+    public function cancel(int $order, CancelOrderRequest $request, AgencyScope $scope, CancelOrderUseCase $useCase): JsonResponse
     {
-        $request->validate(['reason' => ['nullable', 'string', 'max:200']]);
-
-        $cancelled = $useCase->execute($this->findOrder($order, $scope), $request->input('reason'));
+        $cancelled = $useCase->execute($this->findOrder($order, $scope), $request->validated('reason'));
 
         return $this->success(
             data: OrderResource::make($cancelled->load('statusHistory')),
