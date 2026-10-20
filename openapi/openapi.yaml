@@ -14,6 +14,9 @@ tags:
     name: 'Customer - Companies'
     description: "\nAPIs for managing corporate customers."
   -
+    name: 'Customer - Customers'
+    description: "\nAPIs for managing the customer aggregate (sender/receiver of orders)."
+  -
     name: 'Customer - Persons'
     description: "\nAPIs for managing individual customers."
   -
@@ -29,8 +32,20 @@ tags:
     name: 'Identity - Users'
     description: "\nAPIs para administrar usuarios, su estado y su ámbito de agencia (UC-01, UC-06, UC-07, UC-16)."
   -
+    name: 'Logistics - Agency coverages'
+    description: "\nQué ubicaciones atiende una agencia destino, con qué modalidad y con qué\nrecargo de reparto. `agency_id` es de `Organization` y se valida por puerto."
+  -
+    name: 'Logistics - Locations'
+    description: "\nDistritos del padrón INEI (`ubigeo` de 6 dígitos). Se siembran con\n`UbigeoSeeder`; aquí se listan (paginado y filtrable) y se editan."
+  -
     name: 'Logistics - Orders'
     description: "\nAPIs for managing core logistic orders."
+  -
+    name: 'Logistics - Tariffs'
+    description: "\nTarifarios por servicio y alcance (nacional, par de zonas o par de\nubicaciones), con tramos por peso. Administración completa: `tariffs.manage`."
+  -
+    name: 'Logistics - Zones'
+    description: "\nZonas de tarificación (agrupan ubicaciones). El seed crea una por\ndepartamento; el resto de la operación es edición."
   -
     name: 'Organization - Agencies'
     description: "\nAPIs for managing branch locations."
@@ -378,7 +393,7 @@ paths:
     post:
       summary: 'Register Corporate Customer'
       operationId: registerCorporateCustomer
-      description: 'Creates a new company record, typically requiring RUC formatting and business names.'
+      description: "Creates a new company **and** its customer aggregate (`customers`), so it can be used\nas sender/receiver of an order. The RUC is validated (11 digits and check digit)\nin the use case, which answers with an `error_code`."
       parameters: []
       responses:
         201:
@@ -445,6 +460,510 @@ paths:
               required:
                 - tax_id
                 - business_name
+  /api/v1/customers:
+    get:
+      summary: 'List Customers'
+      operationId: listCustomers
+      description: "Returns customers, newest first, paginated with `page` and `per_page` (max 100).\n`q` searches by display name, document number or email."
+      parameters:
+        -
+          in: query
+          name: q
+          description: 'Search term (name, document or email).'
+          required: false
+          schema:
+            type: string
+            description: 'Search term (name, document or email).'
+        -
+          in: query
+          name: customer_type
+          description: 'Filter by type: person|company.'
+          required: false
+          schema:
+            type: string
+            description: 'Filter by type: person|company.'
+        -
+          in: query
+          name: is_active
+          description: 'Filter by active flag.'
+          required: false
+          schema:
+            type: boolean
+            description: 'Filter by active flag.'
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, default 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, default 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          nullable: true
+                        code:
+                          type: string
+                          nullable: true
+                        customer_type:
+                          type: string
+                        person_id:
+                          type: integer
+                        company_id:
+                          type: string
+                          nullable: true
+                        display_name:
+                          type: string
+                        document_type:
+                          type: string
+                        document_number:
+                          type: string
+                        email:
+                          type: string
+                        phone:
+                          type: string
+                        address:
+                          type: string
+                          nullable: true
+                        is_active:
+                          type: boolean
+                        credit_limit:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                          nullable: true
+                        updated_at:
+                          type: string
+                          nullable: true
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Customers'
+    post:
+      summary: 'Register Customer'
+      operationId: registerCustomer
+      description: "Creates the customer aggregate and its backing person or company in one transaction.\nThe document is unique per type and validated (RUC check digit included)."
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                        nullable: true
+                      customer_type:
+                        type: string
+                      person_id:
+                        type: integer
+                      company_id:
+                        type: string
+                        nullable: true
+                      display_name:
+                        type: string
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      address:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      credit_limit:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+                      updated_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Customers'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - person
+                    - company
+                document_type:
+                  type: string
+                  description: 'Must not be greater than 10 characters.'
+                document_number:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                display_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                  nullable: true
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 255 characters.'
+                  nullable: true
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+                address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  nullable: true
+                credit_limit:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+                first_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                last_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                business_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                trade_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                  nullable: true
+                contact_email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 255 characters.'
+                  nullable: true
+                contact_phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+              required:
+                - customer_type
+                - document_type
+                - document_number
+                - business_name
+  '/api/v1/customers/{id}':
+    get:
+      summary: 'Show Customer'
+      operationId: showCustomer
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                        nullable: true
+                      customer_type:
+                        type: string
+                      person_id:
+                        type: integer
+                      company_id:
+                        type: string
+                        nullable: true
+                      display_name:
+                        type: string
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      address:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      credit_limit:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+                      updated_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Customers'
+    put:
+      summary: 'Update Customer'
+      operationId: updateCustomer
+      description: 'Updates contact data and the backing person/company. The document cannot be changed.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                        nullable: true
+                      customer_type:
+                        type: string
+                      person_id:
+                        type: integer
+                      company_id:
+                        type: string
+                        nullable: true
+                      display_name:
+                        type: string
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      address:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      credit_limit:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+                      updated_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Customers'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 255 characters.'
+                  nullable: true
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+                address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  nullable: true
+                credit_limit:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+                first_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                last_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                business_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                trade_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                  nullable: true
+                contact_email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 255 characters.'
+                  nullable: true
+                contact_phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  nullable: true
+    delete:
+      summary: 'Deactivate Customer'
+      operationId: deactivateCustomer
+      description: "Soft-style deletion: sets `is_active = false`. Rejected with 409 while the\ncustomer has pending, confirmed or in-transit orders."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                        nullable: true
+                      customer_type:
+                        type: string
+                      person_id:
+                        type: integer
+                      company_id:
+                        type: string
+                        nullable: true
+                      display_name:
+                        type: string
+                      document_type:
+                        type: string
+                      document_number:
+                        type: string
+                      email:
+                        type: string
+                      phone:
+                        type: string
+                      address:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      credit_limit:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+                      updated_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Customer - Customers'
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the customer.'
+        required: true
+        schema:
+          type: integer
   /api/v1/customer/persons:
     get:
       summary: 'List Individual Customers'
@@ -489,7 +1008,7 @@ paths:
     post:
       summary: 'Register Individual Customer'
       operationId: registerIndividualCustomer
-      description: 'Creates a new person record in the database using their personal document (e.g. DNI).'
+      description: "Creates a new person **and** its customer aggregate (`customers`), so the person can\nbe used as sender/receiver of an order. Business rules (document format and\nuniqueness) run in the use case and answer with an `error_code`."
       parameters: []
       responses:
         201:
@@ -2043,6 +2562,563 @@ paths:
         required: true
         schema:
           type: integer
+  /api/v1/logistics/agency-coverages:
+    get:
+      summary: 'List Agency Coverages'
+      operationId: listAgencyCoverages
+      description: ''
+      parameters:
+        -
+          in: query
+          name: agency_id
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: location_id
+          description: 'Filter by location.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by location.'
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, default 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, default 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          nullable: true
+                        agency_id:
+                          type: string
+                          nullable: true
+                        location_id:
+                          type: string
+                          nullable: true
+                        allows_pickup:
+                          type: boolean
+                        allows_delivery:
+                          type: boolean
+                        delivery_surcharge:
+                          type: string
+                        is_active:
+                          type: boolean
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Agency coverages'
+    post:
+      summary: 'Create Agency Coverage'
+      operationId: createAgencyCoverage
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      agency_id:
+                        type: string
+                        nullable: true
+                      location_id:
+                        type: string
+                        nullable: true
+                      allows_pickup:
+                        type: boolean
+                      allows_delivery:
+                        type: boolean
+                      delivery_surcharge:
+                        type: string
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Agency coverages'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: ''
+                location_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the locations table.'
+                allows_pickup:
+                  type: boolean
+                  description: ''
+                allows_delivery:
+                  type: boolean
+                  description: ''
+                delivery_surcharge:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - agency_id
+                - location_id
+  '/api/v1/logistics/agency-coverages/{coverage_id}':
+    put:
+      summary: 'Update Agency Coverage'
+      operationId: updateAgencyCoverage
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      agency_id:
+                        type: string
+                        nullable: true
+                      location_id:
+                        type: string
+                        nullable: true
+                      allows_pickup:
+                        type: boolean
+                      allows_delivery:
+                        type: boolean
+                      delivery_surcharge:
+                        type: string
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Agency coverages'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: ''
+                location_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the locations table.'
+                allows_pickup:
+                  type: boolean
+                  description: ''
+                allows_delivery:
+                  type: boolean
+                  description: ''
+                delivery_surcharge:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - agency_id
+                - location_id
+    parameters:
+      -
+        in: path
+        name: coverage_id
+        description: 'The ID of the coverage.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/logistics/locations:
+    get:
+      summary: 'List Locations'
+      operationId: listLocations
+      description: ''
+      parameters:
+        -
+          in: query
+          name: q
+          description: 'Search by ubigeo, district, province or department.'
+          required: false
+          schema:
+            type: string
+            description: 'Search by ubigeo, district, province or department.'
+        -
+          in: query
+          name: zone_id
+          description: 'Filter by zone.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by zone.'
+        -
+          in: query
+          name: department
+          description: 'Filter by department.'
+          required: false
+          schema:
+            type: string
+            description: 'Filter by department.'
+        -
+          in: query
+          name: is_active
+          description: 'Filter by active flag.'
+          required: false
+          schema:
+            type: boolean
+            description: 'Filter by active flag.'
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..200, default 50).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..200, default 50).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          nullable: true
+                        ubigeo:
+                          type: string
+                          nullable: true
+                        department:
+                          type: string
+                          nullable: true
+                        province:
+                          type: string
+                          nullable: true
+                        district:
+                          type: string
+                          nullable: true
+                        zone_id:
+                          type: string
+                          nullable: true
+                        is_active:
+                          type: boolean
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Locations'
+    post:
+      summary: 'Create Location'
+      operationId: createLocation
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ubigeo:
+                        type: string
+                        nullable: true
+                      department:
+                        type: string
+                        nullable: true
+                      province:
+                        type: string
+                        nullable: true
+                      district:
+                        type: string
+                        nullable: true
+                      zone_id:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Locations'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ubigeo:
+                  type: string
+                  description: 'Must be 6 characters.'
+                department:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                province:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                district:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                zone_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the zones table.'
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - ubigeo
+                - department
+                - province
+                - district
+                - zone_id
+  '/api/v1/logistics/locations/{id}':
+    put:
+      summary: 'Update Location'
+      operationId: updateLocation
+      description: 'Cambiar `zone_id` es cómo se reagrupa un distrito en otra zona de tarifa.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ubigeo:
+                        type: string
+                        nullable: true
+                      department:
+                        type: string
+                        nullable: true
+                      province:
+                        type: string
+                        nullable: true
+                      district:
+                        type: string
+                        nullable: true
+                      zone_id:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Locations'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ubigeo:
+                  type: string
+                  description: 'Must be 6 characters.'
+                department:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                province:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                district:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                zone_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the zones table.'
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - ubigeo
+                - department
+                - province
+                - district
+                - zone_id
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the location.'
+        required: true
+        schema:
+          type: integer
   /api/v1/logistics/orders:
     get:
       summary: 'List Logistics Orders'
@@ -2086,10 +3162,64 @@ paths:
                           type: string
                         status:
                           type: string
+                        version:
+                          type: string
+                          nullable: true
+                        service_type:
+                          type: string
+                          nullable: true
+                        payment_responsibility:
+                          type: string
+                          nullable: true
+                        description:
+                          type: string
                         weight_kg:
                           type: string
+                        volume_m3:
+                          type: string
+                        chargeable_weight_kg:
+                          type: string
+                          nullable: true
+                        declared_value:
+                          type: string
+                        tariff_id:
+                          type: string
+                          nullable: true
+                        pricing_snapshot:
+                          type: string
+                          nullable: true
                         total_amount:
                           type: string
+                        delivery_type:
+                          type: string
+                          nullable: true
+                        delivery_location_id:
+                          type: string
+                          nullable: true
+                        recipient_address:
+                          type: string
+                          nullable: true
+                        delivery_scheduled_at:
+                          type: string
+                          nullable: true
+                        requires_signature:
+                          type: string
+                          nullable: true
+                        delivery_attempts:
+                          type: string
+                          nullable: true
+                        confirmed_at:
+                          type: string
+                          nullable: true
+                        cancelled_at:
+                          type: string
+                          nullable: true
+                        delivered_at:
+                          type: string
+                          nullable: true
+                        cancelled_reason:
+                          type: string
+                          nullable: true
                         sender_id:
                           type: integer
                         receiver_id:
@@ -2175,10 +3305,64 @@ paths:
                         type: string
                       status:
                         type: string
+                      version:
+                        type: string
+                        nullable: true
+                      service_type:
+                        type: string
+                        nullable: true
+                      payment_responsibility:
+                        type: string
+                        nullable: true
+                      description:
+                        type: string
                       weight_kg:
                         type: string
+                      volume_m3:
+                        type: string
+                      chargeable_weight_kg:
+                        type: string
+                        nullable: true
+                      declared_value:
+                        type: string
+                      tariff_id:
+                        type: string
+                        nullable: true
+                      pricing_snapshot:
+                        type: string
+                        nullable: true
                       total_amount:
                         type: string
+                      delivery_type:
+                        type: string
+                        nullable: true
+                      delivery_location_id:
+                        type: string
+                        nullable: true
+                      recipient_address:
+                        type: string
+                        nullable: true
+                      delivery_scheduled_at:
+                        type: string
+                        nullable: true
+                      requires_signature:
+                        type: string
+                        nullable: true
+                      delivery_attempts:
+                        type: string
+                        nullable: true
+                      confirmed_at:
+                        type: string
+                        nullable: true
+                      cancelled_at:
+                        type: string
+                        nullable: true
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      cancelled_reason:
+                        type: string
+                        nullable: true
                       sender_id:
                         type: integer
                       receiver_id:
@@ -2232,6 +3416,33 @@ paths:
                   type: number
                   description: 'Must be at least 0.'
                   nullable: true
+                service_type:
+                  type: string
+                  description: 'standard,express.'
+                  nullable: true
+                payment_responsibility:
+                  type: string
+                  description: 'sender,receiver.'
+                  nullable: true
+                delivery_type:
+                  type: string
+                  description: 'agency_pickup,home_delivery.'
+                  nullable: true
+                delivery_location_id:
+                  type: integer
+                  description: 'when delivery_type=home_delivery.'
+                  nullable: true
+                recipient_address:
+                  type: string
+                  description: 'Delivery address.'
+                  nullable: true
+                delivery_scheduled_at:
+                  type: string
+                  description: 'Delivery window (ISO 8601).'
+                  nullable: true
+                requires_signature:
+                  type: boolean
+                  description: ''
               required:
                 - idempotency_key
                 - sender_id
@@ -2239,6 +3450,1479 @@ paths:
                 - origin_agency_id
                 - destination_agency_id
                 - weight_kg
+                - delivery_location_id
+  '/api/v1/logistics/orders/by-ticket/{ticketCode}':
+    get:
+      summary: 'Show Logistics Order by ticket code'
+      operationId: showLogisticsOrderByTicketCode
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      status:
+                        type: string
+                      version:
+                        type: string
+                        nullable: true
+                      service_type:
+                        type: string
+                        nullable: true
+                      payment_responsibility:
+                        type: string
+                        nullable: true
+                      description:
+                        type: string
+                      weight_kg:
+                        type: string
+                      volume_m3:
+                        type: string
+                      chargeable_weight_kg:
+                        type: string
+                        nullable: true
+                      declared_value:
+                        type: string
+                      tariff_id:
+                        type: string
+                        nullable: true
+                      pricing_snapshot:
+                        type: string
+                        nullable: true
+                      total_amount:
+                        type: string
+                      delivery_type:
+                        type: string
+                        nullable: true
+                      delivery_location_id:
+                        type: string
+                        nullable: true
+                      recipient_address:
+                        type: string
+                        nullable: true
+                      delivery_scheduled_at:
+                        type: string
+                        nullable: true
+                      requires_signature:
+                        type: string
+                        nullable: true
+                      delivery_attempts:
+                        type: string
+                        nullable: true
+                      confirmed_at:
+                        type: string
+                        nullable: true
+                      cancelled_at:
+                        type: string
+                        nullable: true
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      cancelled_reason:
+                        type: string
+                        nullable: true
+                      sender_id:
+                        type: integer
+                      receiver_id:
+                        type: integer
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+    parameters:
+      -
+        in: path
+        name: ticketCode
+        description: ''
+        required: true
+        schema:
+          type: string
+  '/api/v1/logistics/orders/{order}':
+    get:
+      summary: 'Show Logistics Order'
+      operationId: showLogisticsOrder
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      status:
+                        type: string
+                      version:
+                        type: string
+                        nullable: true
+                      service_type:
+                        type: string
+                        nullable: true
+                      payment_responsibility:
+                        type: string
+                        nullable: true
+                      description:
+                        type: string
+                      weight_kg:
+                        type: string
+                      volume_m3:
+                        type: string
+                      chargeable_weight_kg:
+                        type: string
+                        nullable: true
+                      declared_value:
+                        type: string
+                      tariff_id:
+                        type: string
+                        nullable: true
+                      pricing_snapshot:
+                        type: string
+                        nullable: true
+                      total_amount:
+                        type: string
+                      delivery_type:
+                        type: string
+                        nullable: true
+                      delivery_location_id:
+                        type: string
+                        nullable: true
+                      recipient_address:
+                        type: string
+                        nullable: true
+                      delivery_scheduled_at:
+                        type: string
+                        nullable: true
+                      requires_signature:
+                        type: string
+                        nullable: true
+                      delivery_attempts:
+                        type: string
+                        nullable: true
+                      confirmed_at:
+                        type: string
+                        nullable: true
+                      cancelled_at:
+                        type: string
+                        nullable: true
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      cancelled_reason:
+                        type: string
+                        nullable: true
+                      sender_id:
+                        type: integer
+                      receiver_id:
+                        type: integer
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+    parameters:
+      -
+        in: path
+        name: order
+        description: 'The order.'
+        required: true
+        schema:
+          type: string
+  /api/v1/logistics/orders/quote:
+    post:
+      summary: 'Quote Logistics Order'
+      operationId: quoteLogisticsOrder
+      description: 'Calculates the price without persisting anything, using the same pricing engine and rules as order creation.'
+      parameters: []
+      responses:
+        200:
+          description: 'Cotizacion con tarifario'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      engine:
+                        type: string
+                      chargeable_weight_kg:
+                        type: integer
+                      base_price:
+                        type: integer
+                      weight_amount:
+                        type: integer
+                      minimum_adjustment:
+                        type: integer
+                      surcharge:
+                        type: integer
+                      total_amount:
+                        type: integer
+                      tariff_code:
+                        type: string
+                      breakdown:
+                        type: object
+                        properties:
+                          engine:
+                            type: string
+                          total_amount:
+                            type: integer
+      tags:
+        - 'Logistics - Orders'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                origin_agency_id:
+                  type: integer
+                  description: ''
+                destination_agency_id:
+                  type: integer
+                  description: ''
+                weight_kg:
+                  type: number
+                  description: ''
+                volume_m3:
+                  type: number
+                  description: ''
+                  nullable: true
+                service_type:
+                  type: string
+                  description: 'standard,express.'
+                  nullable: true
+                delivery_type:
+                  type: string
+                  description: 'agency_pickup,home_delivery.'
+                  nullable: true
+                delivery_location_id:
+                  type: integer
+                  description: 'when delivery_type=home_delivery.'
+                  nullable: true
+              required:
+                - origin_agency_id
+                - destination_agency_id
+                - weight_kg
+                - delivery_location_id
+  '/api/v1/logistics/orders/{order}/confirm':
+    post:
+      summary: 'Confirm Logistics Order'
+      operationId: confirmLogisticsOrder
+      description: 'Confirms a pending order (`pending` -> `confirmed`) and freezes its price. Rejects any other transition with `INVALID_STATUS_TRANSITION`.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      status:
+                        type: string
+                      version:
+                        type: string
+                        nullable: true
+                      service_type:
+                        type: string
+                        nullable: true
+                      payment_responsibility:
+                        type: string
+                        nullable: true
+                      description:
+                        type: string
+                      weight_kg:
+                        type: string
+                      volume_m3:
+                        type: string
+                      chargeable_weight_kg:
+                        type: string
+                        nullable: true
+                      declared_value:
+                        type: string
+                      tariff_id:
+                        type: string
+                        nullable: true
+                      pricing_snapshot:
+                        type: string
+                        nullable: true
+                      total_amount:
+                        type: string
+                      delivery_type:
+                        type: string
+                        nullable: true
+                      delivery_location_id:
+                        type: string
+                        nullable: true
+                      recipient_address:
+                        type: string
+                        nullable: true
+                      delivery_scheduled_at:
+                        type: string
+                        nullable: true
+                      requires_signature:
+                        type: string
+                        nullable: true
+                      delivery_attempts:
+                        type: string
+                        nullable: true
+                      confirmed_at:
+                        type: string
+                        nullable: true
+                      cancelled_at:
+                        type: string
+                        nullable: true
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      cancelled_reason:
+                        type: string
+                        nullable: true
+                      sender_id:
+                        type: integer
+                      receiver_id:
+                        type: integer
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+    parameters:
+      -
+        in: path
+        name: order
+        description: 'The order.'
+        required: true
+        schema:
+          type: string
+  '/api/v1/logistics/orders/{order}/cancel':
+    post:
+      summary: 'Cancel Logistics Order'
+      operationId: cancelLogisticsOrder
+      description: 'Cancels a pending or confirmed order. Only `pending` and `confirmed` orders can be cancelled.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      status:
+                        type: string
+                      version:
+                        type: string
+                        nullable: true
+                      service_type:
+                        type: string
+                        nullable: true
+                      payment_responsibility:
+                        type: string
+                        nullable: true
+                      description:
+                        type: string
+                      weight_kg:
+                        type: string
+                      volume_m3:
+                        type: string
+                      chargeable_weight_kg:
+                        type: string
+                        nullable: true
+                      declared_value:
+                        type: string
+                      tariff_id:
+                        type: string
+                        nullable: true
+                      pricing_snapshot:
+                        type: string
+                        nullable: true
+                      total_amount:
+                        type: string
+                      delivery_type:
+                        type: string
+                        nullable: true
+                      delivery_location_id:
+                        type: string
+                        nullable: true
+                      recipient_address:
+                        type: string
+                        nullable: true
+                      delivery_scheduled_at:
+                        type: string
+                        nullable: true
+                      requires_signature:
+                        type: string
+                        nullable: true
+                      delivery_attempts:
+                        type: string
+                        nullable: true
+                      confirmed_at:
+                        type: string
+                        nullable: true
+                      cancelled_at:
+                        type: string
+                        nullable: true
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      cancelled_reason:
+                        type: string
+                        nullable: true
+                      sender_id:
+                        type: integer
+                      receiver_id:
+                        type: integer
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 'Cancellation reason.'
+                  nullable: true
+    parameters:
+      -
+        in: path
+        name: order
+        description: 'The order.'
+        required: true
+        schema:
+          type: string
+  '/api/v1/logistics/orders/{order}/delivery':
+    patch:
+      summary: 'Update Logistics Order delivery'
+      operationId: updateLogisticsOrderDelivery
+      description: 'Defines delivery while the order is still `pending` and re-quotes the price (delivery surcharge). Once confirmed, the price is immutable (`ORDER_ALREADY_CONFIRMED`).'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      status:
+                        type: string
+                      version:
+                        type: string
+                        nullable: true
+                      service_type:
+                        type: string
+                        nullable: true
+                      payment_responsibility:
+                        type: string
+                        nullable: true
+                      description:
+                        type: string
+                      weight_kg:
+                        type: string
+                      volume_m3:
+                        type: string
+                      chargeable_weight_kg:
+                        type: string
+                        nullable: true
+                      declared_value:
+                        type: string
+                      tariff_id:
+                        type: string
+                        nullable: true
+                      pricing_snapshot:
+                        type: string
+                        nullable: true
+                      total_amount:
+                        type: string
+                      delivery_type:
+                        type: string
+                        nullable: true
+                      delivery_location_id:
+                        type: string
+                        nullable: true
+                      recipient_address:
+                        type: string
+                        nullable: true
+                      delivery_scheduled_at:
+                        type: string
+                        nullable: true
+                      requires_signature:
+                        type: string
+                        nullable: true
+                      delivery_attempts:
+                        type: string
+                        nullable: true
+                      confirmed_at:
+                        type: string
+                        nullable: true
+                      cancelled_at:
+                        type: string
+                        nullable: true
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      cancelled_reason:
+                        type: string
+                        nullable: true
+                      sender_id:
+                        type: integer
+                      receiver_id:
+                        type: integer
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                delivery_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - agency_pickup
+                    - home_delivery
+                delivery_location_id:
+                  type: integer
+                  description: 'This field is required when <code>delivery_type</code> is <code>home_delivery</code>.'
+                  nullable: true
+                recipient_address:
+                  type: string
+                  description: 'This field is required when <code>delivery_type</code> is <code>home_delivery</code>. Must not be greater than 255 characters.'
+                  nullable: true
+                delivery_scheduled_at:
+                  type: string
+                  description: 'Must be a valid date.'
+                  nullable: true
+                requires_signature:
+                  type: boolean
+                  description: ''
+              required:
+                - delivery_type
+    parameters:
+      -
+        in: path
+        name: order
+        description: 'The order.'
+        required: true
+        schema:
+          type: string
+  /api/v1/logistics/tariffs:
+    get:
+      summary: 'List Tariffs'
+      operationId: listTariffs
+      description: ''
+      parameters:
+        -
+          in: query
+          name: q
+          description: 'Search by code or name.'
+          required: false
+          schema:
+            type: string
+            description: 'Search by code or name.'
+        -
+          in: query
+          name: service_type
+          description: standard|express.
+          required: false
+          schema:
+            type: string
+            description: standard|express.
+        -
+          in: query
+          name: scope_type
+          description: national|zone_pair|district_pair.
+          required: false
+          schema:
+            type: string
+            description: national|zone_pair|district_pair.
+        -
+          in: query
+          name: is_active
+          description: 'Filter by active flag.'
+          required: false
+          schema:
+            type: boolean
+            description: 'Filter by active flag.'
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, default 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, default 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          nullable: true
+                        code:
+                          type: string
+                        name:
+                          type: string
+                        service_type:
+                          type: string
+                        scope_type:
+                          type: string
+                        origin_zone_id:
+                          type: string
+                          nullable: true
+                        destination_zone_id:
+                          type: string
+                          nullable: true
+                        origin_location_id:
+                          type: string
+                          nullable: true
+                        destination_location_id:
+                          type: string
+                          nullable: true
+                        base_price:
+                          type: string
+                        price_per_kg:
+                          type: string
+                        price_per_m3:
+                          type: string
+                        min_charge:
+                          type: string
+                        max_weight_kg:
+                          type: string
+                        volumetric_factor:
+                          type: integer
+                        priority:
+                          type: integer
+                        valid_from:
+                          type: string
+                        valid_to:
+                          type: string
+                          nullable: true
+                        is_active:
+                          type: boolean
+                        created_at:
+                          type: string
+                          nullable: true
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Tariffs'
+    post:
+      summary: 'Create Tariff'
+      operationId: createTariff
+      description: "Rechaza alcances incoherentes (`TARIFF_SCOPE_INVALID`), vigencias\ninvertidas (`TARIFF_VALIDITY_INVALID`), tramos solapados\n(`TARIFF_BRACKETS_INVALID`) y tarifarios activos solapados del mismo\nalcance (`TARIFF_OVERLAP`, 409)."
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      service_type:
+                        type: string
+                      scope_type:
+                        type: string
+                      origin_zone_id:
+                        type: string
+                        nullable: true
+                      destination_zone_id:
+                        type: string
+                        nullable: true
+                      origin_location_id:
+                        type: string
+                        nullable: true
+                      destination_location_id:
+                        type: string
+                        nullable: true
+                      base_price:
+                        type: string
+                      price_per_kg:
+                        type: string
+                      price_per_m3:
+                        type: string
+                      min_charge:
+                        type: string
+                      max_weight_kg:
+                        type: string
+                      volumetric_factor:
+                        type: integer
+                      priority:
+                        type: integer
+                      valid_from:
+                        type: string
+                      valid_to:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      created_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Tariffs'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                name:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                service_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - standard
+                    - express
+                scope_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - national
+                    - zone_pair
+                    - district_pair
+                origin_zone_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  nullable: true
+                destination_zone_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  nullable: true
+                origin_location_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  nullable: true
+                destination_location_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  nullable: true
+                base_price:
+                  type: number
+                  description: 'Must be at least 0.'
+                price_per_kg:
+                  type: number
+                  description: 'Must be at least 0.'
+                price_per_m3:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+                min_charge:
+                  type: number
+                  description: 'Must be at least 0.'
+                max_weight_kg:
+                  type: number
+                  description: ''
+                volumetric_factor:
+                  type: integer
+                  description: 'Must be at least 0.'
+                  nullable: true
+                priority:
+                  type: integer
+                  description: ''
+                  nullable: true
+                valid_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                valid_to:
+                  type: string
+                  description: 'Must be a valid date.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+                brackets:
+                  type: array
+                  description: ''
+                  items:
+                    type: object
+                    nullable: true
+                    properties:
+                      from_kg:
+                        type: number
+                        description: 'Must be at least 0.'
+                      to_kg:
+                        type: number
+                        description: 'Must be at least 0.'
+                      fixed_fee:
+                        type: number
+                        description: 'Must be at least 0.'
+                      price_per_kg:
+                        type: number
+                        description: 'Must be at least 0.'
+                    required:
+                      - from_kg
+                      - to_kg
+                      - fixed_fee
+                      - price_per_kg
+              required:
+                - code
+                - name
+                - service_type
+                - scope_type
+                - base_price
+                - price_per_kg
+                - min_charge
+                - max_weight_kg
+                - valid_from
+  '/api/v1/logistics/tariffs/{id}':
+    get:
+      summary: 'Show Tariff'
+      operationId: showTariff
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      service_type:
+                        type: string
+                      scope_type:
+                        type: string
+                      origin_zone_id:
+                        type: string
+                        nullable: true
+                      destination_zone_id:
+                        type: string
+                        nullable: true
+                      origin_location_id:
+                        type: string
+                        nullable: true
+                      destination_location_id:
+                        type: string
+                        nullable: true
+                      base_price:
+                        type: string
+                      price_per_kg:
+                        type: string
+                      price_per_m3:
+                        type: string
+                      min_charge:
+                        type: string
+                      max_weight_kg:
+                        type: string
+                      volumetric_factor:
+                        type: integer
+                      priority:
+                        type: integer
+                      valid_from:
+                        type: string
+                      valid_to:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      created_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Tariffs'
+    put:
+      summary: 'Update Tariff'
+      operationId: updateTariff
+      description: "El payload se funde con el tarifario actual antes de validar, y los\ntramos se reemplazan en bloque (los enviados sustituyen a los anteriores)."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      service_type:
+                        type: string
+                      scope_type:
+                        type: string
+                      origin_zone_id:
+                        type: string
+                        nullable: true
+                      destination_zone_id:
+                        type: string
+                        nullable: true
+                      origin_location_id:
+                        type: string
+                        nullable: true
+                      destination_location_id:
+                        type: string
+                        nullable: true
+                      base_price:
+                        type: string
+                      price_per_kg:
+                        type: string
+                      price_per_m3:
+                        type: string
+                      min_charge:
+                        type: string
+                      max_weight_kg:
+                        type: string
+                      volumetric_factor:
+                        type: integer
+                      priority:
+                        type: integer
+                      valid_from:
+                        type: string
+                      valid_to:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      created_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Tariffs'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                name:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                service_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - standard
+                    - express
+                scope_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - national
+                    - zone_pair
+                    - district_pair
+                origin_zone_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  nullable: true
+                destination_zone_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  nullable: true
+                origin_location_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  nullable: true
+                destination_location_id:
+                  type: integer
+                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  nullable: true
+                base_price:
+                  type: number
+                  description: 'Must be at least 0.'
+                price_per_kg:
+                  type: number
+                  description: 'Must be at least 0.'
+                price_per_m3:
+                  type: number
+                  description: 'Must be at least 0.'
+                  nullable: true
+                min_charge:
+                  type: number
+                  description: 'Must be at least 0.'
+                max_weight_kg:
+                  type: number
+                  description: ''
+                volumetric_factor:
+                  type: integer
+                  description: 'Must be at least 0.'
+                  nullable: true
+                priority:
+                  type: integer
+                  description: ''
+                  nullable: true
+                valid_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                valid_to:
+                  type: string
+                  description: 'Must be a valid date.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+                brackets:
+                  type: array
+                  description: ''
+                  items:
+                    type: object
+                    nullable: true
+                    properties:
+                      from_kg:
+                        type: number
+                        description: 'Must be at least 0.'
+                      to_kg:
+                        type: number
+                        description: 'Must be at least 0.'
+                      fixed_fee:
+                        type: number
+                        description: 'Must be at least 0.'
+                      price_per_kg:
+                        type: number
+                        description: 'Must be at least 0.'
+                    required:
+                      - from_kg
+                      - to_kg
+                      - fixed_fee
+                      - price_per_kg
+              required:
+                - code
+                - name
+                - service_type
+                - scope_type
+                - base_price
+                - price_per_kg
+                - min_charge
+                - max_weight_kg
+                - valid_from
+    delete:
+      summary: 'Deactivate Tariff'
+      operationId: deactivateTariff
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      service_type:
+                        type: string
+                      scope_type:
+                        type: string
+                      origin_zone_id:
+                        type: string
+                        nullable: true
+                      destination_zone_id:
+                        type: string
+                        nullable: true
+                      origin_location_id:
+                        type: string
+                        nullable: true
+                      destination_location_id:
+                        type: string
+                        nullable: true
+                      base_price:
+                        type: string
+                      price_per_kg:
+                        type: string
+                      price_per_m3:
+                        type: string
+                      min_charge:
+                        type: string
+                      max_weight_kg:
+                        type: string
+                      volumetric_factor:
+                        type: integer
+                      priority:
+                        type: integer
+                      valid_from:
+                        type: string
+                      valid_to:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      created_at:
+                        type: string
+                        nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Tariffs'
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the tariff.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/logistics/zones:
+    get:
+      summary: 'List Zones'
+      operationId: listZones
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          nullable: true
+                        code:
+                          type: string
+                        name:
+                          type: string
+                        is_active:
+                          type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Zones'
+    post:
+      summary: 'Create Zone'
+      operationId: createZone
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Zones'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - code
+                - name
+  '/api/v1/logistics/zones/{id}':
+    put:
+      summary: 'Update Zone'
+      operationId: updateZone
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      is_active:
+                        type: boolean
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Zones'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                is_active:
+                  type: boolean
+                  description: ''
+              required:
+                - code
+                - name
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the zone.'
+        required: true
+        schema:
+          type: integer
   /api/v1/organization/agencies:
     get:
       summary: 'List Agencies'
@@ -2270,6 +4954,15 @@ paths:
                           type: string
                         district:
                           type: string
+                        province:
+                          type: string
+                          nullable: true
+                        department:
+                          type: string
+                          nullable: true
+                        ubigeo:
+                          type: string
+                          nullable: true
                         is_active:
                           type: boolean
                   success:
@@ -2306,6 +4999,15 @@ paths:
                         type: string
                       district:
                         type: string
+                      province:
+                        type: string
+                        nullable: true
+                      department:
+                        type: string
+                        nullable: true
+                      ubigeo:
+                        type: string
+                        nullable: true
                       is_active:
                         type: boolean
                   success:
@@ -2338,6 +5040,18 @@ paths:
                 district:
                   type: string
                   description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                province:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                department:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                ubigeo:
+                  type: string
+                  description: 'Must be 6 characters.'
                   nullable: true
                 is_active:
                   type: boolean
@@ -2374,6 +5088,15 @@ paths:
                         type: string
                       district:
                         type: string
+                      province:
+                        type: string
+                        nullable: true
+                      department:
+                        type: string
+                        nullable: true
+                      ubigeo:
+                        type: string
+                        nullable: true
                       is_active:
                         type: boolean
                   success:
@@ -2410,6 +5133,15 @@ paths:
                         type: string
                       district:
                         type: string
+                      province:
+                        type: string
+                        nullable: true
+                      department:
+                        type: string
+                        nullable: true
+                      ubigeo:
+                        type: string
+                        nullable: true
                       is_active:
                         type: boolean
                   success:
@@ -2442,6 +5174,18 @@ paths:
                 district:
                   type: string
                   description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                province:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                department:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  nullable: true
+                ubigeo:
+                  type: string
+                  description: 'Must be 6 characters.'
                   nullable: true
                 is_active:
                   type: boolean
