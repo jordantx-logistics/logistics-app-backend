@@ -20,4 +20,11 @@ class EloquentAgencyDirectory implements AgencyDirectory
     {
         return Agency::query()->whereKey($id)->where('is_active', true)->exists();
     }
+
+    public function agencyUbigeo(int $id): ?string
+    {
+        $ubigeo = Agency::query()->whereKey($id)->value('ubigeo');
+
+        return is_string($ubigeo) ? $ubigeo : null;
+    }
 }

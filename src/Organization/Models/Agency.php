@@ -20,6 +20,7 @@ class Agency extends Model
         'district',
         'province',
         'department',
+        'ubigeo',
         'timezone',
         'is_active',
         'opened_at',

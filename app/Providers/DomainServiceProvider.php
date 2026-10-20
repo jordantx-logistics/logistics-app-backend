@@ -11,18 +11,24 @@ use Src\Identity\Device\Adapters\EloquentDeviceRegistrar;
 use Src\Identity\Employee\Adapters\EloquentEmployeeDirectory;
 use Src\Identity\Employee\Models\Employee;
 use Src\Identity\Employee\Policies\EmployeePolicy;
+use Src\Logistics\Location\Adapters\EloquentCoverageDirectory;
+use Src\Logistics\Location\Adapters\EloquentLocationDirectory;
 use Src\Logistics\Order\Adapters\EloquentCustomerOrderQuery;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
 use Src\Logistics\Order\Jobs\ProjectOrderCreatedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
+use Src\Logistics\Tariff\Adapters\EloquentTariffDirectory;
 use Src\Organization\Adapters\EloquentAgencyDirectory;
 use Src\Organization\Models\Agency;
 use Src\Organization\Policies\AgencyPolicy;
 use Src\Shared\Contracts\AgencyDirectory;
+use Src\Shared\Contracts\CoverageDirectory;
 use Src\Shared\Contracts\CustomerDirectory;
 use Src\Shared\Contracts\CustomerOrderQuery;
 use Src\Shared\Contracts\DeviceRegistrar;
 use Src\Shared\Contracts\EmployeeDirectory;
+use Src\Shared\Contracts\LocationDirectory;
+use Src\Shared\Contracts\TariffDirectory;
 use Src\Shared\Services\OutboxEventMap;
 
 /**
@@ -41,6 +47,9 @@ class DomainServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CustomerDirectory::class, EloquentCustomerDirectory::class);
         $this->app->singleton(CustomerOrderQuery::class, EloquentCustomerOrderQuery::class);
+        $this->app->singleton(LocationDirectory::class, EloquentLocationDirectory::class);
+        $this->app->singleton(CoverageDirectory::class, EloquentCoverageDirectory::class);
+        $this->app->singleton(TariffDirectory::class, EloquentTariffDirectory::class);
         $this->app->singleton(AgencyDirectory::class, EloquentAgencyDirectory::class);
         $this->app->singleton(EmployeeDirectory::class, EloquentEmployeeDirectory::class);
         $this->app->singleton(DeviceRegistrar::class, EloquentDeviceRegistrar::class);

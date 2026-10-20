@@ -38,5 +38,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- La suite fija el motor legacy: el camino de rollback se sigue
+             probando tal cual, y los tests de tarifarios activan `tariff`
+             explícitamente (config(['pricing.engine' => 'tariff'])). -->
+        <env name="PRICING_ENGINE" value="legacy"/>
     </php>
 </phpunit>

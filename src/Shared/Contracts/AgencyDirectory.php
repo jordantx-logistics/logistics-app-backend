@@ -24,4 +24,13 @@ interface AgencyDirectory
      * la resolución de tarifas por agencia.
      */
     public function agencyIsActive(int $id): bool;
+
+    /**
+     * Ubigeo del distrito de la agencia, si lo tiene.
+     *
+     * Es la primera pieza de la resolución de tarifas (agencia → ubigeo →
+     * `location` → zona). Las agencias del MVP no lo tienen (`null`), así que el
+     * motor cae al tarifario nacional.
+     */
+    public function agencyUbigeo(int $id): ?string;
 }

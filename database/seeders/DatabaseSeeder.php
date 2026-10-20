@@ -24,6 +24,10 @@ class DatabaseSeeder extends Seeder
         // Crear roles y permisos por defecto
         $this->call(PermissionSeeder::class);
 
+        // Zonas y ubicaciones del padrón INEI: sin ellas no hay tarifas por
+        // origen/destino (se puede repetir: `upsert` por código/ubigeo).
+        $this->call(UbigeoSeeder::class);
+
         // Obtener credenciales de variables de entorno o usar valores por defecto
         $email = env('SCRIBE_AUTH_EMAIL', 'admin@admin.pe');
         $password = env('SCRIBE_AUTH_PASSWORD', 'SecureAdmin2026!@#');

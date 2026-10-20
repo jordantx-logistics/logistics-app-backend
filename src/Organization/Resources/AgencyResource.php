@@ -16,6 +16,9 @@ class AgencyResource extends JsonResource
             'address' => $this->address,
             'phone' => $this->phone,
             'district' => $this->district,
+            'province' => $this->province,
+            'department' => $this->department,
+            'ubigeo' => $this->ubigeo,
             'is_active' => $this->is_active,
         ];
     }
