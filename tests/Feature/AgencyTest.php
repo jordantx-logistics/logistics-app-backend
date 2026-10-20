@@ -1,14 +1,10 @@
 <?php
 
-use App\Models\User;
 use Src\Organization\Models\Agency;
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
-    $this->token = auth('api')->login($this->user);
-    $this->headers = [
-        'Authorization' => "Bearer {$this->token}",
-    ];
+    $this->user = adminUser();
+    $this->headers = tokenHeadersFor($this->user);
 });
 
 it('can list agencies', function () {
@@ -20,8 +16,8 @@ it('can list agencies', function () {
     $response->assertStatus(200)
         ->assertJsonStructure([
             'data' => [
-                '*' => ['id', 'code', 'name', 'address', 'phone', 'district', 'is_active']
-            ]
+                '*' => ['id', 'code', 'name', 'address', 'phone', 'district', 'is_active'],
+            ],
         ]);
 });
 
@@ -56,4 +52,149 @@ it('validates unique code when creating agency', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['code'], 'data');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Ámbito por agencia (criterio 5)
+|--------------------------------------------------------------------------
+|
+| Un rol nacional (`admin`, `analyst`) opera sin filtro; el resto queda acotado
+| a `agency_user`. Es el aislamiento A/B de la Fase 1.
+|
+*/
+
+it('acota el listado a las agencias del usuario', function () {
+    $agenciaA = Agency::factory()->create(['name' => 'Agencia A']);
+    Agency::factory()->create(['name' => 'Agencia B']);
+
+    $supervisor = adminUser();
+    $supervisor->removeRole('admin');
+    $supervisor->assignRole('agency-supervisor');
+    $supervisor->agencies()->attach($agenciaA);
+
+    $this->actingAs($supervisor)
+        ->getJson('/api/v1/organization/agencies')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $agenciaA->id);
+});
+
+it('deja que un rol nacional vea todas las agencias', function () {
+    Agency::factory()->count(3)->create();
+
+    $this->actingAs(adminUser())
+        ->getJson('/api/v1/organization/agencies')
+        ->assertOk()
+        ->assertJsonCount(3, 'data');
+});
+
+it('no deja ver nada a un usuario operativo sin agencia asignada', function () {
+    Agency::factory()->count(2)->create();
+
+    $user = adminUser();
+    $user->removeRole('admin');
+    $user->assignRole('agency-supervisor');
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/organization/agencies')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
+it('responde 403 sin el permiso exigido por la ruta', function () {
+    Agency::factory()->count(2)->create();
+
+    $user = adminUser();
+    $user->removeRole('admin');
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/organization/agencies')
+        ->assertForbidden();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reglas por registro (`AgencyPolicy`, Fase 2 paso 2.4)
+|--------------------------------------------------------------------------
+|
+| El permiso de la ruta decide *qué acción*; la policy, *sobre qué agencia*.
+| Cierra el hueco de pedir por id la agencia de otro.
+|
+*/
+
+it('deja que un supervisor vea y edite su agencia, pero no la ajena', function () {
+    $propia = Agency::factory()->create(['name' => 'Agencia propia']);
+    $ajena = Agency::factory()->create(['name' => 'Agencia ajena']);
+
+    $supervisor = adminUser();
+    $supervisor->removeRole('admin');
+    $supervisor->assignRole('agency-supervisor');
+    $supervisor->agencies()->attach($propia);
+
+    $this->actingAs($supervisor)
+        ->getJson("/api/v1/organization/agencies/{$propia->id}")
+        ->assertOk()
+        ->assertJsonPath('data.id', $propia->id);
+
+    $this->actingAs($supervisor)
+        ->getJson("/api/v1/organization/agencies/{$ajena->id}")
+        ->assertForbidden();
+
+    $this->actingAs($supervisor)
+        ->putJson("/api/v1/organization/agencies/{$propia->id}", [
+            'code' => $propia->code,
+            'name' => 'Agencia propia (renombrada)',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Agencia propia (renombrada)');
+
+    $this->actingAs($supervisor)
+        ->putJson("/api/v1/organization/agencies/{$ajena->id}", [
+            'code' => $ajena->code,
+            'name' => 'Agencia ajena (renombrada)',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($supervisor)
+        ->deleteJson("/api/v1/organization/agencies/{$ajena->id}")
+        ->assertForbidden();
+
+    expect($ajena->fresh()->name)->toBe('Agencia ajena');
+});
+
+it('reserva el alta de agencias al superadmin', function () {
+    $supervisor = adminUser();
+    $supervisor->removeRole('admin');
+    $supervisor->assignRole('agency-supervisor');
+
+    $this->actingAs($supervisor)
+        ->postJson('/api/v1/organization/agencies', [
+            'code' => 'SUP01',
+            'name' => 'Sucursal del supervisor',
+        ])
+        ->assertForbidden();
+});
+
+it('deja que un admin administre cualquier agencia', function () {
+    $agencia = Agency::factory()->create();
+
+    $this->withHeaders($this->headers)
+        ->getJson("/api/v1/organization/agencies/{$agencia->id}")
+        ->assertOk();
+
+    $this->withHeaders($this->headers)
+        ->putJson("/api/v1/organization/agencies/{$agencia->id}", [
+            'code' => $agencia->code,
+            'name' => 'Renombrada por el admin',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Renombrada por el admin');
+
+    $this->withHeaders($this->headers)
+        ->deleteJson("/api/v1/organization/agencies/{$agencia->id}")
+        ->assertOk()
+        ->assertJsonPath('success', true);
+
+    expect($agencia->fresh()->is_active)->toBeFalse();
 });

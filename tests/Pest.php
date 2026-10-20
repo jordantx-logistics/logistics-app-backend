@@ -1,6 +1,7 @@
 <?php
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Tests\TestCase;
 
 /*
@@ -12,10 +13,12 @@ use Tests\TestCase;
 | case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
 | need to change it using the "pest()" function to bind different classes or traits.
 |
+| Los traits compartidos (p. ej. RefreshDatabase) viven en Tests\TestCase para que
+| apliquen también a las clases de test con estilo PHPUnit.
+|
 */
 
 pest()->extend(TestCase::class)
-    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -44,7 +47,28 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Siembra el catálogo de permisos/roles (idempotente) y devuelve un usuario con
+ * el rol `admin`, que los tiene todos. Es el usuario por defecto de los tests
+ * que ejercitan una ruta de negocio: desde la Fase 1 toda ruta lleva `permission:`,
+ * así que un usuario pelado recibiría 403.
+ */
+function adminUser(): User
 {
-    // ..
+    (new PermissionSeeder)->run();
+
+    $user = User::factory()->create();
+    $user->assignRole('admin');
+
+    return $user;
+}
+
+/**
+ * Cabecera `Authorization` con un token de Sanctum recién emitido (modo app).
+ *
+ * @return array<string, string>
+ */
+function tokenHeadersFor(User $user, string $device = 'test'): array
+{
+    return ['Authorization' => 'Bearer '.$user->createToken($device)->plainTextToken];
 }

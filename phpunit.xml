@@ -26,11 +26,21 @@
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>
+        <env name="LOG_CHANNEL" value="null"/>
+        <env name="METRICS_STORAGE" value="in-memory"/>
+        <env name="METRICS_TOKEN" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="AUTHZ_ENFORCE" value="true"/>
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost"/>
+        <env name="SANCTUM_TOKEN_EXPIRATION" value="43200"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- La suite fija el motor legacy: el camino de rollback se sigue
+             probando tal cual, y los tests de tarifarios activan `tariff`
+             explícitamente (config(['pricing.engine' => 'tariff'])). -->
+        <env name="PRICING_ENGINE" value="legacy"/>
     </php>
 </phpunit>

@@ -32,19 +32,25 @@ class MakeModuleCommand extends Command
 
         // Ensure the name is properly capitalized (PascalCase)
         $parts = explode('/', $name);
-        $parts = array_map(fn($part) => Str::studly($part), $parts);
+        $parts = array_map(fn ($part) => Str::studly($part), $parts);
         $parsedName = implode('/', $parts);
 
         $basePath = base_path("src/{$parsedName}");
 
         if (File::exists($basePath)) {
             $this->error("Module '{$parsedName}' already exists!");
+
             return static::FAILURE;
         }
 
         // Create directories
         $directories = [
+            'Adapters',
             'Controllers',
+            'Events',
+            'Exceptions',
+            'Jobs',
+            'Mail',
             'Models',
             'Requests',
             'Resources',
@@ -59,13 +65,13 @@ class MakeModuleCommand extends Command
         }
 
         // Create basic routes.php
-        $routesContent = "<?php\n\nuse Illuminate\Support\Facades\Route;\n\n// Route::prefix('api/v1/...')->middleware('auth:api')->group(function () {\n//    \n// });\n";
+        $routesContent = "<?php\n\nuse Illuminate\Support\Facades\Route;\n\n// Route::prefix('api/v1/...')->middleware(['auth:sanctum', 'permission:recurso.accion'])->group(function () {\n//    \n// });\n";
         File::put("{$basePath}/routes.php", $routesContent);
         $this->info("Created file: src/{$parsedName}/routes.php");
 
         $this->newLine();
         $this->comment("Module scaffolding for '{$parsedName}' created successfully.");
-        $this->info("Don't forget to register `base_path('src/{$parsedName}/routes.php')` in `app/Providers/ModuleServiceProvider.php`!");
+        $this->info('Routes are discovered automatically: ModuleServiceProvider globs `src/*/routes.php` and `src/*/*/routes.php`.');
 
         return static::SUCCESS;
     }

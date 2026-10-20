@@ -1,67 +1,143 @@
+name: logistics-local
+
+# Nota: NO se usa `env_file`. Laravel lee `.env` por su cuenta (Dotenv) y así
+# respeta los valores que fija `phpunit.xml` en los tests (SQLite, colas sync,
+# caché/sesión array). Inyectar `.env` como variables reales del proceso pisaría
+# esa configuración.
+
 services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: logistics-app
-    restart: unless-stopped
-    working_dir: /var/www
+    # El tag se puede pisar con `APP_IMAGE` (el CI construye la suya y le dice a
+    # compose que use esa), pero por defecto es la imagen de desarrollo.
+    image: ${APP_IMAGE:-logistics-app-backend:local}
+    environment:
+      APP_ROLE: web
+      OCTANE_WORKERS: "${OCTANE_WORKERS:-2}"
+      OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+      # Compose interpola estas variables desde el `.env` de Laravel del proyecto.
+      OCTANE_LOG_LEVEL: "${OCTANE_LOG_LEVEL:-warn}"
     volumes:
       - .:/var/www
+    healthcheck:
+      # Liveness de Laravel (`/up`): sin dependencias externas.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - logistics-network
 
   nginx:
     image: nginx:alpine
-    container_name: logistics-nginx
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - logistics-network
+
+  horizon:
+    # Horizon llega en la Fase 1 (todavía no está instalado): el servicio queda
+    # definido pero fuera del `docker compose up` por defecto.
+    #   docker compose --profile horizon up -d horizon
+    profiles: ["horizon"]
+    image: ${APP_IMAGE:-logistics-app-backend:local}
+    command: ["php", "artisan", "horizon"]
+    restart: unless-stopped
+    environment:
+      APP_ROLE: horizon
     volumes:
       - .:/var/www
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    # Horizon sí sabe decir si está vivo: `horizon:status` consulta el estado
+    # que publica el supervisor en Redis. El healthcheck que hereda de la
+    # imagen base (el `/metrics` de Caddy en :2019) no aplica porque no sirve
+    # HTTP; el scheduler, que no tiene comando de estado, lo desactiva.
+    healthcheck:
+      test: ["CMD", "php", "artisan", "horizon:status"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
-      - app
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - logistics-network
+
+  scheduler:
+    image: ${APP_IMAGE:-logistics-app-backend:local}
+    environment:
+      APP_ROLE: scheduler
+    volumes:
+      - .:/var/www
+    healthcheck:
+      disable: true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - logistics-network
 
   mysql:
     image: mysql:8.0
-    container_name: logistics-mysql
     restart: unless-stopped
+    command: --sql-mode=STRICT_ALL_TABLES
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-logistics_app}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-logistics}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - logistics-network
 
   redis:
     image: redis:7-alpine
-    container_name: logistics-redis
     restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
     ports:
       - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - logistics-network
 
-  node:
-    image: node:20-alpine
-    container_name: logistics-node
-    working_dir: /var/www
-    volumes:
-      - .:/var/www
-    entrypoint: ["npm", "run", "dev"]
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "8025:8025"
     networks:
       - logistics-network
 
@@ -71,4 +147,4 @@ networks:
 
 volumes:
   mysql-data:
-    driver: local
+  redis-data:

@@ -10,12 +10,15 @@ class AgencyResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'        => $this->id,
-            'code'      => $this->code,
-            'name'      => $this->name,
-            'address'   => $this->address,
-            'phone'     => $this->phone,
-            'district'  => $this->district,
+            'id' => $this->id,
+            'code' => $this->code,
+            'name' => $this->name,
+            'address' => $this->address,
+            'phone' => $this->phone,
+            'district' => $this->district,
+            'province' => $this->province,
+            'department' => $this->department,
+            'ubigeo' => $this->ubigeo,
             'is_active' => $this->is_active,
         ];
     }

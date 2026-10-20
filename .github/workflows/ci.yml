@@ -1,0 +1,115 @@
+name: CI
+
+# Regla de ramas (ADR-0010): nada llega a `develop` (staging) ni a `main`
+# (producción) sin pasar por aquí.
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # La imagen que construye el CI, y que `docker-compose.yml` usa en sus
+  # servicios (`image: ${APP_IMAGE:-logistics-app-backend:local}`).
+  APP_IMAGE: logistics-app-backend:ci
+
+jobs:
+  backend:
+    name: Calidad y contrato
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Preparar Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # El backend se ejecuta solo con Docker: la imagen es el artefacto que se
+      # despliega, y cada paso corre dentro de ella (el runner no instala PHP).
+      - name: Construir la imagen
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: ${{ env.APP_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Los pasos que no necesitan servicios usan `run --no-deps`, así que
+      # MySQL/Redis no se levantan hasta que hacen falta.
+      - name: Dependencias y entorno
+        run: |
+          docker compose run --rm --no-deps app sh -c '
+            set -e
+            composer install --no-interaction --prefer-dist --no-progress
+            [ -f .env ] || cp .env.example .env
+            php artisan key:generate --force
+          '
+
+      - name: Validar docker-compose
+        run: docker compose config --quiet
+
+      - name: Estilo (Pint)
+        run: docker compose run --rm --no-deps app ./vendor/bin/pint --test
+
+      # La suite va con SQLite en memoria (`phpunit.xml`) y sin red: los tests no
+      # dependen de MySQL/Redis, así que si alguno lo hiciera se vería aquí.
+      # Se usa `docker run` (y no `compose run`) porque hace falta `--network none`.
+      - name: Tests (Pest)
+        run: docker run --rm --network none -v "$GITHUB_WORKSPACE":/var/www "$APP_IMAGE" sh -c 'php artisan test'
+
+      # MySQL es el motor real: las migraciones y los seeders se validan contra
+      # él y no solo contra SQLite. Se levantan **los mismos servicios que en
+      # local** (mismas versiones) para que los hostnames `mysql` y `redis` del
+      # `.env` resuelvan: la migración de spatie/laravel-permission vacía su
+      # caché de permisos, así que `migrate` necesita el almacén de caché vivo.
+      - name: Levantar MySQL y Redis
+        run: docker compose up -d --wait mysql redis
+
+      - name: Migraciones y seeders sobre MySQL
+        run: docker compose run --rm app php artisan migrate --seed --force
+
+      # El runner publica el artefacto como usuario sin privilegios, y Scribe
+      # crea `storage/app/private/scribe` con la visibilidad **privada** del
+      # disco `local` de Laravel (0700, root): sin ese `chmod`, el paso de
+      # publicación no puede ni leer el contrato (`EACCES` en el `lstat`).
+      - name: Generar el contrato OpenAPI
+        run: |
+          docker compose run --rm app sh -c '
+            php artisan scribe:generate
+            chmod -R a+rX storage/app/private/scribe
+          '
+
+      # Criterio 10 de la Fase 1: el contrato vive **versionado** en
+      # `openapi/openapi.yaml`. `contract-sync.php` normaliza el spec (elimina
+      # las claves `example`/`examples`, que trae Faker volátil: ids medidos en
+      # la BD, timestamps de `now()`, latencias) y `git diff` falla la build si
+      # Scribe ya no produce lo mismo que está commiteado — o sea, si alguien
+      # tocó docblocks o rutas sin actualizar la copia.
+      - name: Contrato versionado sin deriva
+        run: |
+          docker compose run --rm app php scripts/contract-sync.php
+          git diff --exit-code -- openapi/ || {
+            echo "::error::El contrato OpenAPI cambió sin actualizar la copia versionada. Ejecuta 'php artisan scribe:generate' + 'php scripts/contract-sync.php' y commitea 'openapi/'."
+            exit 1
+          }
+
+      # ADR-0008: el contrato OpenAPI viaja como artefacto del build (copy de
+      # consulta: la fuente canónica con la que genera el frontend es la copia
+      # versionada `openapi/openapi.yaml`).
+      - name: Publicar el contrato
+        uses: actions/upload-artifact@v7
+        with:
+          name: openapi
+          path: storage/app/private/scribe/openapi.yaml
+          if-no-files-found: error

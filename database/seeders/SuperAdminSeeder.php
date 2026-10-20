@@ -4,60 +4,41 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
 /**
- * Seeder para crear un usuario con rol SuperAdmin
+ * Crea (o actualiza) el usuario administrador del entorno y le asigna el rol
+ * `admin` del catálogo de `PermissionSeeder`.
  *
- * Este seeder crea:
- * - Un usuario administrador con credenciales de variables de entorno
- * - El rol SuperAdmin con todos los permisos disponibles
+ * Es idempotente y se puede repetir: `migrate --seed` es el arranque
+ * documentado. `DatabaseSeeder` hace lo mismo tras sembrar el catálogo; este
+ * seeder suelto existe para poder provisionar el admin sin tocar el resto.
  *
  * Credenciales (variables de entorno):
  * - SCRIBE_AUTH_EMAIL
  * - SCRIBE_AUTH_PASSWORD
- *
- * Si no están configuradas, se usan valores por defecto.
  */
 class SuperAdminSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Obtener credenciales de variables de entorno o usar valores por defecto
         $email = env('SCRIBE_AUTH_EMAIL', 'admin@admin.pe');
         $password = env('SCRIBE_AUTH_PASSWORD', 'SecureAdmin2026!@#');
 
-        // Crear rol SuperAdmin si no existe
-        $superAdminRole = Role::firstOrCreate(
-            ['name' => 'SuperAdmin'],
-            ['guard_name' => 'api']
-        );
-
-        // Asignar todos los permisos existentes al rol SuperAdmin
-        $permissions = Permission::all();
-        $superAdminRole->givePermissionTo($permissions);
-
-        // Crear usuario administrador si no existe
-        $adminUser = User::firstOrCreate(
+        $user = User::updateOrCreate(
             ['email' => $email],
             [
                 'name' => 'Admin',
-                'password' => Hash::make($password),
-            ]
+                'password' => $password,
+            ],
         );
 
-        // Asignar rol SuperAdmin al usuario
-        $adminUser->assignRole($superAdminRole);
+        if ($user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
 
-        // Log de creación
-        $this->command->info('Usuario SuperAdmin creado/actualizado');
-        $this->command->info('Email: ' . $email);
-        $this->command->info('Password: ' . $password);
-        $this->command->info('Rol: SuperAdmin (todos los permisos)');
+        $user->assignRole('admin');
+
+        $this->command->info('Usuario admin creado/actualizado');
+        $this->command->info('Email: '.$email);
     }
 }

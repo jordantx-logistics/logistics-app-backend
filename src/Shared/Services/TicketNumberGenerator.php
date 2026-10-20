@@ -14,17 +14,17 @@ class TicketNumberGenerator
     {
         // For simplicity in SQLite/testing, and MySQL we can use a dedicated table or atomic operations.
         // E.g., INSERT INTO sequences (type) VALUES ('ticket') ON DUPLICATE KEY UPDATE check_val = check_val + 1
-        
+
         // Here we build a robust numeric sequence generator.
         $nextValue = DB::table('sequences')
             ->where('type', 'ticket_number')
             ->lockForUpdate()
             ->value('current_value');
 
-        if (!$nextValue) {
+        if (! $nextValue) {
             DB::table('sequences')->insert([
                 'type' => 'ticket_number',
-                'current_value' => 1
+                'current_value' => 1,
             ]);
             $nextValue = 1;
         } else {

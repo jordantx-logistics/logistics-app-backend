@@ -16,14 +16,15 @@ return new class extends Migration
             $table->string('ticket_number', 20)->unique();    // PAY-2026-000001
             $table->char('ticket_code', 8)->unique();          // B9X21234
             $table->string('idempotency_key', 64)->unique();
-            $table->foreignId('order_id')->constrained('orders');
+            // Referencia a otro contexto (`Logistics/Order`): sin FK (ADR-0006).
+            $table->unsignedBigInteger('order_id');
 
             $table->decimal('amount', 12, 2);
             $table->string('payment_method', 30);              // cash, card, transfer
             $table->string('reference', 100)->nullable();       // Transaction reference
             $table->string('status', 20)->default('pending');  // pending -> completed -> refunded -> failed
 
-            $table->foreignId('processed_by')->constrained('users');
+            $table->unsignedBigInteger('processed_by')->index();
             $table->timestamps();
 
             $table->index(['order_id', 'created_at']);

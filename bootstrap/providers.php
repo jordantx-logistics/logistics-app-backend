@@ -1,8 +1,15 @@
 <?php
 
 use App\Providers\AppServiceProvider;
+use App\Providers\DomainServiceProvider;
+use App\Providers\HorizonServiceProvider;
+use App\Providers\MetricsServiceProvider;
+use App\Providers\ModuleServiceProvider;
 
 return [
     AppServiceProvider::class,
-    App\Providers\ModuleServiceProvider::class,
+    DomainServiceProvider::class,
+    HorizonServiceProvider::class,
+    MetricsServiceProvider::class,
+    ModuleServiceProvider::class,
 ];

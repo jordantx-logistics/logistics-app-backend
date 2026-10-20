@@ -4,8 +4,13 @@ namespace Src\Logistics\Payment\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Src\Logistics\Order\Models\Order;
 
+/**
+ * Pago de una orden (contexto `Logistics/Payment`).
+ *
+ * `order_id` y `processed_by` apuntan a otros contextos (`Logistics/Order` y
+ * `Auth`): columnas indexadas sin FK y sin relaciones Eloquent (ADR-0006).
+ */
 class Payment extends Model
 {
     use HasFactory;
@@ -21,9 +26,4 @@ class Payment extends Model
         'status',
         'processed_by',
     ];
-
-    public function order()
-    {
-        return $this->belongsTo(Order::class);
-    }
 }

@@ -23,3 +23,14 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+**/caddy
+frankenphp
+frankenphp-worker.php
+
+# Documentación de API generada por Scribe: se regenera con `scribe:generate`
+# (y el contrato OpenAPI se publica como artefacto de CI). Versionarla solo
+# añadía ruido, porque los ejemplos de respuesta los genera Faker.
+/.scribe
+/resources/views/scribe
+/public/vendor/scribe

@@ -4,6 +4,7 @@ use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
+use Src\System\Logging\FlatJsonFormatter;
 
 return [
 
@@ -56,6 +57,37 @@ return [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
+        ],
+
+        /*
+         * Canal por defecto del backend: una línea JSON por registro, a stderr,
+         * con `request_id`/`user_id` aplanados en la raíz.
+         *
+         * El contexto de la petición lo añade Laravel por su cuenta: lo guarda el
+         * middleware `AssignRequestId` en `Context` y `ContextLogProcessor`
+         * (que LogManager empuja a todos los canales) lo vuelca en cada registro.
+         *
+         * Se escribe a stderr porque es donde un contenedor debe registrar, pero
+         * bajo Octane+FrankenPHP el stderr del worker pasa por el proceso padre:
+         * el entrypoint arranca Octane con `--log-level`, que hace que imprima
+         * esas líneas en crudo (sin `--log-level`, Octane intenta parsearlas como
+         * log JSON de Caddy y acaban como "ERROR unknown error").
+         */
+        'json' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
+            'formatter' => FlatJsonFormatter::class,
+            'formatter_with' => [
+                'ignoreEmptyContextAndExtra' => true,
+                'includeStacktraces' => true,
+            ],
+            'processors' => [
+                PsrLogMessageProcessor::class,
+            ],
         ],
 
         'single' => [

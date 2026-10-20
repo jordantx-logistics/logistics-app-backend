@@ -15,7 +15,7 @@ class OrderPricingService
         // Base rate: 5.00
         // 2.50 per kg
         // 50.00 per cubic meter
-        
+
         $price = 5.00 + ($weight * 2.50) + ($volume * 50.00);
 
         return round($price, 2);

@@ -1,7 +1,9 @@
 {
     "agents": [
-        "gemini"
+        "gemini",
+        "opencode"
     ],
+    "mcp": true,
     "skills": [
         "laravel-best-practices",
         "pest-testing",

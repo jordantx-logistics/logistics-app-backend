@@ -3,154 +3,131 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Guard;
+use Spatie\Permission\PermissionRegistrar;
+use Src\Identity\Role\Models\Permission;
+use Src\Identity\Role\Models\Role;
 
 /**
- * Seeder para crear roles y permisos por defecto.
+ * Catálogo de permisos y roles (idempotente).
  *
- * Este seeder crea:
- * - Todos los permisos del sistema por módulo
- * - Los roles definidos: SuperAdmin, Admin, Manager, Operator, Viewer
- * - Asigna los permisos correspondientes a cada rol
+ * Los permisos son `recurso.accion` en inglés
+ * (`spec/02-objetivo/04-autorizacion.md`) y cubren las rutas de negocio vivas:
+ * cada `permission:` de los `routes.php` de `src/` apunta a uno de esta lista
+ * (`tests/Feature/Architecture/AuthorizationRoutesTest.php` lo comprueba).
+ *
+ * Los roles son los del spec. Los que todavía no tienen permisos (sus módulos
+ * llegan en fases posteriores: caja, almacén, flota, reparto, reportes) quedan
+ * creados y vacíos, para poder asignarlos desde ya.
+ *
+ * El guard es el que Spatie usa en tiempo de ejecución
+ * (`Guard::getDefaultName()` → `config('auth.defaults.guard')`, hoy `web`), así
+ * que seeder y comprobación nunca se separan.
  */
 class PermissionSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Permisos de las rutas de negocio actuales.
+     *
+     * @var list<string>
      */
+    public const PERMISSIONS = [
+        // Logística (Fase 3).
+        'orders.view',
+        'orders.create',
+        'orders.update',
+        'orders.confirm',
+        'orders.cancel',
+        'customers.view',
+        'customers.manage',
+        'tariffs.manage',
+        'locations.manage',
+
+        'agencies.view',
+        'agencies.manage',
+        'roles.view',
+        'roles.manage',
+        'permissions.view',
+        'permissions.manage',
+        'users.manage',
+
+        // Identity (Fase 2): RRHH, marcaciones y dispositivos.
+        'employees.manage',
+        'attendance.view',
+        'attendance.register',
+        'attendance.manage',
+        'devices.manage',
+    ];
+
+    /**
+     * Rol → permisos. `syncPermissions` los deja exactamente así, sin duplicar.
+     *
+     * @var array<string, list<string>>
+     */
+    public const ROLES = [
+        'admin' => self::PERMISSIONS,
+
+        // Operación de su agencia (el filtro por agencia es el scope `forAgencies`).
+        'agency-supervisor' => [
+            'orders.view', 'orders.create', 'orders.update', 'orders.confirm', 'orders.cancel',
+            'customers.view', 'customers.manage',
+            'agencies.view', 'agencies.manage',
+        ],
+
+        'counter' => [
+            'orders.view', 'orders.create', 'orders.update',
+            'customers.view', 'customers.manage',
+        ],
+
+        'customer-service' => [
+            'orders.view',
+            'customers.view',
+        ],
+
+        // Nacional de lectura: ve todas las órdenes (`hasNationalScope`) pero no
+        // las toca.
+        'analyst' => [
+            'orders.view',
+            'customers.view',
+        ],
+
+        // Sin permisos todavía: llegan con su módulo y su fase.
+        'cashier' => [],
+        'warehouse-operator' => [],
+        'driver' => [],
+        'courier' => [],
+
+        // Marcaciones propias (Fase 2): el único rol operativo que ya tiene
+        // permiso; los de RRHH llegan con los endpoints de Identity.
+        'employee' => ['attendance.register'],
+    ];
+
     public function run(): void
     {
-        $this->createPermissions();
-        $this->createRoles();
-    }
+        // Los permisos viven cacheados (Redis en local/producción): hay que
+        // invalidar antes de tocarlos o las rutas seguirían viendo el catálogo viejo.
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-    /**
-     * Create all permissions for the system modules.
-     */
-    private function createPermissions(): void
-    {
-        $permissions = [
-            // Roles
-            ['name' => 'role.index', 'guard_name' => 'api'],
-            ['name' => 'role.store', 'guard_name' => 'api'],
-            ['name' => 'role.update', 'guard_name' => 'api'],
-            ['name' => 'role.destroy', 'guard_name' => 'api'],
-            ['name' => 'role.show', 'guard_name' => 'api'],
+        $guard = Guard::getDefaultName(Permission::class);
 
-            // Permissions
-            ['name' => 'permission.index', 'guard_name' => 'api'],
-            ['name' => 'permission.store', 'guard_name' => 'api'],
-            ['name' => 'permission.update', 'guard_name' => 'api'],
-            ['name' => 'permission.destroy', 'guard_name' => 'api'],
-            ['name' => 'permission.show', 'guard_name' => 'api'],
-
-            // Users
-            ['name' => 'user.index', 'guard_name' => 'api'],
-            ['name' => 'user.store', 'guard_name' => 'api'],
-            ['name' => 'user.update', 'guard_name' => 'api'],
-            ['name' => 'user.destroy', 'guard_name' => 'api'],
-            ['name' => 'user.show', 'guard_name' => 'api'],
-            ['name' => 'user.assign_role', 'guard_name' => 'api'],
-            ['name' => 'user.assign_permission', 'guard_name' => 'api'],
-
-            // Orders
-            ['name' => 'order.index', 'guard_name' => 'api'],
-            ['name' => 'order.store', 'guard_name' => 'api'],
-            ['name' => 'order.update', 'guard_name' => 'api'],
-            ['name' => 'order.destroy', 'guard_name' => 'api'],
-            ['name' => 'order.show', 'guard_name' => 'api'],
-
-            // Payments
-            ['name' => 'payment.index', 'guard_name' => 'api'],
-            ['name' => 'payment.store', 'guard_name' => 'api'],
-            ['name' => 'payment.update', 'guard_name' => 'api'],
-            ['name' => 'payment.destroy', 'guard_name' => 'api'],
-            ['name' => 'payment.show', 'guard_name' => 'api'],
-
-            // Agencies
-            ['name' => 'agency.index', 'guard_name' => 'api'],
-            ['name' => 'agency.store', 'guard_name' => 'api'],
-            ['name' => 'agency.update', 'guard_name' => 'api'],
-            ['name' => 'agency.destroy', 'guard_name' => 'api'],
-            ['name' => 'agency.show', 'guard_name' => 'api'],
-
-            // Persons
-            ['name' => 'person.index', 'guard_name' => 'api'],
-            ['name' => 'person.store', 'guard_name' => 'api'],
-            ['name' => 'person.update', 'guard_name' => 'api'],
-            ['name' => 'person.destroy', 'guard_name' => 'api'],
-            ['name' => 'person.show', 'guard_name' => 'api'],
-
-            // Companies
-            ['name' => 'company.index', 'guard_name' => 'api'],
-            ['name' => 'company.store', 'guard_name' => 'api'],
-            ['name' => 'company.update', 'guard_name' => 'api'],
-            ['name' => 'company.destroy', 'guard_name' => 'api'],
-            ['name' => 'company.show', 'guard_name' => 'api'],
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate($permission);
+        foreach (self::PERMISSIONS as $permission) {
+            Permission::findOrCreate($permission, $guard);
         }
-    }
 
-    /**
-     * Create all roles with their assigned permissions.
-     */
-    private function createRoles(): void
-    {
-        // SuperAdmin - todos los permisos
-        $superAdmin = Role::firstOrCreate(
-            ['name' => 'SuperAdmin'],
-            ['guard_name' => 'api']
-        );
-        $superAdmin->givePermissionTo(Permission::all());
+        // El catálogo es la fuente de verdad: un permiso retirado (p. ej.
+        // `persons.*`/`companies.*`, que la Fase 3 sustituye por `customers.*`)
+        // se borra para que ningún `routes.php` pueda seguir declarándolo.
+        Permission::query()->whereNotIn('name', self::PERMISSIONS)->delete();
 
-        // Admin - roles, permissions, users
-        $admin = Role::firstOrCreate(
-            ['name' => 'Admin'],
-            ['guard_name' => 'api']
-        );
-        $admin->givePermissionTo([
-            'role.index', 'role.store', 'role.update', 'role.destroy', 'role.show',
-            'permission.index', 'permission.store', 'permission.update', 'permission.destroy', 'permission.show',
-            'user.index', 'user.store', 'user.update', 'user.destroy', 'user.show',
-            'user.assign_role', 'user.assign_permission',
-        ]);
+        // `findOrCreate` deja la colección de permisos *cargada y vacía* en el
+        // registrador de Spatie (la leyó antes de crearlos). Sin invalidarla
+        // aquí, `syncPermissions` no los encontraría: `findByName` mira la caché.
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        // Manager - orders, payments, agencies, persons, companies
-        $manager = Role::firstOrCreate(
-            ['name' => 'Manager'],
-            ['guard_name' => 'api']
-        );
-        $manager->givePermissionTo([
-            'order.index', 'order.store', 'order.update', 'order.destroy', 'order.show',
-            'payment.index', 'payment.store', 'payment.update', 'payment.destroy', 'payment.show',
-            'agency.index', 'agency.store', 'agency.update', 'agency.destroy', 'agency.show',
-            'person.index', 'person.store', 'person.update', 'person.destroy', 'person.show',
-            'company.index', 'company.store', 'company.update', 'company.destroy', 'company.show',
-        ]);
+        foreach (self::ROLES as $name => $permissions) {
+            Role::findOrCreate($name, $guard)->syncPermissions($permissions);
+        }
 
-        // Operator - solo orders (index, store, show)
-        $operator = Role::firstOrCreate(
-            ['name' => 'Operator'],
-            ['guard_name' => 'api']
-        );
-        $operator->givePermissionTo([
-            'order.index', 'order.store', 'order.show',
-        ]);
-
-        // Viewer - todos los módulos (solo lectura)
-        $viewer = Role::firstOrCreate(
-            ['name' => 'Viewer'],
-            ['guard_name' => 'api']
-        );
-        $viewer->givePermissionTo(Permission::all()->filter(function ($p) {
-            return in_array($p->name, [
-                'role.index', 'permission.index', 'user.index', 'order.index',
-                'payment.index', 'agency.index', 'person.index', 'company.index',
-            ]);
-        }));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
