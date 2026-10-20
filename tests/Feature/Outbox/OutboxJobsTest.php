@@ -82,27 +82,41 @@ it('no reenvía el correo si el evento ya se procesó', function () {
     expect(ProcessedEvent::query()->count())->toBe(1);
 });
 
-it('guarda el borrador de la guía en el disco privado', function () {
+it('guarda la guía en PDF en el disco privado', function () {
     Storage::fake(GenerateOrderGuidePdfJob::DISK);
 
+    $order = Order::factory()->create();
+
     $job = new GenerateOrderGuidePdfJob(2, [
-        'order_id' => 10,
-        'ticket_code' => 'A7F3Q8X4',
-        'ticket_number' => 'ORD-2026-000010',
+        'order_id' => $order->id,
+        'ticket_code' => $order->ticket_code,
+        'ticket_number' => $order->ticket_number,
     ]);
 
     app()->call([$job, 'handle']);
 
-    Storage::disk(GenerateOrderGuidePdfJob::DISK)->assertExists('orders/A7F3Q8X4/guia-borrador.html');
+    Storage::disk(GenerateOrderGuidePdfJob::DISK)->assertExists("orders/{$order->ticket_code}/guia.pdf");
 
-    expect(Storage::disk(GenerateOrderGuidePdfJob::DISK)->get($job->path()))
-        ->toContain('ORD-2026-000010');
+    // dompdf siempre empieza el binario con `%PDF-`.
+    expect(Storage::disk(GenerateOrderGuidePdfJob::DISK)->get($job->path()))->toStartWith('%PDF');
+});
+
+it('no hace nada si la orden del evento ya no existe', function () {
+    Storage::fake(GenerateOrderGuidePdfJob::DISK);
+
+    $job = new GenerateOrderGuidePdfJob(4, ['order_id' => 999999, 'ticket_code' => 'NOEXISTE']);
+
+    app()->call([$job, 'handle']);
+
+    Storage::disk(GenerateOrderGuidePdfJob::DISK)->assertMissing('orders/NOEXISTE/guia.pdf');
 });
 
 it('no reescribe la guía en un reintento', function () {
     Storage::fake(GenerateOrderGuidePdfJob::DISK);
 
-    $job = new GenerateOrderGuidePdfJob(3, ['order_id' => 10, 'ticket_code' => 'A7F3Q8X4']);
+    $order = Order::factory()->create();
+
+    $job = new GenerateOrderGuidePdfJob(3, ['order_id' => $order->id, 'ticket_code' => $order->ticket_code]);
 
     app()->call([$job, 'handle']);
 

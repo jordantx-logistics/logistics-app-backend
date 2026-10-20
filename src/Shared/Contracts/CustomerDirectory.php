@@ -26,4 +26,12 @@ interface CustomerDirectory
      * Lo usa el correo de confirmación de la orden.
      */
     public function customerEmail(int $id): ?string;
+
+    /**
+     * Nombre visible del cliente (persona o razón social).
+     *
+     * Lo usa la guía de remisión: el documento que viaja con el paquete no
+     * puede mostrar ids. `null` si el cliente ya no existe.
+     */
+    public function customerDisplayName(int $id): ?string;
 }

@@ -22,4 +22,11 @@ class EloquentCustomerDirectory implements CustomerDirectory
 
         return is_string($email) ? $email : null;
     }
+
+    public function customerDisplayName(int $id): ?string
+    {
+        $name = Customer::query()->whereKey($id)->value('display_name');
+
+        return is_string($name) ? $name : null;
+    }
 }

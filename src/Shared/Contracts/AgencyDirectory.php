@@ -33,4 +33,9 @@ interface AgencyDirectory
      * motor cae al tarifario nacional.
      */
     public function agencyUbigeo(int $id): ?string;
+
+    /**
+     * Nombre de la agencia (lo usa la guía de remisión).
+     */
+    public function agencyName(int $id): ?string;
 }

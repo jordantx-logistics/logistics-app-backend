@@ -27,4 +27,11 @@ class EloquentAgencyDirectory implements AgencyDirectory
 
         return is_string($ubigeo) ? $ubigeo : null;
     }
+
+    public function agencyName(int $id): ?string
+    {
+        $name = Agency::query()->whereKey($id)->value('name');
+
+        return is_string($name) ? $name : null;
+    }
 }
