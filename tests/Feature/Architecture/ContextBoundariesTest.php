@@ -85,12 +85,15 @@ it('no importa clases de otro contexto', function () {
 it('no declara claves foráneas hacia tablas de otro contexto', function () {
     // ADR-0006: `orders.sender_id`/`receiver_id` referencian clientes
     // (`customers`, contexto Customer) y `payments.order_id` referencia orders,
-    // pero sin FOREIGN KEY.
+    // pero sin FOREIGN KEY. Los tarifarios apuntan a `zones`/`locations`
+    // (`Logistics/Location`), también sin FK.
     expect(Schema::getForeignKeys('orders'))->toBe([])
-        ->and(Schema::getForeignKeys('payments'))->toBe([]);
+        ->and(Schema::getForeignKeys('payments'))->toBe([])
+        ->and(Schema::getForeignKeys('tariffs'))->toBe([]);
 
     expect(Schema::hasColumns('orders', ['sender_id', 'receiver_id', 'origin_agency_id', 'destination_agency_id', 'created_by']))->toBeTrue()
-        ->and(Schema::hasColumns('payments', ['order_id', 'processed_by']))->toBeTrue();
+        ->and(Schema::hasColumns('payments', ['order_id', 'processed_by']))->toBeTrue()
+        ->and(Schema::hasColumns('tariffs', ['origin_zone_id', 'destination_zone_id', 'origin_location_id', 'destination_location_id']))->toBeTrue();
 });
 
 it('deja las referencias de Identity a agencies sin clave foránea', function () {

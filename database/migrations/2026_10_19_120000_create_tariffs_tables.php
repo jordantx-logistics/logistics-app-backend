@@ -29,10 +29,13 @@ return new class extends Migration
             $table->string('service_type', 20); // standard | express
             $table->string('scope_type', 20);   // national | zone_pair | district_pair
 
-            $table->foreignId('origin_zone_id')->nullable()->constrained('zones');
-            $table->foreignId('destination_zone_id')->nullable()->constrained('zones');
-            $table->foreignId('origin_location_id')->nullable()->constrained('locations');
-            $table->foreignId('destination_location_id')->nullable()->constrained('locations');
+            // Zonas y ubicaciones viven en `Logistics/Location`: columnas
+            // indexadas sin FK (ADR-0006), validadas por el puerto
+            // `LocationDirectory` en `TariffRequest`.
+            $table->unsignedBigInteger('origin_zone_id')->nullable()->index();
+            $table->unsignedBigInteger('destination_zone_id')->nullable()->index();
+            $table->unsignedBigInteger('origin_location_id')->nullable()->index();
+            $table->unsignedBigInteger('destination_location_id')->nullable()->index();
 
             $table->decimal('base_price', 12, 2);
             $table->decimal('price_per_kg', 12, 2);

@@ -41,6 +41,11 @@ it('siembra una zona por departamento y el padrón de ubicaciones', function () 
         ->and($lima->province)->toBe('LIMA')
         ->and($lima->department)->toBe('LIMA')
         ->and($lima->zone->code)->toBe('ZON-15');
+
+    // El padrón original viene en Windows-1252: el seeder lo normaliza a UTF-8
+    // (SQLite lo aceptaba igual, MySQL no).
+    expect(Location::query()->where('ubigeo', '050605')->sole()->district)->toBe('CHAVIÑA')
+        ->and(mb_check_encoding(Location::query()->where('ubigeo', '150101')->value('district'), 'UTF-8'))->toBeTrue();
 });
 
 it('lista las zonas con el número de ubicaciones', function () {

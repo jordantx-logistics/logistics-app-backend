@@ -99,11 +99,28 @@ class UbigeoSeeder extends Seeder
             return [];
         }
 
-        $handle = fopen($path, 'rb');
+        $contents = file_get_contents($path);
+
+        if ($contents === false) {
+            return [];
+        }
+
+        // El padrón original está en Windows-1252 (los acentos son bytes
+        // sueltos, no UTF-8). SQLite lo acepta tal cual, pero MySQL con
+        // utf8mb4 rechaza la fila («Incorrect string value: '\xD1A'»), así que
+        // se normaliza a UTF-8 antes de parsear.
+        if (! mb_check_encoding($contents, 'UTF-8')) {
+            $contents = mb_convert_encoding($contents, 'UTF-8', 'Windows-1252');
+        }
+
+        $handle = fopen('php://temp', 'r+b');
 
         if ($handle === false) {
             return [];
         }
+
+        fwrite($handle, $contents);
+        rewind($handle);
 
         $rows = [];
 

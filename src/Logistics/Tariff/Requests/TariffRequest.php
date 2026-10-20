@@ -5,6 +5,8 @@ namespace Src\Logistics\Tariff\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\Logistics\Tariff\Models\Tariff;
+use Src\Logistics\Tariff\Rules\LocationExists;
+use Src\Logistics\Tariff\Rules\ZoneExists;
 
 class TariffRequest extends FormRequest
 {
@@ -23,10 +25,11 @@ class TariffRequest extends FormRequest
             'service_type' => ['required', 'string', Rule::in(Tariff::SERVICE_TYPES)],
             'scope_type' => ['required', 'string', Rule::in(Tariff::SCOPE_TYPES)],
 
-            'origin_zone_id' => ['nullable', 'integer', 'exists:zones,id'],
-            'destination_zone_id' => ['nullable', 'integer', 'exists:zones,id'],
-            'origin_location_id' => ['nullable', 'integer', 'exists:locations,id'],
-            'destination_location_id' => ['nullable', 'integer', 'exists:locations,id'],
+            // Zonas y ubicaciones son de otro contexto: se validan por puerto.
+            'origin_zone_id' => ['nullable', 'integer', app(ZoneExists::class)],
+            'destination_zone_id' => ['nullable', 'integer', app(ZoneExists::class)],
+            'origin_location_id' => ['nullable', 'integer', app(LocationExists::class)],
+            'destination_location_id' => ['nullable', 'integer', app(LocationExists::class)],
 
             'base_price' => ['required', 'numeric', 'min:0'],
             'price_per_kg' => ['required', 'numeric', 'min:0'],

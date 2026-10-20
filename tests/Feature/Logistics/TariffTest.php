@@ -89,6 +89,17 @@ it('rechaza un alcance incoherente con el par de zonas o ubicaciones', function 
         ->assertJsonPath('data.error_code', 'TARIFF_SCOPE_INVALID');
 });
 
+it('valida que las zonas y ubicaciones existan (por puerto, sin FK)', function () {
+    $this->withHeaders($this->headers)
+        ->postJson('/api/v1/logistics/tariffs', tariffPayload([
+            'scope_type' => 'zone_pair',
+            'origin_zone_id' => 999999,
+            'destination_zone_id' => 999999,
+        ]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['origin_zone_id', 'destination_zone_id'], 'data');
+});
+
 it('rechaza tramos solapados o fuera del peso máximo', function () {
     $this->withHeaders($this->headers)
         ->postJson('/api/v1/logistics/tariffs', tariffPayload([

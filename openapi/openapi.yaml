@@ -520,11 +520,9 @@ paths:
                       type: object
                       properties:
                         id:
-                          type: string
-                          nullable: true
+                          type: integer
                         code:
                           type: string
-                          nullable: true
                         customer_type:
                           type: string
                         person_id:
@@ -552,10 +550,8 @@ paths:
                           nullable: true
                         created_at:
                           type: string
-                          nullable: true
                         updated_at:
                           type: string
-                          nullable: true
                   links:
                     type: object
                     properties:
@@ -624,11 +620,9 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
-                        nullable: true
                       customer_type:
                         type: string
                       person_id:
@@ -656,10 +650,8 @@ paths:
                         nullable: true
                       created_at:
                         type: string
-                        nullable: true
                       updated_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -749,11 +741,9 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
-                        nullable: true
                       customer_type:
                         type: string
                       person_id:
@@ -781,10 +771,8 @@ paths:
                         nullable: true
                       created_at:
                         type: string
-                        nullable: true
                       updated_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -808,11 +796,9 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
-                        nullable: true
                       customer_type:
                         type: string
                       person_id:
@@ -840,10 +826,8 @@ paths:
                         nullable: true
                       created_at:
                         type: string
-                        nullable: true
                       updated_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -914,11 +898,9 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
-                        nullable: true
                       customer_type:
                         type: string
                       person_id:
@@ -946,10 +928,8 @@ paths:
                         nullable: true
                       created_at:
                         type: string
-                        nullable: true
                       updated_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -2614,14 +2594,11 @@ paths:
                       type: object
                       properties:
                         id:
-                          type: string
-                          nullable: true
+                          type: integer
                         agency_id:
-                          type: string
-                          nullable: true
+                          type: integer
                         location_id:
-                          type: string
-                          nullable: true
+                          type: integer
                         allows_pickup:
                           type: boolean
                         allows_delivery:
@@ -2698,14 +2675,11 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       agency_id:
-                        type: string
-                        nullable: true
+                        type: integer
                       location_id:
-                        type: string
-                        nullable: true
+                        type: integer
                       allows_pickup:
                         type: boolean
                       allows_delivery:
@@ -2767,14 +2741,11 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       agency_id:
-                        type: string
-                        nullable: true
+                        type: integer
                       location_id:
-                        type: string
-                        nullable: true
+                        type: integer
                       allows_pickup:
                         type: boolean
                       allows_delivery:
@@ -2894,23 +2865,17 @@ paths:
                       type: object
                       properties:
                         id:
-                          type: string
-                          nullable: true
+                          type: integer
                         ubigeo:
                           type: string
-                          nullable: true
                         department:
                           type: string
-                          nullable: true
                         province:
                           type: string
-                          nullable: true
                         district:
                           type: string
-                          nullable: true
                         zone_id:
-                          type: string
-                          nullable: true
+                          type: integer
                         is_active:
                           type: boolean
                   links:
@@ -2981,23 +2946,17 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       ubigeo:
                         type: string
-                        nullable: true
                       department:
                         type: string
-                        nullable: true
                       province:
                         type: string
-                        nullable: true
                       district:
                         type: string
-                        nullable: true
                       zone_id:
-                        type: string
-                        nullable: true
+                        type: integer
                       is_active:
                         type: boolean
                   success:
@@ -3055,23 +3014,17 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       ubigeo:
                         type: string
-                        nullable: true
                       department:
                         type: string
-                        nullable: true
                       province:
                         type: string
-                        nullable: true
                       district:
                         type: string
-                        nullable: true
                       zone_id:
-                        type: string
-                        nullable: true
+                        type: integer
                       is_active:
                         type: boolean
                   success:
@@ -3163,14 +3116,11 @@ paths:
                         status:
                           type: string
                         version:
-                          type: string
-                          nullable: true
+                          type: integer
                         service_type:
                           type: string
-                          nullable: true
                         payment_responsibility:
                           type: string
-                          nullable: true
                         description:
                           type: string
                         weight_kg:
@@ -3192,7 +3142,6 @@ paths:
                           type: string
                         delivery_type:
                           type: string
-                          nullable: true
                         delivery_location_id:
                           type: string
                           nullable: true
@@ -3203,11 +3152,9 @@ paths:
                           type: string
                           nullable: true
                         requires_signature:
-                          type: string
-                          nullable: true
+                          type: boolean
                         delivery_attempts:
-                          type: string
-                          nullable: true
+                          type: integer
                         confirmed_at:
                           type: string
                           nullable: true
@@ -3306,14 +3253,11 @@ paths:
                       status:
                         type: string
                       version:
-                        type: string
-                        nullable: true
+                        type: integer
                       service_type:
                         type: string
-                        nullable: true
                       payment_responsibility:
                         type: string
-                        nullable: true
                       description:
                         type: string
                       weight_kg:
@@ -3335,7 +3279,6 @@ paths:
                         type: string
                       delivery_type:
                         type: string
-                        nullable: true
                       delivery_location_id:
                         type: string
                         nullable: true
@@ -3346,11 +3289,9 @@ paths:
                         type: string
                         nullable: true
                       requires_signature:
-                        type: string
-                        nullable: true
+                        type: boolean
                       delivery_attempts:
-                        type: string
-                        nullable: true
+                        type: integer
                       confirmed_at:
                         type: string
                         nullable: true
@@ -3477,14 +3418,11 @@ paths:
                       status:
                         type: string
                       version:
-                        type: string
-                        nullable: true
+                        type: integer
                       service_type:
                         type: string
-                        nullable: true
                       payment_responsibility:
                         type: string
-                        nullable: true
                       description:
                         type: string
                       weight_kg:
@@ -3506,7 +3444,6 @@ paths:
                         type: string
                       delivery_type:
                         type: string
-                        nullable: true
                       delivery_location_id:
                         type: string
                         nullable: true
@@ -3517,11 +3454,9 @@ paths:
                         type: string
                         nullable: true
                       requires_signature:
-                        type: string
-                        nullable: true
+                        type: boolean
                       delivery_attempts:
-                        type: string
-                        nullable: true
+                        type: integer
                       confirmed_at:
                         type: string
                         nullable: true
@@ -3584,14 +3519,11 @@ paths:
                       status:
                         type: string
                       version:
-                        type: string
-                        nullable: true
+                        type: integer
                       service_type:
                         type: string
-                        nullable: true
                       payment_responsibility:
                         type: string
-                        nullable: true
                       description:
                         type: string
                       weight_kg:
@@ -3613,7 +3545,6 @@ paths:
                         type: string
                       delivery_type:
                         type: string
-                        nullable: true
                       delivery_location_id:
                         type: string
                         nullable: true
@@ -3624,11 +3555,9 @@ paths:
                         type: string
                         nullable: true
                       requires_signature:
-                        type: string
-                        nullable: true
+                        type: boolean
                       delivery_attempts:
-                        type: string
-                        nullable: true
+                        type: integer
                       confirmed_at:
                         type: string
                         nullable: true
@@ -3774,14 +3703,11 @@ paths:
                       status:
                         type: string
                       version:
-                        type: string
-                        nullable: true
+                        type: integer
                       service_type:
                         type: string
-                        nullable: true
                       payment_responsibility:
                         type: string
-                        nullable: true
                       description:
                         type: string
                       weight_kg:
@@ -3803,7 +3729,6 @@ paths:
                         type: string
                       delivery_type:
                         type: string
-                        nullable: true
                       delivery_location_id:
                         type: string
                         nullable: true
@@ -3814,11 +3739,9 @@ paths:
                         type: string
                         nullable: true
                       requires_signature:
-                        type: string
-                        nullable: true
+                        type: boolean
                       delivery_attempts:
-                        type: string
-                        nullable: true
+                        type: integer
                       confirmed_at:
                         type: string
                         nullable: true
@@ -3881,14 +3804,11 @@ paths:
                       status:
                         type: string
                       version:
-                        type: string
-                        nullable: true
+                        type: integer
                       service_type:
                         type: string
-                        nullable: true
                       payment_responsibility:
                         type: string
-                        nullable: true
                       description:
                         type: string
                       weight_kg:
@@ -3910,7 +3830,6 @@ paths:
                         type: string
                       delivery_type:
                         type: string
-                        nullable: true
                       delivery_location_id:
                         type: string
                         nullable: true
@@ -3921,11 +3840,9 @@ paths:
                         type: string
                         nullable: true
                       requires_signature:
-                        type: string
-                        nullable: true
+                        type: boolean
                       delivery_attempts:
-                        type: string
-                        nullable: true
+                        type: integer
                       confirmed_at:
                         type: string
                         nullable: true
@@ -3999,14 +3916,11 @@ paths:
                       status:
                         type: string
                       version:
-                        type: string
-                        nullable: true
+                        type: integer
                       service_type:
                         type: string
-                        nullable: true
                       payment_responsibility:
                         type: string
-                        nullable: true
                       description:
                         type: string
                       weight_kg:
@@ -4028,7 +3942,6 @@ paths:
                         type: string
                       delivery_type:
                         type: string
-                        nullable: true
                       delivery_location_id:
                         type: string
                         nullable: true
@@ -4039,11 +3952,9 @@ paths:
                         type: string
                         nullable: true
                       requires_signature:
-                        type: string
-                        nullable: true
+                        type: boolean
                       delivery_attempts:
-                        type: string
-                        nullable: true
+                        type: integer
                       confirmed_at:
                         type: string
                         nullable: true
@@ -4178,8 +4089,7 @@ paths:
                       type: object
                       properties:
                         id:
-                          type: string
-                          nullable: true
+                          type: integer
                         code:
                           type: string
                         name:
@@ -4223,7 +4133,6 @@ paths:
                           type: boolean
                         created_at:
                           type: string
-                          nullable: true
                   links:
                     type: object
                     properties:
@@ -4292,8 +4201,7 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
                       name:
@@ -4337,7 +4245,6 @@ paths:
                         type: boolean
                       created_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -4372,19 +4279,19 @@ paths:
                     - district_pair
                 origin_zone_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  description: ''
                   nullable: true
                 destination_zone_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  description: ''
                   nullable: true
                 origin_location_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  description: ''
                   nullable: true
                 destination_location_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  description: ''
                   nullable: true
                 base_price:
                   type: number
@@ -4472,8 +4379,7 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
                       name:
@@ -4517,7 +4423,6 @@ paths:
                         type: boolean
                       created_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -4541,8 +4446,7 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
                       name:
@@ -4586,7 +4490,6 @@ paths:
                         type: boolean
                       created_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -4621,19 +4524,19 @@ paths:
                     - district_pair
                 origin_zone_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  description: ''
                   nullable: true
                 destination_zone_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the zones table.'
+                  description: ''
                   nullable: true
                 origin_location_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  description: ''
                   nullable: true
                 destination_location_id:
                   type: integer
-                  description: 'The <code>id</code> of an existing record in the locations table.'
+                  description: ''
                   nullable: true
                 base_price:
                   type: number
@@ -4720,8 +4623,7 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
                       name:
@@ -4765,7 +4667,6 @@ paths:
                         type: boolean
                       created_at:
                         type: string
-                        nullable: true
                   success:
                     type: string
                   message:
@@ -4800,8 +4701,7 @@ paths:
                       type: object
                       properties:
                         id:
-                          type: string
-                          nullable: true
+                          type: integer
                         code:
                           type: string
                         name:
@@ -4831,8 +4731,7 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
                       name:
@@ -4882,8 +4781,7 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: string
-                        nullable: true
+                        type: integer
                       code:
                         type: string
                       name:

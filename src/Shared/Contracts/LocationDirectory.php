@@ -20,4 +20,15 @@ interface LocationDirectory
      * Id de la ubicación del ubigeo, o `null` si no está en el padrón.
      */
     public function locationIdForUbigeo(string $ubigeo): ?int;
+
+    /**
+     * ¿Existe la zona? Lo valida el alta de tarifarios (el par de zonas es una
+     * referencia a este contexto, sin FK).
+     */
+    public function zoneExists(int $id): bool;
+
+    /**
+     * ¿Existe la ubicación? Lo valida el alta de tarifarios.
+     */
+    public function locationExists(int $id): bool;
 }

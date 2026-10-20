@@ -3,6 +3,7 @@
 namespace Src\Logistics\Location\Adapters;
 
 use Src\Logistics\Location\Models\Location;
+use Src\Logistics\Location\Models\Zone;
 use Src\Shared\Contracts\LocationDirectory;
 
 /**
@@ -26,5 +27,15 @@ class EloquentLocationDirectory implements LocationDirectory
         $locationId = Location::query()->where('ubigeo', $ubigeo)->value('id');
 
         return $locationId === null ? null : (int) $locationId;
+    }
+
+    public function zoneExists(int $id): bool
+    {
+        return Zone::query()->whereKey($id)->exists();
+    }
+
+    public function locationExists(int $id): bool
+    {
+        return Location::query()->whereKey($id)->exists();
     }
 }
