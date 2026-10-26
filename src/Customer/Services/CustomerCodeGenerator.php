@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Es **propio del contexto Customer** y reinicia cada año: la secuencia vive en
  * `sequences` bajo la clave `customer_code_<año>`, así que el contador de 2026 no
- * arrastra el de 2025. No reutiliza `TicketNumberGenerator` porque ese formatea
- * sin año (`ORD-0000001`), y el código de cliente sí lo lleva
- * (`spec/04-modulos/core-logistica/02-entidades.md`).
+ * arrastra el de 2025. No reutiliza `TicketNumberGenerator` porque ese genera
+ * tickets de negocio con su propio prefijo (`ORD-2026-000001`), no códigos de
+ * cliente.
  *
  * Se llama dentro del `creating` del modelo, que a su vez va dentro de la
  * transacción del caso de uso: el `lockForUpdate` mantiene la secuencia sin

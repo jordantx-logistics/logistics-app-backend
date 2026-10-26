@@ -5,6 +5,7 @@ namespace Src\Logistics\Tariff\Adapters;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Src\Logistics\Tariff\Models\Tariff;
+use Src\Shared\Contracts\Metrics;
 use Src\Shared\Contracts\TariffDirectory;
 use Src\Shared\DTOs\ResolvedTariff;
 
@@ -24,6 +25,10 @@ class EloquentTariffDirectory implements TariffDirectory
     /** Segundos que vive un tarifario resuelto (se invalida al editarlo). */
     private const CACHE_TTL = 3600;
 
+    public function __construct(
+        private readonly Metrics $metrics,
+    ) {}
+
     public function findForRoute(
         string $serviceType,
         ?int $originZoneId,
@@ -40,11 +45,32 @@ class EloquentTariffDirectory implements TariffDirectory
             $destinationLocationId ?? '-',
         );
 
-        return Cache::tags(['tariffs'])->remember(
-            $key,
-            self::CACHE_TTL,
-            fn (): ?ResolvedTariff => $this->resolve($serviceType, $originZoneId, $destinationZoneId, $originLocationId, $destinationLocationId),
+        $cache = Cache::tags(['tariffs']);
+        $cached = $cache->get($key);
+
+        if (is_array($cached)) {
+            $this->metrics->increment(
+                'tariff_cache_hits_total',
+                [],
+                1,
+                'Resoluciones de tarifario servidas desde caché.',
+            );
+
+            return ResolvedTariff::fromArray($cached);
+        }
+
+        $this->metrics->increment(
+            'tariff_cache_misses_total',
+            [],
+            1,
+            'Resoluciones de tarifario que fueron a la base de datos.',
         );
+
+        $resolved = $this->resolve($serviceType, $originZoneId, $destinationZoneId, $originLocationId, $destinationLocationId);
+
+        $cache->put($key, $resolved?->toArray(), self::CACHE_TTL);
+
+        return $resolved;
     }
 
     private function resolve(

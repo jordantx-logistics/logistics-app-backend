@@ -45,16 +45,26 @@ class ConsumeOutboxCommand extends Command
 
         $published = 0;
         $failed = 0;
+        $publishedIds = [];
+        $failures = [];
 
         foreach ($this->claim((int) ($this->option('limit') ?: config('outbox.batch'))) as $event) {
             try {
                 $this->publish($event, $map, $bus);
-                $this->markProcessed($event);
+                $publishedIds[] = $event->id;
                 $published++;
             } catch (Throwable $error) {
-                $this->reschedule($event, $error);
+                $failures[] = [$event, $error];
                 $failed++;
             }
+        }
+
+        // Un solo UPDATE por lote: marcar cada evento por separado convertía el
+        // consumidor en 200 autocommits por pasada y hundía el throughput.
+        $this->markProcessed($publishedIds);
+
+        foreach ($failures as [$event, $error]) {
+            $this->reschedule($event, $error);
         }
 
         $this->info("Eventos publicados: {$published}; fallidos: {$failed}.");
@@ -113,9 +123,16 @@ class ConsumeOutboxCommand extends Command
         }
     }
 
-    private function markProcessed(OutboxEvent $event): void
+    /**
+     * @param  list<int>  $ids
+     */
+    private function markProcessed(array $ids): void
     {
-        OutboxEvent::query()->whereKey($event->id)->update([
+        if ($ids === []) {
+            return;
+        }
+
+        OutboxEvent::query()->whereIn('id', $ids)->update([
             'status' => OutboxEvent::STATUS_PROCESSED,
             'processed_at' => now(),
             'error' => null,

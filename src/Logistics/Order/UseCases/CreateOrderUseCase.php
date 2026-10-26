@@ -72,6 +72,11 @@ class CreateOrderUseCase
                 'created_by' => auth()->id(),
             ]);
 
+            // El INSERT no devuelve los defaults de la base (`version`,
+            // `delivery_attempts`, timestamps): refrescar deja la respuesta y el
+            // evento con los mismos valores que quedaron guardados.
+            $order->refresh();
+
             OrderStatusHistory::create([
                 'order_id' => $order->id,
                 'from_status' => null,
@@ -85,8 +90,12 @@ class CreateOrderUseCase
                     'order_id' => $order->id,
                     'ticket_number' => $order->ticket_number,
                     'ticket_code' => $order->ticket_code,
+                    'status' => $order->status,
+                    'origin_agency_id' => $order->origin_agency_id,
+                    'destination_agency_id' => $order->destination_agency_id,
                     'total_amount' => $order->total_amount,
                     'created_by' => $order->created_by,
+                    'created_at' => $order->created_at?->toIso8601String(),
                 ],
             ]);
 

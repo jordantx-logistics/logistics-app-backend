@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Mockery\MockInterface;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
-use Src\Logistics\Order\Jobs\ProjectOrderCreatedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
+use Src\Operations\Shipment\Jobs\CancelShipmentJob;
+use Src\Operations\Shipment\Jobs\ProjectOrderCreatedJob;
+use Src\Shared\Jobs\AcknowledgeEventJob;
 use Src\Shared\Models\OutboxEvent;
 
 /*
@@ -109,6 +111,31 @@ it('marca failed un evento que ningún contexto consume', function () {
         ->and($event->error)->toContain('payment.registered');
 });
 
+it('reconoce los eventos de orden que aún no tienen consumidor real', function () {
+    Queue::fake();
+
+    $confirmed = pendingOutboxEvent(['event_type' => 'order.confirmed']);
+    $received = pendingOutboxEvent(['event_type' => 'shipment.received']);
+
+    $this->artisan('outbox:consume')->assertSuccessful();
+
+    Queue::assertPushed(AcknowledgeEventJob::class, 2);
+
+    expect($confirmed->refresh()->status)->toBe(OutboxEvent::STATUS_PROCESSED)
+        ->and($received->refresh()->status)->toBe(OutboxEvent::STATUS_PROCESSED);
+});
+
+it('publica la cancelación de la orden al consumidor de Operaciones', function () {
+    Queue::fake();
+
+    $cancelled = pendingOutboxEvent(['event_type' => 'order.cancelled']);
+
+    $this->artisan('outbox:consume')->assertSuccessful();
+
+    Queue::assertPushed(CancelShipmentJob::class);
+    expect($cancelled->refresh()->status)->toBe(OutboxEvent::STATUS_PROCESSED);
+});
+
 it('recupera los eventos que dejó colgados un consumidor muerto', function () {
     Queue::fake();
 
@@ -164,6 +191,6 @@ it('agenda el consumidor y los gauges de cola en el scheduler', function () {
 
     expect($consumer)->not->toBeNull()
         ->and($consumer->expression)->toBe('* * * * *')
-        ->and($consumer->repeatSeconds)->toBe(5)
+        ->and($consumer->repeatSeconds)->toBe(1)
         ->and($gauges->repeatSeconds)->toBe(15);
 });

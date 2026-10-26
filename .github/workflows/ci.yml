@@ -68,6 +68,28 @@ jobs:
       - name: Tests (Pest)
         run: docker run --rm --network none -v "$GITHUB_WORKSPACE":/var/www "$APP_IMAGE" sh -c 'php artisan test'
 
+      # Criterios 9 de Fase 3 y 4. Pcov solo se activa en este paso (no penaliza
+      # la suite normal) y el script aplica los umbrales por dominio: `src/`
+      # >= 80 %, el motor de precios al 100 % de líneas y `src/Operations/`
+      # >= 80 %. Pcov no mide ramas; el 100 % del motor se complementa con la
+      # matriz de escenarios de precios y el de Operaciones con sus tests.
+      - name: Cobertura
+        run: |
+          docker run --rm --network none -v "$GITHUB_WORKSPACE":/var/www "$APP_IMAGE" sh -c '
+            set -e
+            php -d pcov.enabled=1 -d pcov.directory=src artisan test --coverage-clover build/coverage.xml
+            php scripts/coverage-check.php build/coverage.xml
+            chmod -R a+rX build
+          '
+
+      - name: Publicar cobertura
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: build/coverage.xml
+          if-no-files-found: ignore
+
       # MySQL es el motor real: las migraciones y los seeders se validan contra
       # él y no solo contra SQLite. Se levantan **los mismos servicios que en
       # local** (mismas versiones) para que los hostnames `mysql` y `redis` del

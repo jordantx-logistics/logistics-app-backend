@@ -8,6 +8,8 @@ use Prometheus\CollectorRegistry;
 use Prometheus\Storage\Adapter;
 use Prometheus\Storage\InMemory;
 use Prometheus\Storage\Redis;
+use Src\Shared\Contracts\Metrics;
+use Src\System\Adapters\PrometheusMetrics;
 use Src\System\Services\Metrics\MetricsRecorder;
 
 /**
@@ -48,6 +50,11 @@ class MetricsServiceProvider extends ServiceProvider
             $app->make(CollectorRegistry::class),
             (string) $app['config']->get('app.env'),
             (array) $app['config']->get('metrics.buckets'),
+        ));
+
+        $this->app->singleton(Metrics::class, fn (Application $app) => new PrometheusMetrics(
+            $app->make(CollectorRegistry::class),
+            (string) $app['config']->get('app.env'),
         ));
     }
 

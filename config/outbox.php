@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'batch' => (int) env('OUTBOX_BATCH', 100),
+    'batch' => (int) env('OUTBOX_BATCH', 200),
 
     // Intentos de publicación antes de marcar el evento como `failed`. Un
     // evento agotado se inspecciona y se reprocesa a mano (spec 05).

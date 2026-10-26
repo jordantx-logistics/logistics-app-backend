@@ -4,14 +4,23 @@ use Src\Shared\Pipelines\RulesPipeline;
 use Src\Shared\Services\TicketCodeGenerator;
 use Src\Shared\Services\TicketNumberGenerator;
 
-it('generates sequential ticket numbers', function () {
+it('generates sequential ticket numbers by prefix and year', function () {
     $generator = new TicketNumberGenerator;
+    $year = now()->format('Y');
 
     $code1 = $generator->generate('ABC');
     $code2 = $generator->generate('ABC');
 
-    expect($code1)->toBe('ABC-0000001');
-    expect($code2)->toBe('ABC-0000002');
+    expect($code1)->toBe("ABC-{$year}-000001");
+    expect($code2)->toBe("ABC-{$year}-000002");
+});
+
+it('keeps independent sequences for each ticket prefix', function () {
+    $generator = new TicketNumberGenerator;
+    $year = now()->format('Y');
+
+    expect($generator->generate('ORD'))->toBe("ORD-{$year}-000001");
+    expect($generator->generate('ABC'))->toBe("ABC-{$year}-000001");
 });
 
 it('generates 8 char alphanumeric ticket codes', function () {

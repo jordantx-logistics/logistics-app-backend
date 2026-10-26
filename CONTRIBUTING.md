@@ -22,7 +22,7 @@ docker compose exec app php artisan test
 docker compose exec app ./vendor/bin/pint
 docker compose exec app php artisan scribe:generate   # la doc generada no se versiona
 docker compose exec horizon php artisan horizon:status   # panel: http://localhost:8000/horizon
-docker compose exec scheduler php artisan outbox:consume  # el scheduler ya lo hace cada 5 s
+docker compose exec scheduler php artisan outbox:consume  # el scheduler ya lo hace cada segundo
 docker compose logs -f app
 ```
 

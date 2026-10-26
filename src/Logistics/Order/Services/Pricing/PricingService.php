@@ -22,10 +22,4 @@ final class PricingService
             ? $this->legacy->quote($request)
             : $this->tariff->quote($request);
     }
-
-    /** ¿Está activo el motor de tarifarios? (Lo usa la cotización para el aviso). */
-    public function usesTariffs(): bool
-    {
-        return config('pricing.engine') !== 'legacy';
-    }
 }

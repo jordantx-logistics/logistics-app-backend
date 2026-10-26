@@ -18,6 +18,7 @@ RUN install-php-extensions \
       gd \
       intl \
       pcntl \
+      pcov \
       redis \
       zip
 

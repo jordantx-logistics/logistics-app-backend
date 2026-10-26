@@ -29,4 +29,15 @@ class EloquentCustomerDirectory implements CustomerDirectory
 
         return is_string($name) ? $name : null;
     }
+
+    public function customerIdsByDocument(string $number, ?string $type = null): array
+    {
+        $query = Customer::query()->where('document_number', $number);
+
+        if ($type !== null && $type !== '') {
+            $query->where('document_type', strtoupper($type));
+        }
+
+        return $query->pluck('id')->all();
+    }
 }

@@ -28,6 +28,12 @@ class DatabaseSeeder extends Seeder
         // origen/destino (se puede repetir: `upsert` por código/ubigeo).
         $this->call(UbigeoSeeder::class);
 
+        // Datos de demo solo en local/testing: una agencia con ubigeo para que
+        // el motor de tarifarios tenga una ruta resoluble.
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(DemoDataSeeder::class);
+        }
+
         // Obtener credenciales de variables de entorno o usar valores por defecto
         $email = env('SCRIBE_AUTH_EMAIL', 'admin@admin.pe');
         $password = env('SCRIBE_AUTH_PASSWORD', 'SecureAdmin2026!@#');

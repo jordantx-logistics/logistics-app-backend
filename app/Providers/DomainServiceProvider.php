@@ -15,9 +15,14 @@ use Src\Logistics\Location\Adapters\EloquentCoverageDirectory;
 use Src\Logistics\Location\Adapters\EloquentLocationDirectory;
 use Src\Logistics\Order\Adapters\EloquentCustomerOrderQuery;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
-use Src\Logistics\Order\Jobs\ProjectOrderCreatedJob;
+use Src\Logistics\Order\Jobs\MarkOrderDeliveredJob;
+use Src\Logistics\Order\Jobs\MarkOrderInTransitJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
 use Src\Logistics\Tariff\Adapters\EloquentTariffDirectory;
+use Src\Operations\Shipment\Adapters\EloquentShipmentDirectory;
+use Src\Operations\Shipment\Jobs\CancelShipmentJob;
+use Src\Operations\Shipment\Jobs\ProjectOrderCreatedJob as ProjectShipmentJob;
+use Src\Operations\Tracking\Adapters\EloquentTrackingRecorder;
 use Src\Organization\Adapters\EloquentAgencyDirectory;
 use Src\Organization\Models\Agency;
 use Src\Organization\Policies\AgencyPolicy;
@@ -28,7 +33,10 @@ use Src\Shared\Contracts\CustomerOrderQuery;
 use Src\Shared\Contracts\DeviceRegistrar;
 use Src\Shared\Contracts\EmployeeDirectory;
 use Src\Shared\Contracts\LocationDirectory;
+use Src\Shared\Contracts\ShipmentDirectory;
 use Src\Shared\Contracts\TariffDirectory;
+use Src\Shared\Contracts\TrackingRecorder;
+use Src\Shared\Jobs\AcknowledgeEventJob;
 use Src\Shared\Services\OutboxEventMap;
 
 /**
@@ -53,6 +61,8 @@ class DomainServiceProvider extends ServiceProvider
         $this->app->singleton(AgencyDirectory::class, EloquentAgencyDirectory::class);
         $this->app->singleton(EmployeeDirectory::class, EloquentEmployeeDirectory::class);
         $this->app->singleton(DeviceRegistrar::class, EloquentDeviceRegistrar::class);
+        $this->app->singleton(ShipmentDirectory::class, EloquentShipmentDirectory::class);
+        $this->app->singleton(TrackingRecorder::class, EloquentTrackingRecorder::class);
 
         // Policies: los módulos no tienen provider propio (sus rutas y comandos
         // se descubren solos), así que el registro de quién protege qué modelo
@@ -62,13 +72,28 @@ class DomainServiceProvider extends ServiceProvider
         Gate::policy(AttendanceRecord::class, AttendancePolicy::class);
 
         $this->app->singleton(OutboxEventMap::class, fn (): OutboxEventMap => new OutboxEventMap([
-            // `order.created` → Core (`spec/02-objetivo/05-asincronia-y-eventos.md`).
+            // `order.created` → Core (PDF, correo) y Operaciones (proyección).
             // Cada job decide su cola: PDF y correo en `default`, proyección en `sync`.
             'order.created' => [
                 GenerateOrderGuidePdfJob::class,
                 SendOrderConfirmationMailJob::class,
-                ProjectOrderCreatedJob::class,
+                ProjectShipmentJob::class,
             ],
+            // Confirmar una orden todavía no tiene consumidor de negocio: se
+            // reconoce para no bloquear el outbox.
+            'order.confirmed' => [AcknowledgeEventJob::class],
+            // Operaciones consume la cancelación para cerrar el envío si aún
+            // no salió a reparto.
+            'order.cancelled' => [CancelShipmentJob::class],
+
+            // Eventos de Operaciones. Core mueve la orden con el embarque y la
+            // entrega; el resto todavía no tiene consumidor real y se reconoce.
+            'shipment.received' => [AcknowledgeEventJob::class],
+            'shipment.embarked' => [MarkOrderInTransitJob::class],
+            'shipment.disembarked' => [AcknowledgeEventJob::class],
+            'inventory.counted' => [AcknowledgeEventJob::class],
+            'delivery.completed' => [MarkOrderDeliveredJob::class],
+            'delivery.failed' => [AcknowledgeEventJob::class],
         ]));
     }
 }

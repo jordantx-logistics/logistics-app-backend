@@ -47,6 +47,24 @@ tags:
     name: 'Logistics - Zones'
     description: "\nZonas de tarificación (agrupan ubicaciones). El seed crea una por\ndepartamento; el resto de la operación es edición."
   -
+    name: 'Operations - Delivery'
+    description: "\nLast-mile assignment, delivery and failure with evidence by route."
+  -
+    name: 'Operations - Embarks'
+    description: "\nLoad manifests and disembark at destination/scale agencies."
+  -
+    name: 'Operations - Inventory'
+    description: "\nPhysical inventory counts per agency."
+  -
+    name: 'Operations - Reception'
+    description: "\nPhysical reception of parcels at the origin agency."
+  -
+    name: 'Operations - Shipments'
+    description: "\nOperational state of every shipment (projection of `order.created`)."
+  -
+    name: 'Operations - Tracking'
+    description: "\nPDA scan synchronization and shipment timeline."
+  -
     name: 'Organization - Agencies'
     description: "\nAPIs for managing branch locations."
   -
@@ -3076,7 +3094,7 @@ paths:
     get:
       summary: 'List Logistics Orders'
       operationId: listLogisticsOrders
-      description: 'Returns the orders visible to the authenticated user, newest first, paginated with `page` and `per_page` (max 100).'
+      description: 'Returns the orders visible to the authenticated user, newest first, paginated with `page` and `per_page` (max 100). All filters are cumulative and never widen the agency scope.'
       parameters:
         -
           in: query
@@ -3094,6 +3112,126 @@ paths:
           schema:
             type: integer
             description: 'Rows per page (1..100, por defecto 15).'
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list (`pending,confirmed`).'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list (`pending,confirmed`).'
+        -
+          in: query
+          name: origin_agency_id
+          description: 'Filter by origin agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by origin agency.'
+        -
+          in: query
+          name: destination_agency_id
+          description: 'Filter by destination agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by destination agency.'
+        -
+          in: query
+          name: agency
+          description: 'Filter orders that touch this agency (origin or destination).'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter orders that touch this agency (origin or destination).'
+        -
+          in: query
+          name: created_from
+          description: 'date Filter orders created on or after this date (ISO 8601).'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter orders created on or after this date (ISO 8601).'
+        -
+          in: query
+          name: created_to
+          description: 'date Filter orders created on or before this date (ISO 8601).'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter orders created on or before this date (ISO 8601).'
+        -
+          in: query
+          name: sender_id
+          description: 'Filter by sender customer id.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by sender customer id.'
+        -
+          in: query
+          name: receiver_id
+          description: 'Filter by receiver customer id.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by receiver customer id.'
+        -
+          in: query
+          name: sender_document
+          description: 'Filter by sender document number.'
+          required: false
+          schema:
+            type: string
+            description: 'Filter by sender document number.'
+        -
+          in: query
+          name: sender_document_type
+          description: 'Sender document type (`DNI`, `RUC`, `CE`, `PASSPORT`).'
+          required: false
+          schema:
+            type: string
+            description: 'Sender document type (`DNI`, `RUC`, `CE`, `PASSPORT`).'
+        -
+          in: query
+          name: receiver_document
+          description: 'Filter by receiver document number.'
+          required: false
+          schema:
+            type: string
+            description: 'Filter by receiver document number.'
+        -
+          in: query
+          name: receiver_document_type
+          description: 'Receiver document type (`DNI`, `RUC`, `CE`, `PASSPORT`).'
+          required: false
+          schema:
+            type: string
+            description: 'Receiver document type (`DNI`, `RUC`, `CE`, `PASSPORT`).'
+        -
+          in: query
+          name: ticket_code
+          description: 'Exact 8-char ticket code.'
+          required: false
+          schema:
+            type: string
+            description: 'Exact 8-char ticket code.'
+        -
+          in: query
+          name: ticket_number
+          description: 'Exact or prefix ticket number.'
+          required: false
+          schema:
+            type: string
+            description: 'Exact or prefix ticket number.'
+        -
+          in: query
+          name: ticket
+          description: 'Exact ticket code or ticket number prefix (shortcut).'
+          required: false
+          schema:
+            type: string
+            description: 'Exact ticket code or ticket number prefix (shortcut).'
       responses:
         200:
           description: ''
@@ -3228,6 +3366,71 @@ paths:
                     type: string
       tags:
         - 'Logistics - Orders'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                origin_agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                destination_agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                created_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                created_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>created_from</code>.'
+                sender_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                receiver_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                sender_document:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                sender_document_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - DNI
+                    - RUC
+                    - CE
+                    - PASSPORT
+                receiver_document:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                receiver_document_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - DNI
+                    - RUC
+                    - CE
+                    - PASSPORT
+                ticket_code:
+                  type: string
+                  description: 'Must not be greater than 8 characters.'
+                ticket_number:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                ticket:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                per_page:
+                  type: integer
+                  description: ''
     post:
       summary: 'Create Logistics Order'
       operationId: createLogisticsOrder
@@ -3586,6 +3789,141 @@ paths:
                     type: string
       tags:
         - 'Logistics - Orders'
+    patch:
+      summary: 'Update Logistics Order'
+      operationId: updateLogisticsOrder
+      description: 'Edits shipping and delivery data while the order is `pending` or `confirmed`. It cannot change sender, receiver, agencies, service or tariff. Weight, volume or delivery changes re-quote the order; identity changes after departure are rejected with `ORDER_NOT_EDITABLE`.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      status:
+                        type: string
+                      version:
+                        type: integer
+                      service_type:
+                        type: string
+                      payment_responsibility:
+                        type: string
+                      description:
+                        type: string
+                      weight_kg:
+                        type: string
+                      volume_m3:
+                        type: string
+                      chargeable_weight_kg:
+                        type: string
+                        nullable: true
+                      declared_value:
+                        type: string
+                      tariff_id:
+                        type: string
+                        nullable: true
+                      pricing_snapshot:
+                        type: string
+                        nullable: true
+                      total_amount:
+                        type: string
+                      delivery_type:
+                        type: string
+                      delivery_location_id:
+                        type: string
+                        nullable: true
+                      recipient_address:
+                        type: string
+                        nullable: true
+                      delivery_scheduled_at:
+                        type: string
+                        nullable: true
+                      requires_signature:
+                        type: boolean
+                      delivery_attempts:
+                        type: integer
+                      confirmed_at:
+                        type: string
+                        nullable: true
+                      cancelled_at:
+                        type: string
+                        nullable: true
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      cancelled_reason:
+                        type: string
+                        nullable: true
+                      sender_id:
+                        type: integer
+                      receiver_id:
+                        type: integer
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Logistics - Orders'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                  description: 'Order description.'
+                  nullable: true
+                weight_kg:
+                  type: number
+                  description: 'Weight in kilograms.'
+                volume_m3:
+                  type: number
+                  description: 'Volume in cubic meters.'
+                  nullable: true
+                declared_value:
+                  type: number
+                  description: 'Declared value.'
+                  nullable: true
+                delivery_type:
+                  type: string
+                  description: 'agency_pickup,home_delivery.'
+                delivery_location_id:
+                  type: integer
+                  description: 'when delivery_type=home_delivery.'
+                  nullable: true
+                recipient_address:
+                  type: string
+                  description: 'when delivery_type=home_delivery.'
+                  nullable: true
+                delivery_scheduled_at:
+                  type: date
+                  description: 'Delivery date (ISO 8601).'
+                  nullable: true
+                requires_signature:
+                  type: boolean
+                  description: 'Whether the delivery requires a signature.'
+              required:
+                - delivery_location_id
+                - recipient_address
     parameters:
       -
         in: path
@@ -4821,6 +5159,2202 @@ paths:
         required: true
         schema:
           type: integer
+  /api/v1/operations/deliveries:
+    get:
+      summary: 'List deliveries'
+      operationId: listDeliveries
+      description: ''
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list.'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list.'
+        -
+          in: query
+          name: courier_id
+          description: 'Filter by courier.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by courier.'
+        -
+          in: query
+          name: ticket_code
+          description: 'Exact 8-char ticket code.'
+          required: false
+          schema:
+            type: string
+            description: 'Exact 8-char ticket code.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        shipment_id:
+                          type: integer
+                        ticket_code:
+                          type: string
+                        ticket_number:
+                          type: string
+                        agency_id:
+                          type: integer
+                        courier_id:
+                          type: integer
+                        status:
+                          type: string
+                        attempt:
+                          type: integer
+                        delivered_at:
+                          type: string
+                          nullable: true
+                        failure_reason:
+                          type: string
+                          nullable: true
+                        recipient_name:
+                          type: string
+                          nullable: true
+                        recipient_document:
+                          type: string
+                          nullable: true
+                        evidence:
+                          type: object
+                          properties:
+                            signature_path:
+                              type: string
+                            photo_path:
+                              type: string
+                            latitude:
+                              type: string
+                            longitude:
+                              type: string
+                            captured_at:
+                              type: string
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Operations - Delivery'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                status:
+                  type: string
+                  description: 'Must not be greater than 120 characters.'
+                courier_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                ticket_code:
+                  type: string
+                  description: 'Must not be greater than 8 characters.'
+                per_page:
+                  type: integer
+                  description: ''
+  '/api/v1/operations/deliveries/{delivery}':
+    get:
+      summary: 'Show a delivery'
+      operationId: showADelivery
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      shipment_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      ticket_number:
+                        type: string
+                      agency_id:
+                        type: integer
+                      courier_id:
+                        type: integer
+                      status:
+                        type: string
+                      attempt:
+                        type: integer
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      failure_reason:
+                        type: string
+                        nullable: true
+                      recipient_name:
+                        type: string
+                        nullable: true
+                      recipient_document:
+                        type: string
+                        nullable: true
+                      evidence:
+                        type: object
+                        properties:
+                          signature_path:
+                            type: string
+                          photo_path:
+                            type: string
+                          latitude:
+                            type: string
+                          longitude:
+                            type: string
+                          captured_at:
+                            type: string
+                      created_at:
+                        type: string
+      tags:
+        - 'Operations - Delivery'
+    parameters:
+      -
+        in: path
+        name: delivery
+        description: 'Delivery id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/operations/deliveries/assign:
+    post:
+      summary: 'Assign shipments for delivery'
+      operationId: assignShipmentsForDelivery
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        shipment_id:
+                          type: integer
+                        ticket_code:
+                          type: string
+                        status:
+                          type: string
+                        attempt:
+                          type: integer
+      tags:
+        - 'Operations - Delivery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Delivery agency.'
+                courier_id:
+                  type: integer
+                  description: 'Courier employee id.'
+                shipment_ids:
+                  type: array
+                  description: 'Shipment ids.'
+                  items:
+                    type: integer
+              required:
+                - agency_id
+                - courier_id
+                - shipment_ids
+  '/api/v1/operations/deliveries/{delivery}/start':
+    post:
+      summary: 'Start a delivery'
+      operationId: startADelivery
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      shipment_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      ticket_number:
+                        type: string
+                      agency_id:
+                        type: integer
+                      courier_id:
+                        type: integer
+                      status:
+                        type: string
+                      attempt:
+                        type: integer
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      failure_reason:
+                        type: string
+                        nullable: true
+                      recipient_name:
+                        type: string
+                        nullable: true
+                      recipient_document:
+                        type: string
+                        nullable: true
+                      evidence:
+                        type: object
+                        properties:
+                          signature_path:
+                            type: string
+                          photo_path:
+                            type: string
+                          latitude:
+                            type: string
+                          longitude:
+                            type: string
+                          captured_at:
+                            type: string
+                      created_at:
+                        type: string
+      tags:
+        - 'Operations - Delivery'
+    parameters:
+      -
+        in: path
+        name: delivery
+        description: 'Delivery id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/operations/deliveries/{delivery}/complete':
+    post:
+      summary: 'Complete a delivery'
+      operationId: completeADelivery
+      description: 'Evidence is recorded as routes (`deliveries/...`); Fase 4 does not upload files.'
+      parameters: []
+      responses:
+        200:
+          description: Delivered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      delivery:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          status:
+                            type: string
+                      order_id:
+                        type: integer
+                      shipment_id:
+                        type: integer
+                      already:
+                        type: boolean
+      tags:
+        - 'Operations - Delivery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipient_name:
+                  type: string
+                  description: 'Recipient name.'
+                recipient_document:
+                  type: string
+                  description: 'Recipient document.'
+                signature_path:
+                  type: string
+                  description: 'Signature route.'
+                photo_path:
+                  type: string
+                  description: 'Photo route.'
+                latitude:
+                  type: number
+                  description: 'GPS latitude.'
+                longitude:
+                  type: number
+                  description: 'GPS longitude.'
+                captured_at:
+                  type: string
+                  description: 'ISO 8601 capture time.'
+              required:
+                - recipient_name
+                - recipient_document
+                - signature_path
+                - photo_path
+                - latitude
+                - longitude
+                - captured_at
+    parameters:
+      -
+        in: path
+        name: delivery
+        description: 'Delivery id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/operations/deliveries/{delivery}/fail':
+    post:
+      summary: 'Fail a delivery'
+      operationId: failADelivery
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      shipment_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      ticket_number:
+                        type: string
+                      agency_id:
+                        type: integer
+                      courier_id:
+                        type: integer
+                      status:
+                        type: string
+                      attempt:
+                        type: integer
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      failure_reason:
+                        type: string
+                        nullable: true
+                      recipient_name:
+                        type: string
+                        nullable: true
+                      recipient_document:
+                        type: string
+                        nullable: true
+                      evidence:
+                        type: object
+                        properties:
+                          signature_path:
+                            type: string
+                          photo_path:
+                            type: string
+                          latitude:
+                            type: string
+                          longitude:
+                            type: string
+                          captured_at:
+                            type: string
+                      created_at:
+                        type: string
+      tags:
+        - 'Operations - Delivery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                failure_reason:
+                  type: string
+                  description: Reason.
+              required:
+                - failure_reason
+    parameters:
+      -
+        in: path
+        name: delivery
+        description: 'Delivery id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/operations/embarks:
+    get:
+      summary: 'List embarks'
+      operationId: listEmbarks
+      description: ''
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by origin agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by origin agency.'
+        -
+          in: query
+          name: departed_from
+          description: 'date Filter from this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter from this date.'
+        -
+          in: query
+          name: departed_to
+          description: 'date Filter up to this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter up to this date.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        vehicle_id:
+                          type: integer
+                        driver_id:
+                          type: integer
+                        route_ref:
+                          type: string
+                        departed_at:
+                          type: string
+                        items_count:
+                          type: integer
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              shipment_id:
+                                type: integer
+                              ticket_code:
+                                type: string
+                              scan_id:
+                                type: string
+                                nullable: true
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Operations - Embarks'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                departed_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                departed_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>departed_from</code>.'
+                per_page:
+                  type: integer
+                  description: ''
+    post:
+      summary: 'Create an embark'
+      operationId: createAnEmbark
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      vehicle_id:
+                        type: integer
+                      driver_id:
+                        type: integer
+                      route_ref:
+                        type: string
+                      departed_at:
+                        type: string
+                      items_count:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            shipment_id:
+                              type: integer
+                            ticket_code:
+                              type: string
+                            scan_id:
+                              type: string
+                              nullable: true
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+                  accepted:
+                    type: string
+      tags:
+        - 'Operations - Embarks'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Origin agency.'
+                vehicle_id:
+                  type: integer
+                  description: 'Vehicle id.'
+                driver_id:
+                  type: integer
+                  description: 'Driver id.'
+                route_ref:
+                  type: string
+                  description: 'Optional route reference.'
+                  nullable: true
+                departed_at:
+                  type: string
+                  description: 'Optional ISO 8601 departure.'
+                  nullable: true
+                items:
+                  type: array
+                  description: 'Shipments in the manifest.'
+                  items:
+                    type: object
+                    properties:
+                      ticket_code:
+                        type: string
+                        description: '8-char ticket code.'
+                      scan_id:
+                        type: string
+                        description: 'Optional PDA scan UUID.'
+                        nullable: true
+                      scanned_at:
+                        type: string
+                        description: 'Must be a valid date.'
+                        nullable: true
+                    required:
+                      - ticket_code
+              required:
+                - agency_id
+                - vehicle_id
+                - driver_id
+                - items
+  '/api/v1/operations/embarks/{embark}':
+    get:
+      summary: 'Show an embark'
+      operationId: showAnEmbark
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      vehicle_id:
+                        type: integer
+                      driver_id:
+                        type: integer
+                      route_ref:
+                        type: string
+                      departed_at:
+                        type: string
+                      items_count:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            shipment_id:
+                              type: integer
+                            ticket_code:
+                              type: string
+                            scan_id:
+                              type: string
+                              nullable: true
+                      created_at:
+                        type: string
+      tags:
+        - 'Operations - Embarks'
+    parameters:
+      -
+        in: path
+        name: embark
+        description: 'Embark id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/operations/embarks/{embark}/disembark':
+    post:
+      summary: 'Disembark an embark'
+      operationId: disembarkAnEmbark
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      embark_id:
+                        type: integer
+                      arrived_at:
+                        type: string
+                      items_count:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            shipment_id:
+                              type: integer
+                            ticket_code:
+                              type: string
+                            scan_id:
+                              type: string
+                              nullable: true
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+                  accepted:
+                    type: string
+                  duplicated:
+                    type: string
+      tags:
+        - 'Operations - Embarks'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Agency where the parcels are unloaded.'
+                arrived_at:
+                  type: string
+                  description: 'Optional ISO 8601 arrival.'
+                  nullable: true
+                items:
+                  type: array
+                  description: 'Optional subset of tickets; omit to disembark the whole manifest.'
+                  items:
+                    type: object
+                    properties:
+                      ticket_code:
+                        type: string
+                        description: '8-char ticket code.'
+                      scan_id:
+                        type: string
+                        description: 'Optional PDA scan UUID.'
+                        nullable: true
+                    required:
+                      - ticket_code
+              required:
+                - agency_id
+    parameters:
+      -
+        in: path
+        name: embark
+        description: 'Embark id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/operations/inventory-counts:
+    get:
+      summary: 'List inventory counts'
+      operationId: listInventoryCounts
+      description: ''
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: status
+          description: '`open` or `finished`.'
+          required: false
+          schema:
+            type: string
+            description: '`open` or `finished`.'
+        -
+          in: query
+          name: created_from
+          description: 'date Filter from this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter from this date.'
+        -
+          in: query
+          name: created_to
+          description: 'date Filter up to this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter up to this date.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        status:
+                          type: string
+                        counted_by:
+                          type: integer
+                        finished_at:
+                          type: string
+                          nullable: true
+                        items_count:
+                          type: integer
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Operations - Inventory'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - open
+                    - finished
+                created_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                created_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>created_from</code>.'
+                per_page:
+                  type: integer
+                  description: ''
+    post:
+      summary: 'Open an inventory count'
+      operationId: openAnInventoryCount
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      status:
+                        type: string
+                      counted_by:
+                        type: integer
+                      finished_at:
+                        type: string
+                        nullable: true
+                      items_count:
+                        type: integer
+                      summary:
+                        type: object
+                        properties:
+                          expected:
+                            type: integer
+                          found:
+                            type: integer
+                          missing:
+                            type: integer
+                          unexpected:
+                            type: integer
+                          difference:
+                            type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            shipment_id:
+                              type: integer
+                            ticket_code:
+                              type: string
+                            expected:
+                              type: boolean
+                            found:
+                              type: boolean
+                            difference:
+                              type: integer
+                            motive:
+                              type: string
+                              nullable: true
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Operations - Inventory'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Agency to count.'
+              required:
+                - agency_id
+  '/api/v1/operations/inventory-counts/{count}':
+    get:
+      summary: 'Show an inventory count'
+      operationId: showAnInventoryCount
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      status:
+                        type: string
+                      counted_by:
+                        type: integer
+                      finished_at:
+                        type: string
+                        nullable: true
+                      items_count:
+                        type: integer
+                      summary:
+                        type: object
+                        properties:
+                          expected:
+                            type: integer
+                          found:
+                            type: integer
+                          missing:
+                            type: integer
+                          unexpected:
+                            type: integer
+                          difference:
+                            type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            shipment_id:
+                              type: integer
+                            ticket_code:
+                              type: string
+                            expected:
+                              type: boolean
+                            found:
+                              type: boolean
+                            difference:
+                              type: integer
+                            motive:
+                              type: string
+                              nullable: true
+                      created_at:
+                        type: string
+      tags:
+        - 'Operations - Inventory'
+    parameters:
+      -
+        in: path
+        name: count
+        description: 'Inventory count id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/operations/inventory-counts/{count}/finish':
+    post:
+      summary: 'Finish an inventory count'
+      operationId: finishAnInventoryCount
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      status:
+                        type: string
+                      counted_by:
+                        type: integer
+                      finished_at:
+                        type: string
+                        nullable: true
+                      items_count:
+                        type: integer
+                      summary:
+                        type: object
+                        properties:
+                          expected:
+                            type: integer
+                          found:
+                            type: integer
+                          missing:
+                            type: integer
+                          unexpected:
+                            type: integer
+                          difference:
+                            type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            shipment_id:
+                              type: integer
+                            ticket_code:
+                              type: string
+                            expected:
+                              type: boolean
+                            found:
+                              type: boolean
+                            difference:
+                              type: integer
+                            motive:
+                              type: string
+                              nullable: true
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+                  expected:
+                    type: string
+                  found:
+                    type: string
+                  missing:
+                    type: string
+                  unexpected:
+                    type: string
+      tags:
+        - 'Operations - Inventory'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  description: 'Counted shipments.'
+                  items:
+                    type: object
+                    properties:
+                      shipment_id:
+                        type: integer
+                        description: 'Shipment id.'
+                      found:
+                        type: boolean
+                        description: 'Whether the parcel was found.'
+                      motive:
+                        type: string
+                        description: 'Required when the expected and found states differ.'
+                        nullable: true
+                    required:
+                      - shipment_id
+                      - found
+              required:
+                - items
+    parameters:
+      -
+        in: path
+        name: count
+        description: 'Inventory count id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/operations/receptions:
+    get:
+      summary: 'List receptions'
+      operationId: listReceptions
+      description: ''
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: received_from
+          description: 'date Filter from this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter from this date.'
+        -
+          in: query
+          name: received_to
+          description: 'date Filter up to this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter up to this date.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        received_by:
+                          type: integer
+                        received_at:
+                          type: string
+                        status:
+                          type: string
+                        items_count:
+                          type: integer
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              shipment_id:
+                                type: integer
+                              ticket_code:
+                                type: string
+                              scan_id:
+                                type: string
+                                nullable: true
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Operations - Reception'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                received_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                received_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>received_from</code>.'
+                per_page:
+                  type: integer
+                  description: ''
+    post:
+      summary: 'Receive shipments'
+      operationId: receiveShipments
+      description: "Registers one or more parcels at their origin agency. A shipment already\nreceived with the same scan is reported as duplicated, not as an error."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      received_by:
+                        type: integer
+                      received_at:
+                        type: string
+                      status:
+                        type: string
+                      items_count:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            shipment_id:
+                              type: integer
+                            ticket_code:
+                              type: string
+                            scan_id:
+                              type: string
+                              nullable: true
+                      created_at:
+                        type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+                  accepted:
+                    type: string
+                  duplicated:
+                    type: string
+      tags:
+        - 'Operations - Reception'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Agency where the parcels are received.'
+                items:
+                  type: array
+                  description: 'List of parcels.'
+                  items:
+                    type: object
+                    properties:
+                      ticket_code:
+                        type: string
+                        description: '8-char ticket code.'
+                      scan_id:
+                        type: string
+                        description: 'Optional PDA scan UUID.'
+                        nullable: true
+                      scanned_at:
+                        type: string
+                        description: 'Optional ISO 8601 timestamp.'
+                        nullable: true
+                    required:
+                      - ticket_code
+              required:
+                - agency_id
+                - items
+  /api/v1/operations/shipments:
+    get:
+      summary: 'List shipments'
+      operationId: listShipments
+      description: ''
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list.'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list.'
+        -
+          in: query
+          name: agency
+          description: 'Filter shipments touching this agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter shipments touching this agency.'
+        -
+          in: query
+          name: origin_agency_id
+          description: 'Filter by origin agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by origin agency.'
+        -
+          in: query
+          name: destination_agency_id
+          description: 'Filter by destination agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by destination agency.'
+        -
+          in: query
+          name: ticket_code
+          description: 'Exact 8-char ticket code.'
+          required: false
+          schema:
+            type: string
+            description: 'Exact 8-char ticket code.'
+        -
+          in: query
+          name: ticket_number
+          description: 'Ticket number prefix.'
+          required: false
+          schema:
+            type: string
+            description: 'Ticket number prefix.'
+        -
+          in: query
+          name: created_from
+          description: 'date Filter from this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter from this date.'
+        -
+          in: query
+          name: created_to
+          description: 'date Filter up to this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter up to this date.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        order_id:
+                          type: integer
+                        ticket_code:
+                          type: string
+                        ticket_number:
+                          type: string
+                        status:
+                          type: string
+                        origin_agency_id:
+                          type: integer
+                        destination_agency_id:
+                          type: integer
+                        current_location_agency_id:
+                          type: integer
+                        delivered_at:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Operations - Shipments'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: 'Must not be greater than 120 characters.'
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                origin_agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                destination_agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                ticket_code:
+                  type: string
+                  description: 'Must not be greater than 8 characters.'
+                ticket_number:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                created_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                created_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>created_from</code>.'
+                per_page:
+                  type: integer
+                  description: ''
+  '/api/v1/operations/shipments/{ticketCode}':
+    get:
+      summary: 'Show a shipment'
+      operationId: showAShipment
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      ticket_number:
+                        type: string
+                      status:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      current_location_agency_id:
+                        type: integer
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Operations - Shipments'
+    parameters:
+      -
+        in: path
+        name: ticketCode
+        description: '8-char ticket code.'
+        required: true
+        schema:
+          type: string
+  '/api/v1/operations/agencies/{agency}/inventory':
+    get:
+      summary: 'Agency inventory'
+      operationId: agencyInventory
+      description: 'Shipments physically at the agency and not yet delivered, returned or cancelled.'
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page to return.'
+          required: false
+          schema:
+            type: integer
+            description: 'Page to return.'
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list.'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list.'
+        -
+          in: query
+          name: search
+          description: 'Ticket code or number prefix.'
+          required: false
+          schema:
+            type: string
+            description: 'Ticket code or number prefix.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        order_id:
+                          type: integer
+                        ticket_code:
+                          type: string
+                        ticket_number:
+                          type: string
+                        status:
+                          type: string
+                        origin_agency_id:
+                          type: integer
+                        destination_agency_id:
+                          type: integer
+                        current_location_agency_id:
+                          type: integer
+                        delivered_at:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Operations - Shipments'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: 'Must not be greater than 120 characters.'
+                search:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                per_page:
+                  type: integer
+                  description: ''
+    parameters:
+      -
+        in: path
+        name: agency
+        description: 'Agency id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/operations/scans/sync:
+    post:
+      summary: 'Synchronize PDA scans'
+      operationId: synchronizePDAScans
+      description: "Accepts a batch of scans. Each item is processed independently and\nreturned as accepted, duplicated or rejected."
+      parameters: []
+      responses:
+        200:
+          description: 'Batch processed'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      accepted:
+                        type: integer
+                      duplicated:
+                        type: integer
+                      rejected:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            scan_id:
+                              type: string
+                            status:
+                              type: string
+                            shipment_id:
+                              type: integer
+                            shipment_status:
+                              type: string
+      tags:
+        - 'Operations - Tracking'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_id:
+                  type: string
+                  description: 'Optional device identifier.'
+                  nullable: true
+                scans:
+                  type: array
+                  description: 'Batch of scans.'
+                  items:
+                    type: object
+                    properties:
+                      scan_id:
+                        type: string
+                        description: 'Client-generated UUID (idempotency key).'
+                      ticket_code:
+                        type: string
+                        description: '8-char ticket code.'
+                      scan_type:
+                        type: string
+                        description: 'One of reception, embark, disembark, inventory, out_for_delivery. `delivery` is reserved for the delivery endpoint.'
+                      scanned_at:
+                        type: string
+                        description: 'ISO 8601 timestamp.'
+                      embark_id:
+                        type: integer
+                        description: 'Required for embark/disembark scans.'
+                        nullable: true
+                      agency_id:
+                        type: integer
+                        description: 'Optional agency override.'
+                        nullable: true
+                      latitude:
+                        type: number
+                        description: 'Optional GPS latitude.'
+                        nullable: true
+                      longitude:
+                        type: number
+                        description: 'Optional GPS longitude.'
+                        nullable: true
+                    required:
+                      - scan_id
+                      - ticket_code
+                      - scan_type
+                      - scanned_at
+              required:
+                - scans
+  '/api/v1/operations/tracking/{ticketCode}':
+    get:
+      summary: 'Look up a shipment timeline'
+      operationId: lookUpAShipmentTimeline
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: Timeline
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      shipment_id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      ticket_number:
+                        type: string
+                      status:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      current_location_agency_id:
+                        type: integer
+                      delivered_at:
+                        type: string
+                        nullable: true
+                      events:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            event_type:
+                              type: string
+                            status:
+                              type: string
+                            agency_id:
+                              type: integer
+                            scan_id:
+                              type: string
+                              nullable: true
+                            meta:
+                              type: object
+                              properties: []
+                            created_at:
+                              type: string
+      tags:
+        - 'Operations - Tracking'
+    parameters:
+      -
+        in: path
+        name: ticketCode
+        description: '8-char ticket code.'
+        required: true
+        schema:
+          type: string
   /api/v1/organization/agencies:
     get:
       summary: 'List Agencies'
