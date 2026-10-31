@@ -323,7 +323,7 @@ it('cubre las guardas de aprobación de anulaciones', function () {
         'payment_id' => null,
         'reason' => 'No payment',
         'status' => PaymentVoid::STATUS_REQUESTED,
-        'requested_by' => $paymentThree->created_by ?? $requester->id,
+        'requested_by' => $requester->id,
         'requested_at' => now(),
     ]);
 
