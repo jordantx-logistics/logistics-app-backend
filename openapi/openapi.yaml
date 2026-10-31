@@ -20,6 +20,30 @@ tags:
     name: 'Customer - Persons'
     description: "\nAPIs for managing individual customers."
   -
+    name: 'Finance - Cash closures'
+    description: "\nAprobación o rechazo de cierres con descuadre y descarga del reporte PDF."
+  -
+    name: 'Finance - Cash movements'
+    description: ''
+  -
+    name: 'Finance - Cash sessions'
+    description: "\nTurnos de caja, cierre cuadrado y cierre con descuadre pendiente de aprobación."
+  -
+    name: 'Finance - Credit notes'
+    description: "\nNotas de crédito totales o parciales sobre comprobantes aceptados."
+  -
+    name: 'Finance - Invoices'
+    description: "\nComprobantes electrónicos, su estado SUNAT y sus descargas."
+  -
+    name: 'Finance - Invoice series'
+    description: "\nSeries y datos fiscales del emisor por agencia. Una serie activa por defecto\ny tipo de comprobante; sin ella no se puede registrar un pago."
+  -
+    name: 'Finance - Payments'
+    description: "\nRegistro de cobros totales o parciales y consulta de saldo por orden."
+  -
+    name: 'Finance - Voids'
+    description: "\nAnulación de pagos con solicitud y aprobación separadas."
+  -
     name: 'Identity - Attendance'
     description: "\nAPIs para registrar, anular y consultar marcaciones de asistencia (UC-17/UC-18)."
   -
@@ -1073,6 +1097,2845 @@ paths:
                 - document_number
                 - first_name
                 - last_name
+  /api/v1/finance/cash-closures:
+    get:
+      summary: 'List cash closures'
+      operationId: listCashClosures
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: '`pending`, `approved` or `rejected`.'
+          required: false
+          schema:
+            type: string
+            description: '`pending`, `approved` or `rejected`.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        cash_session_id:
+                          type: integer
+                        status:
+                          type: string
+                        expected_amount:
+                          type: string
+                        closing_amount:
+                          type: string
+                        difference:
+                          type: string
+                        requested_by:
+                          type: integer
+                        approved_by:
+                          type: integer
+                        requested_at:
+                          type: string
+                        approved_at:
+                          type: string
+                        rejected_at:
+                          type: string
+                          nullable: true
+                        rejection_reason:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                        report_url:
+                          type: string
+                          nullable: true
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Finance - Cash closures'
+  '/api/v1/finance/cash-closures/{closure}/approve':
+    post:
+      summary: 'Approve a cash closure'
+      operationId: approveACashClosure
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      cash_session_id:
+                        type: integer
+                      status:
+                        type: string
+                      expected_amount:
+                        type: string
+                      closing_amount:
+                        type: string
+                      difference:
+                        type: string
+                      requested_by:
+                        type: integer
+                      approved_by:
+                        type: integer
+                      requested_at:
+                        type: string
+                      approved_at:
+                        type: string
+                      rejected_at:
+                        type: string
+                        nullable: true
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      report_url:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Finance - Cash closures'
+    parameters:
+      -
+        in: path
+        name: closure
+        description: 'Cash closure id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/cash-closures/{closure}/reject':
+    post:
+      summary: 'Reject a cash closure'
+      operationId: rejectACashClosure
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      cash_session_id:
+                        type: integer
+                      status:
+                        type: string
+                      expected_amount:
+                        type: string
+                      closing_amount:
+                        type: string
+                      difference:
+                        type: string
+                      requested_by:
+                        type: integer
+                      approved_by:
+                        type: integer
+                      requested_at:
+                        type: string
+                      approved_at:
+                        type: string
+                      rejected_at:
+                        type: string
+                        nullable: true
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      report_url:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Finance - Cash closures'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 'Why the closure is rejected.'
+              required:
+                - reason
+    parameters:
+      -
+        in: path
+        name: closure
+        description: 'Cash closure id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/cash-closures/{closure}/report':
+    get:
+      summary: 'Download the cash closure report'
+      operationId: downloadTheCashClosureReport
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      error_code:
+                        type: string
+      tags:
+        - 'Finance - Cash closures'
+    parameters:
+      -
+        in: path
+        name: closure
+        description: 'Cash closure id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/finance/cash-movements:
+    post:
+      summary: 'Register an expense or withdrawal'
+      operationId: registerAnExpenseOrWithdrawal
+      description: 'Income movements are generated only by cash payments.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      cash_session_id:
+                        type: integer
+                      type:
+                        type: string
+                      amount:
+                        type: string
+                      signed_amount:
+                        type: string
+                      reference_type:
+                        type: string
+                        nullable: true
+                      reference_id:
+                        type: string
+                        nullable: true
+                      note:
+                        type: string
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - 'Finance - Cash movements'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: '`expense` or `withdrawal`.'
+                amount:
+                  type: number
+                  description: 'Movement amount.'
+                note:
+                  type: string
+                  description: Reason.
+                reference_type:
+                  type: string
+                  description: 'optional External reference type.'
+                  nullable: true
+                reference_id:
+                  type: integer
+                  description: 'optional External reference id.'
+                  nullable: true
+              required:
+                - type
+                - amount
+                - note
+  /api/v1/finance/cash-sessions/current:
+    get:
+      summary: 'Current open cash session'
+      operationId: currentOpenCashSession
+      description: 'Returns `cash_session: null` when the authenticated cashier has no open session.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  -
+                    description: 'Open session'
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      message:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          cash_session:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              agency_id:
+                                type: integer
+                              cashier_id:
+                                type: integer
+                              status:
+                                type: string
+                              opening_amount:
+                                type: string
+                              expected_amount:
+                                type: string
+                              closing_amount:
+                                type: string
+                                nullable: true
+                              difference:
+                                type: string
+                                nullable: true
+                              opened_at:
+                                type: string
+                              closed_at:
+                                type: string
+                                nullable: true
+                              created_at:
+                                type: string
+                              updated_at:
+                                type: string
+                              movements:
+                                type: array
+                              closures:
+                                type: array
+                  -
+                    description: 'No open session'
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      message:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          cash_session:
+                            type: string
+                            nullable: true
+      tags:
+        - 'Finance - Cash sessions'
+  /api/v1/finance/cash-sessions:
+    get:
+      summary: 'List cash sessions'
+      operationId: listCashSessions
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: '`open` or `closed`.'
+          required: false
+          schema:
+            type: string
+            description: '`open` or `closed`.'
+        -
+          in: query
+          name: cashier_id
+          description: 'Filter by cashier.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by cashier.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: opened_from
+          description: 'date Filter from this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter from this date.'
+        -
+          in: query
+          name: opened_to
+          description: 'date Filter up to this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter up to this date.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        cashier_id:
+                          type: integer
+                        status:
+                          type: string
+                        opening_amount:
+                          type: string
+                        expected_amount:
+                          type: string
+                        closing_amount:
+                          type: string
+                          nullable: true
+                        difference:
+                          type: string
+                          nullable: true
+                        opened_at:
+                          type: string
+                        closed_at:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Finance - Cash sessions'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - open
+                    - closed
+                cashier_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                opened_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                opened_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>opened_from</code>.'
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Open a cash session'
+      operationId: openACashSession
+      description: 'The agency is inferred from the authenticated cashier; it is not accepted from the client.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      cashier_id:
+                        type: integer
+                      status:
+                        type: string
+                      opening_amount:
+                        type: string
+                      expected_amount:
+                        type: string
+                      closing_amount:
+                        type: string
+                        nullable: true
+                      difference:
+                        type: string
+                        nullable: true
+                      opened_at:
+                        type: string
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Cash sessions'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                opening_amount:
+                  type: number
+                  description: 'Opening cash.'
+              required:
+                - opening_amount
+  '/api/v1/finance/cash-sessions/{session}':
+    get:
+      summary: 'Show a cash session'
+      operationId: showACashSession
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      cashier_id:
+                        type: integer
+                      status:
+                        type: string
+                      opening_amount:
+                        type: string
+                      expected_amount:
+                        type: string
+                      closing_amount:
+                        type: string
+                        nullable: true
+                      difference:
+                        type: string
+                        nullable: true
+                      opened_at:
+                        type: string
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Cash sessions'
+    parameters:
+      -
+        in: path
+        name: session
+        description: 'Cash session id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/cash-sessions/{session}/close':
+    post:
+      summary: 'Close a cash session'
+      operationId: closeACashSession
+      description: "A zero difference closes immediately. Any difference (tolerance 0.00) keeps the\nsession open and returns a pending closure that a supervisor must approve."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  -
+                    description: 'Closed without difference'
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      message:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          cash_session:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              agency_id:
+                                type: integer
+                              cashier_id:
+                                type: integer
+                              status:
+                                type: string
+                              opening_amount:
+                                type: string
+                              expected_amount:
+                                type: string
+                              closing_amount:
+                                type: string
+                              difference:
+                                type: string
+                              opened_at:
+                                type: string
+                              closed_at:
+                                type: string
+                              created_at:
+                                type: string
+                              updated_at:
+                                type: string
+                              movements:
+                                type: array
+                              closures:
+                                type: array
+                          closure:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              cash_session_id:
+                                type: integer
+                              status:
+                                type: string
+                              expected_amount:
+                                type: string
+                              closing_amount:
+                                type: string
+                              difference:
+                                type: string
+                              requested_by:
+                                type: integer
+                              approved_by:
+                                type: string
+                                nullable: true
+                              requested_at:
+                                type: string
+                              approved_at:
+                                type: string
+                              rejected_at:
+                                type: string
+                                nullable: true
+                              rejection_reason:
+                                type: string
+                                nullable: true
+                              created_at:
+                                type: string
+                              report_url:
+                                type: string
+                                nullable: true
+                          requires_approval:
+                            type: boolean
+                  -
+                    description: 'Pending approval'
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      message:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          cash_session:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              agency_id:
+                                type: integer
+                              cashier_id:
+                                type: integer
+                              status:
+                                type: string
+                              opening_amount:
+                                type: string
+                              expected_amount:
+                                type: string
+                              closing_amount:
+                                type: string
+                              difference:
+                                type: string
+                              opened_at:
+                                type: string
+                              closed_at:
+                                type: string
+                                nullable: true
+                              created_at:
+                                type: string
+                              updated_at:
+                                type: string
+                              movements:
+                                type: array
+                              closures:
+                                type: array
+                          closure:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              cash_session_id:
+                                type: integer
+                              status:
+                                type: string
+                              expected_amount:
+                                type: string
+                              closing_amount:
+                                type: string
+                              difference:
+                                type: string
+                              requested_by:
+                                type: integer
+                              approved_by:
+                                type: string
+                                nullable: true
+                              requested_at:
+                                type: string
+                              approved_at:
+                                type: string
+                                nullable: true
+                              rejected_at:
+                                type: string
+                                nullable: true
+                              rejection_reason:
+                                type: string
+                                nullable: true
+                              created_at:
+                                type: string
+                              report_url:
+                                type: string
+                                nullable: true
+                          requires_approval:
+                            type: boolean
+      tags:
+        - 'Finance - Cash sessions'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                closing_amount:
+                  type: number
+                  description: 'Counted cash.'
+                count:
+                  type: array
+                  description: 'optional Cash count detail.'
+                  items:
+                    type: object
+                    properties:
+                      denomination:
+                        type: number
+                        description: 'This field is required when <code>count</code> is present. Must be at least 0.'
+                      quantity:
+                        type: integer
+                        description: 'This field is required when <code>count</code> is present. Must be at least 0.'
+              required:
+                - closing_amount
+    parameters:
+      -
+        in: path
+        name: session
+        description: 'Cash session id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/finance/credit-notes:
+    get:
+      summary: 'List credit notes'
+      operationId: listCreditNotes
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list.'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list.'
+        -
+          in: query
+          name: payment_id
+          description: 'Filter by payment.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by payment.'
+        -
+          in: query
+          name: order_id
+          description: 'Filter by order.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by order.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_number:
+                          type: string
+                        ticket_code:
+                          type: string
+                        order_id:
+                          type: integer
+                        payment_id:
+                          type: integer
+                        invoice_id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        cash_session_id:
+                          type: integer
+                        amount:
+                          type: string
+                        currency:
+                          type: string
+                        reason:
+                          type: string
+                        note:
+                          type: string
+                        status:
+                          type: string
+                        sunat_code:
+                          type: string
+                        sunat_message:
+                          type: string
+                        created_by:
+                          type: integer
+                        issued_at:
+                          type: string
+                        created_at:
+                          type: string
+                        downloads:
+                          type: object
+                          properties:
+                            xml:
+                              type: string
+                              nullable: true
+                            pdf:
+                              type: string
+                              nullable: true
+                            cdr:
+                              type: string
+                              nullable: true
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Finance - Credit notes'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: 'Must not be greater than 120 characters.'
+                payment_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                order_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Issue a credit note'
+      operationId: issueACreditNote
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      invoice_id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      cash_session_id:
+                        type: integer
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      reason:
+                        type: string
+                      note:
+                        type: string
+                      status:
+                        type: string
+                      sunat_code:
+                        type: string
+                      sunat_message:
+                        type: string
+                      created_by:
+                        type: integer
+                      issued_at:
+                        type: string
+                      created_at:
+                        type: string
+                      downloads:
+                        type: object
+                        properties:
+                          xml:
+                            type: string
+                            nullable: true
+                          pdf:
+                            type: string
+                            nullable: true
+                          cdr:
+                            type: string
+                            nullable: true
+      tags:
+        - 'Finance - Credit notes'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_id:
+                  type: integer
+                  description: 'Payment to credit.'
+                amount:
+                  type: number
+                  description: 'Credit amount.'
+                reason:
+                  type: string
+                  description: 'SUNAT reason code (`01`, `02`, `03`, `06`, `07`).'
+                note:
+                  type: string
+                  description: 'optional Detail.'
+                  nullable: true
+              required:
+                - payment_id
+                - amount
+                - reason
+  '/api/v1/finance/credit-notes/{creditNote}':
+    get:
+      summary: 'Show a credit note'
+      operationId: showACreditNote
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      invoice_id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      cash_session_id:
+                        type: integer
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      reason:
+                        type: string
+                      note:
+                        type: string
+                      status:
+                        type: string
+                      sunat_code:
+                        type: string
+                      sunat_message:
+                        type: string
+                      created_by:
+                        type: integer
+                      issued_at:
+                        type: string
+                      created_at:
+                        type: string
+                      downloads:
+                        type: object
+                        properties:
+                          xml:
+                            type: string
+                            nullable: true
+                          pdf:
+                            type: string
+                            nullable: true
+                          cdr:
+                            type: string
+                            nullable: true
+      tags:
+        - 'Finance - Credit notes'
+    parameters:
+      -
+        in: path
+        name: creditNote
+        description: 'Credit note id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/credit-notes/{creditNote}/download/{type}':
+    get:
+      summary: 'Download a credit note artifact'
+      operationId: downloadACreditNoteArtifact
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      error_code:
+                        type: string
+      tags:
+        - 'Finance - Credit notes'
+    parameters:
+      -
+        in: path
+        name: creditNote
+        description: 'Credit note id.'
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: type
+        description: '`xml`, `pdf` or `cdr`.'
+        required: true
+        schema:
+          type: string
+  /api/v1/finance/invoices:
+    get:
+      summary: 'List invoices'
+      operationId: listInvoices
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list.'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list.'
+        -
+          in: query
+          name: document_type
+          description: '`boleta` or `factura`.'
+          required: false
+          schema:
+            type: string
+            description: '`boleta` or `factura`.'
+        -
+          in: query
+          name: order_id
+          description: 'Filter by order.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by order.'
+        -
+          in: query
+          name: ticket_number
+          description: 'Ticket number prefix.'
+          required: false
+          schema:
+            type: string
+            description: 'Ticket number prefix.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: issued_from
+          description: 'date Filter from this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter from this date.'
+        -
+          in: query
+          name: issued_to
+          description: 'date Filter up to this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter up to this date.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_number:
+                          type: string
+                        order_id:
+                          type: integer
+                        payment_id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        invoice_series_id:
+                          type: integer
+                        document_type:
+                          type: string
+                        series:
+                          type: string
+                        number:
+                          type: integer
+                        customer_document_type:
+                          type: string
+                        customer_document_number:
+                          type: string
+                        customer_name:
+                          type: string
+                        taxable_amount:
+                          type: string
+                        igv:
+                          type: string
+                        total:
+                          type: string
+                        currency:
+                          type: string
+                        status:
+                          type: string
+                        sunat_code:
+                          type: string
+                        sunat_message:
+                          type: string
+                        issued_at:
+                          type: string
+                        accepted_at:
+                          type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        downloads:
+                          type: object
+                          properties:
+                            xml:
+                              type: string
+                              nullable: true
+                            pdf:
+                              type: string
+                              nullable: true
+                            cdr:
+                              type: string
+                              nullable: true
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Finance - Invoices'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: 'Must not be greater than 120 characters.'
+                document_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - boleta
+                    - factura
+                order_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                ticket_number:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                issued_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                issued_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>issued_from</code>.'
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+  '/api/v1/finance/invoices/{invoice}':
+    get:
+      summary: 'Show an invoice'
+      operationId: showAnInvoice
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      invoice_series_id:
+                        type: integer
+                      document_type:
+                        type: string
+                      series:
+                        type: string
+                      number:
+                        type: integer
+                      customer_document_type:
+                        type: string
+                      customer_document_number:
+                        type: string
+                      customer_name:
+                        type: string
+                      taxable_amount:
+                        type: string
+                      igv:
+                        type: string
+                      total:
+                        type: string
+                      currency:
+                        type: string
+                      status:
+                        type: string
+                      sunat_code:
+                        type: string
+                      sunat_message:
+                        type: string
+                      issued_at:
+                        type: string
+                      accepted_at:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+                      downloads:
+                        type: object
+                        properties:
+                          xml:
+                            type: string
+                            nullable: true
+                          pdf:
+                            type: string
+                            nullable: true
+                          cdr:
+                            type: string
+                            nullable: true
+      tags:
+        - 'Finance - Invoices'
+    parameters:
+      -
+        in: path
+        name: invoice
+        description: 'Invoice id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/invoices/{invoice}/retry':
+    post:
+      summary: 'Retry SUNAT transmission'
+      operationId: retrySUNATTransmission
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      invoice_series_id:
+                        type: integer
+                      document_type:
+                        type: string
+                      series:
+                        type: string
+                      number:
+                        type: integer
+                      customer_document_type:
+                        type: string
+                      customer_document_number:
+                        type: string
+                      customer_name:
+                        type: string
+                      taxable_amount:
+                        type: string
+                      igv:
+                        type: string
+                      total:
+                        type: string
+                      currency:
+                        type: string
+                      status:
+                        type: string
+                      sunat_code:
+                        type: string
+                      sunat_message:
+                        type: string
+                      issued_at:
+                        type: string
+                      accepted_at:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+                      downloads:
+                        type: object
+                        properties:
+                          xml:
+                            type: string
+                            nullable: true
+                          pdf:
+                            type: string
+                            nullable: true
+                          cdr:
+                            type: string
+                            nullable: true
+      tags:
+        - 'Finance - Invoices'
+    parameters:
+      -
+        in: path
+        name: invoice
+        description: 'Invoice id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/invoices/{invoice}/download/{type}':
+    get:
+      summary: 'Download an invoice artifact'
+      operationId: downloadAnInvoiceArtifact
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      error_code:
+                        type: string
+      tags:
+        - 'Finance - Invoices'
+    parameters:
+      -
+        in: path
+        name: invoice
+        description: 'Invoice id.'
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: type
+        description: '`xml`, `pdf` or `cdr`.'
+        required: true
+        schema:
+          type: string
+  /api/v1/finance/invoice-series:
+    get:
+      summary: 'List invoice series'
+      operationId: listInvoiceSeries
+      description: ''
+      parameters:
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: document_type
+          description: '`boleta` or `factura`.'
+          required: false
+          schema:
+            type: string
+            description: '`boleta` or `factura`.'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        document_type:
+                          type: string
+                        series:
+                          type: string
+                        next_number:
+                          type: integer
+                        is_active:
+                          type: boolean
+                        is_default:
+                          type: boolean
+                        issuer_ruc:
+                          type: string
+                        issuer_name:
+                          type: string
+                        issuer_trade_name:
+                          type: string
+                        issuer_address:
+                          type: string
+                        issuer_ubigeo:
+                          type: string
+                        establishment_code:
+                          type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Finance - Invoice series'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                document_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - boleta
+                    - factura
+                series:
+                  type: string
+                  description: 'Must match the regex /^[A-Z0-9]{4}$/. Must be 4 characters.'
+                issuer_ruc:
+                  type: string
+                  description: 'Must be 11 digits.'
+                issuer_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                issuer_trade_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                  nullable: true
+                issuer_address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  nullable: true
+                issuer_ubigeo:
+                  type: string
+                  description: 'Must be 6 digits.'
+                  nullable: true
+                establishment_code:
+                  type: string
+                  description: 'Must be 4 characters.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+                is_default:
+                  type: boolean
+                  description: ''
+    post:
+      summary: 'Create an invoice series'
+      operationId: createAnInvoiceSeries
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      document_type:
+                        type: string
+                      series:
+                        type: string
+                      next_number:
+                        type: integer
+                      is_active:
+                        type: boolean
+                      is_default:
+                        type: boolean
+                      issuer_ruc:
+                        type: string
+                      issuer_name:
+                        type: string
+                      issuer_trade_name:
+                        type: string
+                      issuer_address:
+                        type: string
+                      issuer_ubigeo:
+                        type: string
+                      establishment_code:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Invoice series'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Agency that issues.'
+                document_type:
+                  type: string
+                  description: '`boleta` or `factura`.'
+                series:
+                  type: string
+                  description: 'Four alphanumeric characters.'
+                issuer_ruc:
+                  type: string
+                  description: 'Issuer RUC (11 digits).'
+                issuer_name:
+                  type: string
+                  description: 'Legal name.'
+                issuer_trade_name:
+                  type: string
+                  description: 'optional Trade name.'
+                  nullable: true
+                issuer_address:
+                  type: string
+                  description: 'optional Fiscal address.'
+                  nullable: true
+                issuer_ubigeo:
+                  type: string
+                  description: 'optional Six-digit ubigeo.'
+                  nullable: true
+                establishment_code:
+                  type: string
+                  description: 'optional SUNAT establishment code.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: 'optional Defaults to true.'
+                is_default:
+                  type: boolean
+                  description: 'optional Defaults to false.'
+              required:
+                - agency_id
+                - document_type
+                - series
+                - issuer_ruc
+                - issuer_name
+  '/api/v1/finance/invoice-series/{series}':
+    put:
+      summary: 'Update an invoice series'
+      operationId: updateAnInvoiceSeries
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      document_type:
+                        type: string
+                      series:
+                        type: string
+                      next_number:
+                        type: integer
+                      is_active:
+                        type: boolean
+                      is_default:
+                        type: boolean
+                      issuer_ruc:
+                        type: string
+                      issuer_name:
+                        type: string
+                      issuer_trade_name:
+                        type: string
+                      issuer_address:
+                        type: string
+                      issuer_ubigeo:
+                        type: string
+                      establishment_code:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Invoice series'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agency_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                document_type:
+                  type: string
+                  description: ''
+                  enum:
+                    - boleta
+                    - factura
+                series:
+                  type: string
+                  description: 'Must match the regex /^[A-Z0-9]{4}$/. Must be 4 characters.'
+                issuer_ruc:
+                  type: string
+                  description: 'Must be 11 digits.'
+                issuer_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                issuer_trade_name:
+                  type: string
+                  description: 'Must not be greater than 200 characters.'
+                  nullable: true
+                issuer_address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  nullable: true
+                issuer_ubigeo:
+                  type: string
+                  description: 'Must be 6 digits.'
+                  nullable: true
+                establishment_code:
+                  type: string
+                  description: 'Must be 4 characters.'
+                  nullable: true
+                is_active:
+                  type: boolean
+                  description: ''
+                is_default:
+                  type: boolean
+                  description: ''
+    parameters:
+      -
+        in: path
+        name: series
+        description: 'Invoice series id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/orders/{order}/payment-status':
+    get:
+      summary: 'Payment status of an order'
+      operationId: paymentStatusOfAnOrder
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      error_code:
+                        type: string
+      tags:
+        - 'Finance - Payments'
+    parameters:
+      -
+        in: path
+        name: order
+        description: 'Order id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/finance/payments:
+    get:
+      summary: 'List payments'
+      operationId: listPayments
+      description: ''
+      parameters:
+        -
+          in: query
+          name: order_id
+          description: 'Filter by order.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by order.'
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list.'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list.'
+        -
+          in: query
+          name: payment_method
+          description: '`cash` or `pos`.'
+          required: false
+          schema:
+            type: string
+            description: '`cash` or `pos`.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by agency.'
+        -
+          in: query
+          name: ticket_number
+          description: 'Ticket number prefix.'
+          required: false
+          schema:
+            type: string
+            description: 'Ticket number prefix.'
+        -
+          in: query
+          name: created_from
+          description: 'date Filter from this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter from this date.'
+        -
+          in: query
+          name: created_to
+          description: 'date Filter up to this date.'
+          required: false
+          schema:
+            type: string
+            description: 'date Filter up to this date.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_number:
+                          type: string
+                        ticket_code:
+                          type: string
+                        order_id:
+                          type: integer
+                        cash_session_id:
+                          type: integer
+                        agency_id:
+                          type: integer
+                        amount:
+                          type: string
+                        currency:
+                          type: string
+                        payment_method:
+                          type: string
+                        reference:
+                          type: string
+                          nullable: true
+                        document_type:
+                          type: string
+                        status:
+                          type: string
+                        created_by:
+                          type: integer
+                        paid_at:
+                          type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Finance - Payments'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                status:
+                  type: string
+                  description: 'Must not be greater than 120 characters.'
+                payment_method:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                ticket_number:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                created_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                created_to:
+                  type: string
+                  description: 'Must be a valid date. Must be a date after or equal to <code>created_from</code>.'
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Register a payment'
+      operationId: registerAPayment
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      order_id:
+                        type: integer
+                      cash_session_id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      payment_method:
+                        type: string
+                      reference:
+                        type: string
+                        nullable: true
+                      document_type:
+                        type: string
+                      status:
+                        type: string
+                      created_by:
+                        type: integer
+                      paid_at:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Payments'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                  description: 'Order to charge.'
+                amount:
+                  type: number
+                  description: 'Payment amount (partial payments allowed).'
+                currency:
+                  type: string
+                  description: 'optional ISO currency.'
+                payment_method:
+                  type: string
+                  description: '`cash` or `pos`.'
+                document_type:
+                  type: string
+                  description: 'optional `boleta` or `factura`.'
+                  nullable: true
+                idempotency_key:
+                  type: string
+                  description: 'Client idempotency key.'
+                reference:
+                  type: string
+                  description: 'optional Free-text reference (POS operation, voucher).'
+                  nullable: true
+              required:
+                - order_id
+                - amount
+                - payment_method
+                - idempotency_key
+  '/api/v1/finance/payments/{payment}':
+    get:
+      summary: 'Show a payment'
+      operationId: showAPayment
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_number:
+                        type: string
+                      ticket_code:
+                        type: string
+                      order_id:
+                        type: integer
+                      cash_session_id:
+                        type: integer
+                      agency_id:
+                        type: integer
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      payment_method:
+                        type: string
+                      reference:
+                        type: string
+                        nullable: true
+                      document_type:
+                        type: string
+                      status:
+                        type: string
+                      created_by:
+                        type: integer
+                      paid_at:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Payments'
+    parameters:
+      -
+        in: path
+        name: payment
+        description: 'Payment id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/finance/voids:
+    get:
+      summary: 'List void requests'
+      operationId: listVoidRequests
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: '`requested`, `approved` or `rejected`.'
+          required: false
+          schema:
+            type: string
+            description: '`requested`, `approved` or `rejected`.'
+        -
+          in: query
+          name: payment_id
+          description: 'Filter by payment.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by payment.'
+        -
+          in: query
+          name: order_id
+          description: 'Filter by order.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by order.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        order_id:
+                          type: integer
+                        payment_id:
+                          type: integer
+                        invoice_id:
+                          type: integer
+                        reason:
+                          type: string
+                        status:
+                          type: string
+                        requested_by:
+                          type: integer
+                        approved_by:
+                          type: string
+                          nullable: true
+                        requested_at:
+                          type: string
+                        approved_at:
+                          type: string
+                          nullable: true
+                        rejected_at:
+                          type: string
+                          nullable: true
+                        rejection_reason:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Finance - Voids'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - requested
+                    - approved
+                    - rejected
+                payment_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                order_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Request a void'
+      operationId: requestAVoid
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      invoice_id:
+                        type: integer
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      requested_by:
+                        type: integer
+                      approved_by:
+                        type: string
+                        nullable: true
+                      requested_at:
+                        type: string
+                      approved_at:
+                        type: string
+                        nullable: true
+                      rejected_at:
+                        type: string
+                        nullable: true
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Voids'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_id:
+                  type: integer
+                  description: 'Payment to void.'
+                reason:
+                  type: string
+                  description: 'Why the payment is voided.'
+              required:
+                - payment_id
+                - reason
+  '/api/v1/finance/voids/{void}':
+    get:
+      summary: 'Show a void request'
+      operationId: showAVoidRequest
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      invoice_id:
+                        type: integer
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      requested_by:
+                        type: integer
+                      approved_by:
+                        type: string
+                        nullable: true
+                      requested_at:
+                        type: string
+                      approved_at:
+                        type: string
+                        nullable: true
+                      rejected_at:
+                        type: string
+                        nullable: true
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Voids'
+    parameters:
+      -
+        in: path
+        name: void
+        description: 'Void id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/voids/{void}/approve':
+    post:
+      summary: 'Approve a void'
+      operationId: approveAVoid
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      invoice_id:
+                        type: integer
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      requested_by:
+                        type: integer
+                      approved_by:
+                        type: string
+                        nullable: true
+                      requested_at:
+                        type: string
+                      approved_at:
+                        type: string
+                        nullable: true
+                      rejected_at:
+                        type: string
+                        nullable: true
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Voids'
+    parameters:
+      -
+        in: path
+        name: void
+        description: 'Void id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/finance/voids/{void}/reject':
+    post:
+      summary: 'Reject a void'
+      operationId: rejectAVoid
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      payment_id:
+                        type: integer
+                      invoice_id:
+                        type: integer
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      requested_by:
+                        type: integer
+                      approved_by:
+                        type: string
+                        nullable: true
+                      requested_at:
+                        type: string
+                      approved_at:
+                        type: string
+                        nullable: true
+                      rejected_at:
+                        type: string
+                        nullable: true
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Finance - Voids'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 'Why the void is rejected.'
+              required:
+                - reason
+    parameters:
+      -
+        in: path
+        name: void
+        description: 'Void id.'
+        required: true
+        schema:
+          type: integer
   /api/v1/identity/attendance:
     get:
       summary: 'List Attendance'
