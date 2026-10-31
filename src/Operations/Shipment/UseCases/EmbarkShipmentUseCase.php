@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\DB;
 use Src\Operations\Shipment\Models\Embark;
 use Src\Operations\Shipment\Models\EmbarkItem;
 use Src\Operations\Shipment\Models\Shipment;
+use Src\Shared\Contracts\RouteDirectory;
 use Src\Shared\Contracts\ShipmentDirectory;
 use Src\Shared\Contracts\TrackingRecorder;
+use Src\Shared\DTOs\RouteSnapshot;
 use Src\Shared\Exceptions\BusinessRuleException;
 use Src\Shared\Models\OutboxEvent;
 use Src\Shared\Scope\AgencyScope;
@@ -16,12 +18,18 @@ use Src\Shared\Scope\AgencyScope;
  * Manifiesto de carga: un vehículo/ruta sale con un lote de envíos.
  *
  * Los envíos deben estar `received` en la agencia de origen del manifiesto.
+ *
+ * Un `route_ref` con formato `RUT-…` enlaza el manifiesto a una ruta de Flota, y
+ * debe coincidir con ella; cualquier otro texto sigue siendo una referencia libre.
  */
 class EmbarkShipmentUseCase
 {
+    private const ROUTE_TICKET_PREFIX = 'RUT-';
+
     public function __construct(
         private readonly ShipmentDirectory $shipments,
         private readonly TrackingRecorder $tracking,
+        private readonly RouteDirectory $routes,
     ) {}
 
     /**
@@ -40,7 +48,9 @@ class EmbarkShipmentUseCase
             );
         }
 
-        return DB::transaction(function () use ($data, $agencyId, $actorId): array {
+        $route = $this->linkedRoute($data);
+
+        return DB::transaction(function () use ($data, $agencyId, $actorId, $route): array {
             $departedAt = $data['departed_at'] ?? now()->toIso8601String();
 
             $embark = Embark::create([
@@ -117,6 +127,23 @@ class EmbarkShipmentUseCase
                     occurredAt: $item['scanned_at'] ?? $departedAt,
                 );
 
+                // Carga en una agencia intermedia: `route.started` ya pasó.
+                if ($route?->isInProgress()) {
+                    $inTransit = $this->shipments->transition(
+                        shipmentId: $embarked->id,
+                        to: Shipment::STATUS_IN_TRANSIT,
+                        from: Shipment::STATUS_EMBARKED,
+                    );
+
+                    $this->tracking->record(
+                        shipment: $inTransit,
+                        eventType: 'in_transit',
+                        agencyId: $agencyId,
+                        meta: ['route_ref' => $route->ticketNumber, 'source' => 'embark'],
+                        occurredAt: $item['scanned_at'] ?? $departedAt,
+                    );
+                }
+
                 $shipmentIds[] = $embarked->id;
                 $accepted++;
             }
@@ -151,5 +178,42 @@ class EmbarkShipmentUseCase
                 'accepted' => $accepted,
             ];
         });
+    }
+
+    /**
+     * @param  array{vehicle_id: int, driver_id: int, route_ref?: ?string}  $data
+     */
+    private function linkedRoute(array $data): ?RouteSnapshot
+    {
+        $reference = $data['route_ref'] ?? null;
+
+        if ($reference === null || ! str_starts_with($reference, self::ROUTE_TICKET_PREFIX)) {
+            return null;
+        }
+
+        $route = $this->routes->findByTicketNumber($reference);
+
+        if ($route === null) {
+            throw new BusinessRuleException(
+                message: "The route [{$reference}] does not exist.",
+                errorCode: 'EMBARK_ROUTE_NOT_FOUND',
+            );
+        }
+
+        if (! $route->acceptsCargo()) {
+            throw new BusinessRuleException(
+                message: "The route [{$reference}] does not accept cargo: it is [{$route->status}].",
+                errorCode: 'EMBARK_ROUTE_NOT_AVAILABLE',
+            );
+        }
+
+        if ($route->vehicleId !== (int) $data['vehicle_id'] || $route->driverId !== (int) $data['driver_id']) {
+            throw new BusinessRuleException(
+                message: 'The vehicle and the driver must be the ones assigned to the route.',
+                errorCode: 'EMBARK_ROUTE_RESOURCE_MISMATCH',
+            );
+        }
+
+        return $route;
     }
 }

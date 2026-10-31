@@ -33,9 +33,9 @@ final class ShipmentStatus
     public const CANCELLED = 'cancelled';
 
     /**
-     * `embarked -> disembarked` se permite porque Flota (que emite
-     * `route.started`) llega en la Fase 6; mientras tanto el desembarque directo
-     * no puede quedar bloqueado.
+     * `embarked -> disembarked` sigue permitido porque el enlace con una ruta de
+     * Flota es opcional: solo los embarques con ruta pasan por `in_transit`, con
+     * `route.started`.
      *
      * @var array<string, list<string>>
      */

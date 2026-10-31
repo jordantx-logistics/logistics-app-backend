@@ -16,12 +16,14 @@ use Src\Finance\Payment\Adapters\EloquentPaymentStatusQuery;
 use Src\Finance\Payment\Jobs\MarkBillingOrderDeliveredJob;
 use Src\Finance\Payment\Jobs\ProjectBillingOrderCancelledJob;
 use Src\Finance\Payment\Jobs\ProjectBillingOrderCreatedJob;
+use Src\Fleet\Route\Adapters\EloquentRouteDirectory;
 use Src\Identity\Attendance\Models\AttendanceRecord;
 use Src\Identity\Attendance\Policies\AttendancePolicy;
 use Src\Identity\Device\Adapters\EloquentDeviceRegistrar;
 use Src\Identity\Employee\Adapters\EloquentEmployeeDirectory;
 use Src\Identity\Employee\Models\Employee;
 use Src\Identity\Employee\Policies\EmployeePolicy;
+use Src\Identity\User\Adapters\EloquentUserDirectory;
 use Src\Logistics\Location\Adapters\EloquentCoverageDirectory;
 use Src\Logistics\Location\Adapters\EloquentLocationDirectory;
 use Src\Logistics\Order\Adapters\EloquentCustomerOrderQuery;
@@ -35,7 +37,9 @@ use Src\Logistics\Order\Jobs\ProjectPaymentVoidedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
 use Src\Logistics\Tariff\Adapters\EloquentTariffDirectory;
 use Src\Operations\Shipment\Adapters\EloquentShipmentDirectory;
+use Src\Operations\Shipment\Jobs\AlertRouteFinishedWithPendingJob;
 use Src\Operations\Shipment\Jobs\CancelShipmentJob;
+use Src\Operations\Shipment\Jobs\MarkRouteShipmentsInTransitJob;
 use Src\Operations\Shipment\Jobs\ProjectOrderCreatedJob as ProjectShipmentJob;
 use Src\Operations\Tracking\Adapters\EloquentTrackingRecorder;
 use Src\Organization\Adapters\EloquentAgencyDirectory;
@@ -50,9 +54,11 @@ use Src\Shared\Contracts\EmployeeDirectory;
 use Src\Shared\Contracts\LocationDirectory;
 use Src\Shared\Contracts\OrderQuery;
 use Src\Shared\Contracts\PaymentStatusQuery;
+use Src\Shared\Contracts\RouteDirectory;
 use Src\Shared\Contracts\ShipmentDirectory;
 use Src\Shared\Contracts\TariffDirectory;
 use Src\Shared\Contracts\TrackingRecorder;
+use Src\Shared\Contracts\UserDirectory;
 use Src\Shared\Jobs\AcknowledgeEventJob;
 use Src\Shared\Services\OutboxEventMap;
 
@@ -82,6 +88,8 @@ class DomainServiceProvider extends ServiceProvider
         $this->app->singleton(TrackingRecorder::class, EloquentTrackingRecorder::class);
         $this->app->singleton(OrderQuery::class, EloquentOrderQuery::class);
         $this->app->singleton(PaymentStatusQuery::class, EloquentPaymentStatusQuery::class);
+        $this->app->singleton(UserDirectory::class, EloquentUserDirectory::class);
+        $this->app->singleton(RouteDirectory::class, EloquentRouteDirectory::class);
         // Sin caída silenciosa al simulado: un valor desconocido en producción
         // dejaría de emitir comprobantes reales sin que nadie lo note (ADR-0011).
         $this->app->singleton(SunatGateway::class, fn (): SunatGateway => match (config('finance.sunat.gateway')) {
@@ -137,6 +145,14 @@ class DomainServiceProvider extends ServiceProvider
             'invoice.void-rejected' => [AcknowledgeEventJob::class],
             'credit-note.accepted' => [AcknowledgeEventJob::class],
             'credit-note.rejected' => [AcknowledgeEventJob::class],
+
+            // Flota: Operaciones mueve los envíos enlazados a la ruta. El resto
+            // alimentará reportes (Fase 7) y mientras tanto se reconoce.
+            'route.started' => [MarkRouteShipmentsInTransitJob::class],
+            'route.finished' => [AlertRouteFinishedWithPendingJob::class],
+            'route.segment-completed' => [AcknowledgeEventJob::class],
+            'route.cancelled' => [AcknowledgeEventJob::class],
+            'expense.registered' => [AcknowledgeEventJob::class],
         ]));
     }
 }

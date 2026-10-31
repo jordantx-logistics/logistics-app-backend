@@ -84,6 +84,14 @@ class PermissionSeeder extends Seeder
         'invoices.view',
         'invoices.retry',
         'invoices.series',
+
+        // Flota (Fase 6).
+        'fleet.manage',
+        'routes.view',
+        'routes.manage',
+        'routes.execute',
+        'expenses.register',
+        'expenses.approve',
     ];
 
     /**
@@ -107,6 +115,8 @@ class PermissionSeeder extends Seeder
             'credit-notes.view', 'credit-notes.issue',
             'voids.view', 'voids.request', 'voids.approve',
             'invoices.view', 'invoices.retry',
+            'routes.view', 'routes.manage', 'routes.execute',
+            'expenses.register', 'expenses.approve',
         ],
 
         'counter' => [
@@ -134,6 +144,7 @@ class PermissionSeeder extends Seeder
             'customers.view',
             'shipments.view', 'tracking.view', 'delivery.view',
             'payments.view', 'cash.view', 'credit-notes.view', 'voids.view', 'invoices.view',
+            'routes.view',
         ],
 
         'cashier' => [
@@ -150,7 +161,7 @@ class PermissionSeeder extends Seeder
             'tracking.scan', 'tracking.view', 'inventory.manage',
         ],
 
-        'driver' => ['tracking.view'],
+        'driver' => ['tracking.view', 'routes.view', 'routes.execute', 'expenses.register'],
 
         'courier' => ['delivery.view', 'delivery.execute', 'tracking.view'],
 
