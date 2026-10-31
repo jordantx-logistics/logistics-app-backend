@@ -175,7 +175,28 @@ Cada iteración suma un pago a la misma orden y `paidAmountOf` los recorre todos
 usa una orden con pocos pagos y espera a que el outbox se vacíe, o la medición
 reflejará los datos de carga anteriores y no el caso de uso.
 
-### Concurrencia de caja
+## Fase 6 — Flota
+
+- `phase6-lists.js`: p95 de los listados de Flota ≤ 300 ms. Usa `TOKEN` de un
+  usuario con ámbito por agencia, porque `visibleTo` es el filtro más caro;
+  `FLEET_TOKEN` opcional para choferes y vehículos. Mide con datos repartidos entre
+  muchas agencias: que todas las rutas toquen la agencia del usuario no es realista.
+- `phase6-route-cycle.js`: genera rutas completas con un chofer y un vehículo, a un
+  VU. Corre con un consumidor persistente (`php scripts/outbox-loop.php 70`) y lee
+  el criterio de ≤ 5 s p95 con `php artisan outbox:latency --minutes=2`.
+
+```bash
+k6 run -e BASE_URL=http://localhost:8000 -e TOKEN="$TOKEN" load/phase6-lists.js
+
+k6 run -e BASE_URL=http://localhost:8000 -e TOKEN="$TOKEN" \
+  -e ORIGIN_AGENCY_ID=1 -e DESTINATION_AGENCY_ID=2 \
+  -e DRIVER_ID=1 -e VEHICLE_ID=1 -e ODOMETER=1000 \
+  load/phase6-route-cycle.js
+```
+
+## Concurrencia
+
+### Caja
 
 No es k6: `scripts/finance-concurrency-check.php` lanza procesos reales que
 ejecutan los casos de uso a la vez contra un MySQL desechable, con 10 rondas:
@@ -190,4 +211,10 @@ docker compose exec \
 
 docker compose --profile concurrency rm -sf mysql-concurrency
 ```
+
+### Flota
+
+`scripts/fleet-concurrency-check.php` se ejecuta igual. Cubre el mismo chofer o
+vehículo en varias rutas, inicios y finales repetidos, lecturas de odómetro
+simultáneas, el tope de viático y las claves de idempotencia.
 

@@ -101,16 +101,19 @@ jobs:
       - name: Migraciones y seeders sobre MySQL
         run: docker compose run --rm app php artisan migrate --seed --force
 
-      # Criterio 2 de la Fase 5. SQLite en memoria no tiene conexiones concurrentes
-      # ni bloqueos de fila: procesos reales cobran a la vez contra un MySQL
-      # desechable. Corre aparte de `mysql`, porque recrea su base.
-      - name: Concurrencia de caja sobre MySQL
+      # Criterio 2 de la Fase 5 y reglas de recursos de la Fase 6. SQLite en memoria
+      # no tiene conexiones concurrentes ni bloqueos de fila: procesos reales operan
+      # a la vez contra un MySQL desechable. Corre aparte de `mysql`, porque recrea
+      # su base.
+      - name: Concurrencia sobre MySQL
         run: |
           docker compose --profile concurrency up -d --wait mysql-concurrency
-          docker compose run --rm --no-deps \
-            -e DB_HOST=mysql-concurrency -e DB_DATABASE=logistics_concurrency \
-            -e DB_USERNAME=root -e DB_PASSWORD=root \
-            app php scripts/finance-concurrency-check.php
+          for check in finance fleet; do
+            docker compose run --rm --no-deps \
+              -e DB_HOST=mysql-concurrency -e DB_DATABASE=logistics_concurrency \
+              -e DB_USERNAME=root -e DB_PASSWORD=root \
+              app php "scripts/$check-concurrency-check.php"
+          done
 
       # El runner publica el artefacto como usuario sin privilegios, y Scribe
       # crea `storage/app/private/scribe` con la visibilidad **privada** del

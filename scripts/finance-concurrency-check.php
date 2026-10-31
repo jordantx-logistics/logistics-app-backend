@@ -47,6 +47,7 @@ use Src\Shared\Scope\AgencyScope;
 const WORKERS = 8;
 
 require dirname(__DIR__).'/vendor/autoload.php';
+require __DIR__.'/support/WorkerPool.php';
 
 $app = require dirname(__DIR__).'/bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
@@ -62,14 +63,14 @@ if ($app->environment('production')
 config(['cache.default' => 'array']);
 
 if (($argv[1] ?? null) === '--worker') {
-    runWorker();
+    WorkerPool::serve(execute(...));
     exit(0);
 }
 
 Artisan::call('migrate:fresh', ['--force' => true]);
 
 $rounds = max(1, (int) ($argv[1] ?? 3));
-$pool = new WorkerPool(WORKERS);
+$pool = new WorkerPool(__FILE__, WORKERS);
 
 $agency = Agency::factory()->create([
     'code' => 'CONC1',
@@ -575,22 +576,6 @@ function unexpected(array $replies, array $allowed): array
     );
 }
 
-// Procesos.
-
-/**
- * Bucle de un proceso: lee una orden JSON por línea y responde con otra. Los
- * procesos arrancan una sola vez, porque arrancar Laravel es mucho más lento que
- * la ventana de carrera que se quiere provocar.
- */
-function runWorker(): void
-{
-    echo "ready\n";
-
-    while (($line = fgets(STDIN)) !== false) {
-        echo json_encode(execute(json_decode($line, true, flags: JSON_THROW_ON_ERROR)))."\n";
-    }
-}
-
 function execute(array $command): array
 {
     Auth::setUser(User::query()->findOrFail($command['user']));
@@ -622,60 +607,5 @@ function execute(array $command): array
         return ['ok' => false, 'code' => $exception->errorCode];
     } catch (Throwable $exception) {
         return ['ok' => false, 'code' => class_basename($exception).': '.substr($exception->getMessage(), 0, 120)];
-    }
-}
-
-final class WorkerPool
-{
-    /** @var list<array{process: resource, stdin: resource, stdout: resource}> */
-    private array $workers = [];
-
-    public function __construct(int $size)
-    {
-        for ($i = 0; $i < $size; $i++) {
-            $process = proc_open(
-                [PHP_BINARY, __FILE__, '--worker'],
-                [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => STDERR],
-                $pipes,
-            );
-
-            $this->workers[] = ['process' => $process, 'stdin' => $pipes[0], 'stdout' => $pipes[1]];
-        }
-
-        foreach ($this->workers as $worker) {
-            if (trim((string) fgets($worker['stdout'])) !== 'ready') {
-                throw new RuntimeException('Un proceso no arrancó.');
-            }
-        }
-    }
-
-    /**
-     * Entrega una orden a cada proceso y espera todas las respuestas.
-     *
-     * @param  list<array<string, mixed>>  $commands
-     * @return list<array{ok: bool, code?: string}>
-     */
-    public function run(array $commands): array
-    {
-        foreach ($commands as $i => $command) {
-            fwrite($this->workers[$i]['stdin'], json_encode($command)."\n");
-        }
-
-        $replies = [];
-
-        foreach (array_keys($commands) as $i) {
-            $replies[] = json_decode((string) fgets($this->workers[$i]['stdout']), true, flags: JSON_THROW_ON_ERROR);
-        }
-
-        return $replies;
-    }
-
-    public function stop(): void
-    {
-        foreach ($this->workers as $worker) {
-            fclose($worker['stdin']);
-            fclose($worker['stdout']);
-            proc_close($worker['process']);
-        }
     }
 }

@@ -12,6 +12,7 @@
  *  - `src/Operations/`: >= 80 % de líneas (Fase 4).
  *  - `src/Finance/`: >= 80 % de líneas (Fase 5).
  *  - `src/Finance/{Cash,Void}/UseCases/`: 100 % de líneas (Fase 5).
+ *  - `src/Fleet/`: >= 80 % de líneas (Fase 6).
  *
  * Pcov no mide ramas; el 100 % del motor de precios se complementa con la
  * matriz de escenarios de `tests/Feature/Logistics/OrderFlowTest.php` y
@@ -47,6 +48,7 @@ $pricing = ['covered' => 0, 'total' => 0];
 $operations = ['covered' => 0, 'total' => 0];
 $finance = ['covered' => 0, 'total' => 0];
 $financeCritical = ['covered' => 0, 'total' => 0];
+$fleet = ['covered' => 0, 'total' => 0];
 
 foreach ($files as $file) {
     $name = str_replace('\\', '/', (string) $file['name']);
@@ -85,6 +87,11 @@ foreach ($files as $file) {
             $financeCritical['total']++;
             $financeCritical['covered'] += $count > 0 ? 1 : 0;
         }
+
+        if (str_starts_with($relative, 'src/Fleet/')) {
+            $fleet['total']++;
+            $fleet['covered'] += $count > 0 ? 1 : 0;
+        }
     }
 }
 
@@ -97,12 +104,14 @@ $pricingPercent = $percent($pricing);
 $operationsPercent = $percent($operations);
 $financePercent = $percent($finance);
 $financeCriticalPercent = $percent($financeCritical);
+$fleetPercent = $percent($fleet);
 
 printf("Cobertura src/: %.2f %% (%d/%d)\n", $srcPercent, $totals['covered'], $totals['total']);
 printf("Cobertura pricing: %.2f %% (%d/%d)\n", $pricingPercent, $pricing['covered'], $pricing['total']);
 printf("Cobertura operations: %.2f %% (%d/%d)\n", $operationsPercent, $operations['covered'], $operations['total']);
 printf("Cobertura finance: %.2f %% (%d/%d)\n", $financePercent, $finance['covered'], $finance['total']);
 printf("Cobertura caja y anulación: %.2f %% (%d/%d)\n", $financeCriticalPercent, $financeCritical['covered'], $financeCritical['total']);
+printf("Cobertura fleet: %.2f %% (%d/%d)\n", $fleetPercent, $fleet['covered'], $fleet['total']);
 
 $failed = false;
 
@@ -140,6 +149,14 @@ if ($financeCritical['total'] === 0) {
     $failed = true;
 } elseif ($financeCriticalPercent < 100.0) {
     fwrite(STDERR, "FALLO: los casos de uso de caja y anulación deben tener 100 % de líneas.\n");
+    $failed = true;
+}
+
+if ($fleet['total'] === 0) {
+    fwrite(STDERR, "FALLO: no se encontraron líneas de Flota en el informe.\n");
+    $failed = true;
+} elseif ($fleetPercent < 80.0) {
+    fwrite(STDERR, "FALLO: src/Fleet/ debe tener al menos 80 % de líneas.\n");
     $failed = true;
 }
 
