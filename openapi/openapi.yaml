@@ -44,6 +44,18 @@ tags:
     name: 'Finance - Voids'
     description: "\nAnulación de pagos con solicitud y aprobación separadas."
   -
+    name: 'Fleet - Drivers'
+    description: "\nFichas operativas de los choferes."
+  -
+    name: 'Fleet - Expenses'
+    description: "\nViáticos y combustible de las rutas, con su comprobante y liquidación."
+  -
+    name: 'Fleet - Routes'
+    description: "\nRutas troncales: planificación, asignación, ejecución y kilometraje."
+  -
+    name: 'Fleet - Vehicles'
+    description: "\nFichas y estado de los vehículos."
+  -
     name: 'Identity - Attendance'
     description: "\nAPIs para registrar, anular y consultar marcaciones de asistencia (UC-17/UC-18)."
   -
@@ -3933,6 +3945,2000 @@ paths:
         in: path
         name: void
         description: 'Void id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/fleet/drivers:
+    get:
+      summary: 'List drivers'
+      operationId: listDrivers
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: '`active`, `inactive` or `suspended`.'
+          required: false
+          schema:
+            type: string
+            description: '`active`, `inactive` or `suspended`.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by home agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by home agency.'
+        -
+          in: query
+          name: available
+          description: 'Only active drivers with a valid license.'
+          required: false
+          schema:
+            type: boolean
+            description: 'Only active drivers with a valid license.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        user_id:
+                          type: integer
+                        license_number:
+                          type: string
+                        license_category:
+                          type: string
+                        license_expires_at:
+                          type: string
+                        phone:
+                          type: string
+                        status:
+                          type: string
+                        home_agency_id:
+                          type: integer
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Fleet - Drivers'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - active
+                    - inactive
+                    - suspended
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                available:
+                  type: boolean
+                  description: ''
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Register a driver'
+      operationId: registerADriver
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      user_id:
+                        type: integer
+                      license_number:
+                        type: string
+                      license_category:
+                        type: string
+                      license_expires_at:
+                        type: string
+                      phone:
+                        type: string
+                      status:
+                        type: string
+                      home_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Fleet - Drivers'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  description: 'User account of the driver.'
+                license_number:
+                  type: string
+                  description: 'License number.'
+                license_category:
+                  type: string
+                  description: 'License category.'
+                license_expires_at:
+                  type: string
+                  description: 'Expiration date (`Y-m-d`).'
+                phone:
+                  type: string
+                  description: 'optional Contact phone.'
+                  nullable: true
+                home_agency_id:
+                  type: integer
+                  description: 'Home agency.'
+              required:
+                - user_id
+                - license_number
+                - license_category
+                - license_expires_at
+                - home_agency_id
+  '/api/v1/fleet/drivers/{driver}':
+    patch:
+      summary: 'Update a driver'
+      operationId: updateADriver
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      user_id:
+                        type: integer
+                      license_number:
+                        type: string
+                      license_category:
+                        type: string
+                      license_expires_at:
+                        type: string
+                      phone:
+                        type: string
+                      status:
+                        type: string
+                      home_agency_id:
+                        type: integer
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Fleet - Drivers'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                license_number:
+                  type: string
+                  description: 'optional License number.'
+                license_category:
+                  type: string
+                  description: 'optional License category.'
+                license_expires_at:
+                  type: string
+                  description: 'optional Expiration date (`Y-m-d`).'
+                phone:
+                  type: string
+                  description: 'optional Contact phone.'
+                  nullable: true
+                status:
+                  type: string
+                  description: 'optional `active`, `inactive` or `suspended`.'
+    parameters:
+      -
+        in: path
+        name: driver
+        description: 'Driver id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/fleet/expenses:
+    get:
+      summary: 'List expenses'
+      operationId: listExpenses
+      description: ''
+      parameters:
+        -
+          in: query
+          name: route_id
+          description: 'Filter by route.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by route.'
+        -
+          in: query
+          name: type
+          description: '`per_diem` or `fuel`.'
+          required: false
+          schema:
+            type: string
+            description: '`per_diem` or `fuel`.'
+        -
+          in: query
+          name: status
+          description: '`registered`, `liquidated` or `rejected`.'
+          required: false
+          schema:
+            type: string
+            description: '`registered`, `liquidated` or `rejected`.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        route_id:
+                          type: integer
+                        driver_id:
+                          type: string
+                          nullable: true
+                        vehicle_id:
+                          type: string
+                          nullable: true
+                        type:
+                          type: string
+                        amount:
+                          type: string
+                        currency:
+                          type: string
+                        liters:
+                          type: string
+                        odometer_km:
+                          type: string
+                        has_receipt:
+                          type: boolean
+                        status:
+                          type: string
+                        rejection_reason:
+                          type: string
+                          nullable: true
+                        registered_by:
+                          type: integer
+                        registered_at:
+                          type: string
+                        reviewed_by:
+                          type: string
+                          nullable: true
+                        reviewed_at:
+                          type: string
+                          nullable: true
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Fleet - Expenses'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                route_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                type:
+                  type: string
+                  description: ''
+                  enum:
+                    - per_diem
+                    - fuel
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - registered
+                    - liquidated
+                    - rejected
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Register an expense'
+      operationId: registerAnExpense
+      description: "Fuel requires the receipt and the liters. A per diem can add its receipt\nlater, but cannot be liquidated without it."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      route_id:
+                        type: integer
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      type:
+                        type: string
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      liters:
+                        type: string
+                      odometer_km:
+                        type: string
+                      has_receipt:
+                        type: boolean
+                      status:
+                        type: string
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      registered_by:
+                        type: integer
+                      registered_at:
+                        type: string
+                      reviewed_by:
+                        type: string
+                        nullable: true
+                      reviewed_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Expenses'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                route_id:
+                  type: integer
+                  description: Route.
+                type:
+                  type: string
+                  description: '`per_diem` or `fuel`.'
+                amount:
+                  type: number
+                  description: 'Amount in PEN.'
+                liters:
+                  type: number
+                  description: 'optional Liters (fuel).'
+                  nullable: true
+                odometer_km:
+                  type: number
+                  description: 'optional Odometer reading.'
+                  nullable: true
+                idempotency_key:
+                  type: string
+                  description: 'optional Tolerates offline retries.'
+                  nullable: true
+                receipt:
+                  type: string
+                  format: binary
+                  description: 'optional Receipt (jpg, png or pdf, up to 5 MB).'
+                  nullable: true
+              required:
+                - route_id
+                - type
+                - amount
+  '/api/v1/fleet/expenses/{expense}/receipt':
+    get:
+      summary: 'Download the receipt of an expense'
+      operationId: downloadTheReceiptOfAnExpense
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      error_code:
+                        type: string
+      tags:
+        - 'Fleet - Expenses'
+    post:
+      summary: 'Attach a receipt to an expense'
+      operationId: attachAReceiptToAnExpense
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      route_id:
+                        type: integer
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      type:
+                        type: string
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      liters:
+                        type: string
+                      odometer_km:
+                        type: string
+                      has_receipt:
+                        type: boolean
+                      status:
+                        type: string
+                      rejection_reason:
+                        type: string
+                        nullable: true
+                      registered_by:
+                        type: integer
+                      registered_at:
+                        type: string
+                      reviewed_by:
+                        type: string
+                        nullable: true
+                      reviewed_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Expenses'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                receipt:
+                  type: string
+                  format: binary
+                  description: 'Receipt (jpg, png or pdf, up to 5 MB).'
+              required:
+                - receipt
+    parameters:
+      -
+        in: path
+        name: expense
+        description: 'Expense id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/fleet/expenses/liquidate:
+    post:
+      summary: 'Liquidate or reject expenses'
+      operationId: liquidateOrRejectExpenses
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        route_id:
+                          type: integer
+                        driver_id:
+                          type: string
+                          nullable: true
+                        vehicle_id:
+                          type: string
+                          nullable: true
+                        type:
+                          type: string
+                        amount:
+                          type: string
+                        currency:
+                          type: string
+                        liters:
+                          type: string
+                        odometer_km:
+                          type: string
+                        has_receipt:
+                          type: boolean
+                        status:
+                          type: string
+                        rejection_reason:
+                          type: string
+                          nullable: true
+                        registered_by:
+                          type: integer
+                        registered_at:
+                          type: string
+                        reviewed_by:
+                          type: string
+                          nullable: true
+                        reviewed_at:
+                          type: string
+                          nullable: true
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Fleet - Expenses'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expense_ids:
+                  type: array
+                  description: 'Expenses of closed routes.'
+                  items:
+                    type: integer
+                decision:
+                  type: string
+                  description: '`liquidated` or `rejected`.'
+                reason:
+                  type: string
+                  description: 'optional Required to reject.'
+                  nullable: true
+              required:
+                - expense_ids
+                - decision
+  /api/v1/fleet/routes:
+    get:
+      summary: 'List routes'
+      operationId: listRoutes
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: 'One status or a comma-separated list.'
+          required: false
+          schema:
+            type: string
+            description: 'One status or a comma-separated list.'
+        -
+          in: query
+          name: agency
+          description: 'Origin or destination agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Origin or destination agency.'
+        -
+          in: query
+          name: driver_id
+          description: 'Filter by driver.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by driver.'
+        -
+          in: query
+          name: vehicle_id
+          description: 'Filter by vehicle.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by vehicle.'
+        -
+          in: query
+          name: ticket_number
+          description: 'Exact route number.'
+          required: false
+          schema:
+            type: string
+            description: 'Exact route number.'
+        -
+          in: query
+          name: departure_from
+          description: 'Planned departure from.'
+          required: false
+          schema:
+            type: string
+            description: 'Planned departure from.'
+        -
+          in: query
+          name: departure_to
+          description: 'Planned departure to.'
+          required: false
+          schema:
+            type: string
+            description: 'Planned departure to.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_number:
+                          type: string
+                        ticket_code:
+                          type: string
+                        origin_agency_id:
+                          type: integer
+                        destination_agency_id:
+                          type: integer
+                        driver_id:
+                          type: string
+                          nullable: true
+                        vehicle_id:
+                          type: string
+                          nullable: true
+                        status:
+                          type: string
+                        planned_departure_at:
+                          type: string
+                        planned_arrival_at:
+                          type: string
+                        started_at:
+                          type: string
+                          nullable: true
+                        finished_at:
+                          type: string
+                          nullable: true
+                        computed_km:
+                          type: string
+                          nullable: true
+                        cancel_reason:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Fleet - Routes'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                driver_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                vehicle_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                ticket_number:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                departure_from:
+                  type: string
+                  description: 'Must be a valid date.'
+                departure_to:
+                  type: string
+                  description: 'Must be a valid date.'
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Plan a route'
+      operationId: planARoute
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ticket_number:
+                        type: string
+                        nullable: true
+                      ticket_code:
+                        type: string
+                        nullable: true
+                      origin_agency_id:
+                        type: string
+                        nullable: true
+                      destination_agency_id:
+                        type: string
+                        nullable: true
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        nullable: true
+                      planned_departure_at:
+                        type: string
+                        nullable: true
+                      planned_arrival_at:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      finished_at:
+                        type: string
+                        nullable: true
+                      computed_km:
+                        type: string
+                        nullable: true
+                      cancel_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Routes'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                origin_agency_id:
+                  type: integer
+                  description: 'Origin agency.'
+                destination_agency_id:
+                  type: integer
+                  description: 'Destination agency.'
+                planned_departure_at:
+                  type: string
+                  description: 'Planned departure.'
+                planned_arrival_at:
+                  type: string
+                  description: 'optional Planned arrival.'
+                  nullable: true
+                segments:
+                  type: array
+                  description: 'Segments chaining origin to destination.'
+                  items:
+                    type: object
+                    properties:
+                      from_agency_id:
+                        type: integer
+                        description: 'Segment start.'
+                      to_agency_id:
+                        type: integer
+                        description: 'Segment end.'
+                      distance_km:
+                        type: number
+                        description: 'Distance in km.'
+                    required:
+                      - from_agency_id
+                      - to_agency_id
+                      - distance_km
+              required:
+                - origin_agency_id
+                - destination_agency_id
+                - planned_departure_at
+                - segments
+  '/api/v1/fleet/routes/{route}':
+    get:
+      summary: 'Show a route'
+      operationId: showARoute
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ticket_number:
+                        type: string
+                        nullable: true
+                      ticket_code:
+                        type: string
+                        nullable: true
+                      origin_agency_id:
+                        type: string
+                        nullable: true
+                      destination_agency_id:
+                        type: string
+                        nullable: true
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        nullable: true
+                      planned_departure_at:
+                        type: string
+                        nullable: true
+                      planned_arrival_at:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      finished_at:
+                        type: string
+                        nullable: true
+                      computed_km:
+                        type: string
+                        nullable: true
+                      cancel_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Routes'
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/summary':
+    get:
+      summary: 'Show the cost and consumption of a route'
+      operationId: showTheCostAndConsumptionOfARoute
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      route_id:
+                        type: integer
+                      km:
+                        type: string
+                      liters:
+                        type: string
+                      fuel_cost:
+                        type: string
+                      per_diem_cost:
+                        type: string
+                      total_cost:
+                        type: string
+                      km_per_liter:
+                        type: number
+                      cost_per_km:
+                        type: number
+                      is_anomalous:
+                        type: boolean
+      tags:
+        - 'Fleet - Routes'
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/mileage/{log}/photo':
+    get:
+      summary: 'Download an odometer photo'
+      operationId: downloadAnOdometerPhoto
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      error_code:
+                        type: string
+      tags:
+        - 'Fleet - Routes'
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: log
+        description: 'Mileage log id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/assign':
+    post:
+      summary: 'Assign a driver and a vehicle'
+      operationId: assignADriverAndAVehicle
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ticket_number:
+                        type: string
+                        nullable: true
+                      ticket_code:
+                        type: string
+                        nullable: true
+                      origin_agency_id:
+                        type: string
+                        nullable: true
+                      destination_agency_id:
+                        type: string
+                        nullable: true
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        nullable: true
+                      planned_departure_at:
+                        type: string
+                        nullable: true
+                      planned_arrival_at:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      finished_at:
+                        type: string
+                        nullable: true
+                      computed_km:
+                        type: string
+                        nullable: true
+                      cancel_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Routes'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                driver_id:
+                  type: integer
+                  description: Driver.
+                vehicle_id:
+                  type: integer
+                  description: Vehicle.
+              required:
+                - driver_id
+                - vehicle_id
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/cancel':
+    post:
+      summary: 'Cancel a route'
+      operationId: cancelARoute
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ticket_number:
+                        type: string
+                        nullable: true
+                      ticket_code:
+                        type: string
+                        nullable: true
+                      origin_agency_id:
+                        type: string
+                        nullable: true
+                      destination_agency_id:
+                        type: string
+                        nullable: true
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        nullable: true
+                      planned_departure_at:
+                        type: string
+                        nullable: true
+                      planned_arrival_at:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      finished_at:
+                        type: string
+                        nullable: true
+                      computed_km:
+                        type: string
+                        nullable: true
+                      cancel_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Routes'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 'Why it is cancelled.'
+              required:
+                - reason
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/start':
+    post:
+      summary: 'Start a route'
+      operationId: startARoute
+      description: 'Idempotent: starting a route already in progress has no further effects.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ticket_number:
+                        type: string
+                        nullable: true
+                      ticket_code:
+                        type: string
+                        nullable: true
+                      origin_agency_id:
+                        type: string
+                        nullable: true
+                      destination_agency_id:
+                        type: string
+                        nullable: true
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        nullable: true
+                      planned_departure_at:
+                        type: string
+                        nullable: true
+                      planned_arrival_at:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      finished_at:
+                        type: string
+                        nullable: true
+                      computed_km:
+                        type: string
+                        nullable: true
+                      cancel_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Routes'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                odometer_km:
+                  type: number
+                  description: 'Initial reading.'
+                recorded_at:
+                  type: string
+                  description: 'optional When it was read.'
+                  nullable: true
+              required:
+                - odometer_km
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/segments/{segment}/complete':
+    post:
+      summary: 'Complete a segment'
+      operationId: completeASegment
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      route_id:
+                        type: integer
+                      sequence:
+                        type: integer
+                      from_agency_id:
+                        type: integer
+                      to_agency_id:
+                        type: integer
+                      distance_km:
+                        type: string
+                      status:
+                        type: string
+                      completed_at:
+                        type: string
+      tags:
+        - 'Fleet - Routes'
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: segment
+        description: 'Segment id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/finish':
+    post:
+      summary: 'Finish a route'
+      operationId: finishARoute
+      description: 'Idempotent: finishing a route already finished has no further effects.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        nullable: true
+                      ticket_number:
+                        type: string
+                        nullable: true
+                      ticket_code:
+                        type: string
+                        nullable: true
+                      origin_agency_id:
+                        type: string
+                        nullable: true
+                      destination_agency_id:
+                        type: string
+                        nullable: true
+                      driver_id:
+                        type: string
+                        nullable: true
+                      vehicle_id:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        nullable: true
+                      planned_departure_at:
+                        type: string
+                        nullable: true
+                      planned_arrival_at:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      finished_at:
+                        type: string
+                        nullable: true
+                      computed_km:
+                        type: string
+                        nullable: true
+                      cancel_reason:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        nullable: true
+      tags:
+        - 'Fleet - Routes'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                odometer_km:
+                  type: number
+                  description: 'Final reading.'
+                recorded_at:
+                  type: string
+                  description: 'optional When it was read.'
+                  nullable: true
+              required:
+                - odometer_km
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/routes/{route}/mileage':
+    post:
+      summary: 'Register an odometer reading'
+      operationId: registerAnOdometerReading
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      route_id:
+                        type: integer
+                      vehicle_id:
+                        type: integer
+                      odometer_km:
+                        type: string
+                      recorded_at:
+                        type: string
+                      recorded_by:
+                        type: integer
+                      has_photo:
+                        type: boolean
+      tags:
+        - 'Fleet - Routes'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                odometer_km:
+                  type: number
+                  description: Reading.
+                recorded_at:
+                  type: string
+                  description: 'optional When it was read.'
+                  nullable: true
+                idempotency_key:
+                  type: string
+                  description: 'optional Tolerates offline retries.'
+                  nullable: true
+                photo:
+                  type: string
+                  format: binary
+                  description: 'optional Odometer photo (jpg, png or pdf, up to 5 MB).'
+                  nullable: true
+              required:
+                - odometer_km
+    parameters:
+      -
+        in: path
+        name: route
+        description: 'Route id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/fleet/vehicles:
+    get:
+      summary: 'List vehicles'
+      operationId: listVehicles
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: '`available`, `on_route`, `maintenance` or `inactive`.'
+          required: false
+          schema:
+            type: string
+            description: '`available`, `on_route`, `maintenance` or `inactive`.'
+        -
+          in: query
+          name: agency
+          description: 'Filter by owner agency.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by owner agency.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        plate:
+                          type: string
+                        type:
+                          type: string
+                        capacity_kg:
+                          type: string
+                        capacity_m3:
+                          type: string
+                        owner_agency_id:
+                          type: integer
+                        status:
+                          type: string
+                        odometer_km:
+                          type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - 'Fleet - Vehicles'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - available
+                    - on_route
+                    - maintenance
+                    - inactive
+                agency:
+                  type: integer
+                  description: 'Must be at least 1.'
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Register a vehicle'
+      operationId: registerAVehicle
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      plate:
+                        type: string
+                      type:
+                        type: string
+                      capacity_kg:
+                        type: string
+                      capacity_m3:
+                        type: string
+                      owner_agency_id:
+                        type: integer
+                      status:
+                        type: string
+                      odometer_km:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Fleet - Vehicles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plate:
+                  type: string
+                  description: Plate.
+                type:
+                  type: string
+                  description: '`truck`, `van` or `trailer`.'
+                capacity_kg:
+                  type: number
+                  description: 'Load capacity in kg.'
+                capacity_m3:
+                  type: number
+                  description: 'Load capacity in m3.'
+                owner_agency_id:
+                  type: integer
+                  description: 'Owner agency.'
+                odometer_km:
+                  type: number
+                  description: 'optional Current odometer reading.'
+              required:
+                - plate
+                - type
+                - capacity_kg
+                - capacity_m3
+                - owner_agency_id
+  '/api/v1/fleet/vehicles/{vehicle}/status':
+    patch:
+      summary: 'Change the status of a vehicle'
+      operationId: changeTheStatusOfAVehicle
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      plate:
+                        type: string
+                      type:
+                        type: string
+                      capacity_kg:
+                        type: string
+                      capacity_m3:
+                        type: string
+                      owner_agency_id:
+                        type: integer
+                      status:
+                        type: string
+                      odometer_km:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Fleet - Vehicles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: '`available`, `maintenance` or `inactive`.'
+              required:
+                - status
+    parameters:
+      -
+        in: path
+        name: vehicle
+        description: 'Vehicle id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/fleet/vehicles/{vehicle}/odometer-correction':
+    post:
+      summary: 'Correct the odometer of a vehicle'
+      operationId: correctTheOdometerOfAVehicle
+      description: 'Audited correction: the only way for a reading to go backwards.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      plate:
+                        type: string
+                      type:
+                        type: string
+                      capacity_kg:
+                        type: string
+                      capacity_m3:
+                        type: string
+                      owner_agency_id:
+                        type: integer
+                      status:
+                        type: string
+                      odometer_km:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+      tags:
+        - 'Fleet - Vehicles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                odometer_km:
+                  type: number
+                  description: 'Correct reading.'
+                reason:
+                  type: string
+                  description: 'Why it is corrected.'
+              required:
+                - odometer_km
+                - reason
+    parameters:
+      -
+        in: path
+        name: vehicle
+        description: 'Vehicle id.'
         required: true
         schema:
           type: integer
