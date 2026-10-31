@@ -198,7 +198,7 @@ it('no deja ver órdenes a un usuario operativo sin agencia asignada', function 
 it('responde 403 al listar órdenes sin orders.view', function () {
     $user = adminUser();
     $user->removeRole('admin');
-    $user->assignRole('cashier'); // Sin permisos todavía
+    $user->assignRole('employee'); // Solo marcaciones: sin orders.view
 
     $this->actingAs($user)
         ->getJson('/api/v1/logistics/orders')

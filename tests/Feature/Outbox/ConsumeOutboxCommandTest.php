@@ -99,7 +99,7 @@ it('no toca los eventos que aún no tocan', function () {
 it('marca failed un evento que ningún contexto consume', function () {
     Queue::fake();
 
-    $event = pendingOutboxEvent(['event_type' => 'payment.registered']);
+    $event = pendingOutboxEvent(['event_type' => 'unknown.event']);
 
     $this->artisan('outbox:consume')->assertSuccessful();
 
@@ -108,7 +108,7 @@ it('marca failed un evento que ningún contexto consume', function () {
     $event->refresh();
 
     expect($event->status)->toBe(OutboxEvent::STATUS_FAILED)
-        ->and($event->error)->toContain('payment.registered');
+        ->and($event->error)->toContain('unknown.event');
 });
 
 it('reconoce los eventos de orden que aún no tienen consumidor real', function () {

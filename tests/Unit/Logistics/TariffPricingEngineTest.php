@@ -89,6 +89,11 @@ it('exige ubicación resoluble para el reparto a domicilio', function () {
             {
                 return 'Agencia';
             }
+
+            public function agencyCode(int $id): ?string
+            {
+                return 'LIM01';
+            }
         },
         coverages: new class implements CoverageDirectory
         {

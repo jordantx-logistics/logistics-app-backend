@@ -4,7 +4,18 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 use Src\Customer\Adapters\EloquentCustomerDirectory;
+use Src\Finance\Cash\Jobs\GenerateCashCloseReportJob;
+use Src\Finance\Invoice\Adapters\FakeSunatGateway;
+use Src\Finance\Invoice\Contracts\SunatGateway;
+use Src\Finance\Invoice\Jobs\GenerateCreditNoteArtifactsJob;
+use Src\Finance\Invoice\Jobs\GenerateInvoiceJob;
+use Src\Finance\Invoice\Jobs\VoidInvoiceJob;
+use Src\Finance\Payment\Adapters\EloquentPaymentStatusQuery;
+use Src\Finance\Payment\Jobs\MarkBillingOrderDeliveredJob;
+use Src\Finance\Payment\Jobs\ProjectBillingOrderCancelledJob;
+use Src\Finance\Payment\Jobs\ProjectBillingOrderCreatedJob;
 use Src\Identity\Attendance\Models\AttendanceRecord;
 use Src\Identity\Attendance\Policies\AttendancePolicy;
 use Src\Identity\Device\Adapters\EloquentDeviceRegistrar;
@@ -14,9 +25,13 @@ use Src\Identity\Employee\Policies\EmployeePolicy;
 use Src\Logistics\Location\Adapters\EloquentCoverageDirectory;
 use Src\Logistics\Location\Adapters\EloquentLocationDirectory;
 use Src\Logistics\Order\Adapters\EloquentCustomerOrderQuery;
+use Src\Logistics\Order\Adapters\EloquentOrderQuery;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
 use Src\Logistics\Order\Jobs\MarkOrderDeliveredJob;
 use Src\Logistics\Order\Jobs\MarkOrderInTransitJob;
+use Src\Logistics\Order\Jobs\ProjectPaymentRefundedJob;
+use Src\Logistics\Order\Jobs\ProjectPaymentRegisteredJob;
+use Src\Logistics\Order\Jobs\ProjectPaymentVoidedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
 use Src\Logistics\Tariff\Adapters\EloquentTariffDirectory;
 use Src\Operations\Shipment\Adapters\EloquentShipmentDirectory;
@@ -33,6 +48,8 @@ use Src\Shared\Contracts\CustomerOrderQuery;
 use Src\Shared\Contracts\DeviceRegistrar;
 use Src\Shared\Contracts\EmployeeDirectory;
 use Src\Shared\Contracts\LocationDirectory;
+use Src\Shared\Contracts\OrderQuery;
+use Src\Shared\Contracts\PaymentStatusQuery;
 use Src\Shared\Contracts\ShipmentDirectory;
 use Src\Shared\Contracts\TariffDirectory;
 use Src\Shared\Contracts\TrackingRecorder;
@@ -63,6 +80,14 @@ class DomainServiceProvider extends ServiceProvider
         $this->app->singleton(DeviceRegistrar::class, EloquentDeviceRegistrar::class);
         $this->app->singleton(ShipmentDirectory::class, EloquentShipmentDirectory::class);
         $this->app->singleton(TrackingRecorder::class, EloquentTrackingRecorder::class);
+        $this->app->singleton(OrderQuery::class, EloquentOrderQuery::class);
+        $this->app->singleton(PaymentStatusQuery::class, EloquentPaymentStatusQuery::class);
+        // Sin caída silenciosa al simulado: un valor desconocido en producción
+        // dejaría de emitir comprobantes reales sin que nadie lo note (ADR-0011).
+        $this->app->singleton(SunatGateway::class, fn (): SunatGateway => match (config('finance.sunat.gateway')) {
+            'fake' => new FakeSunatGateway,
+            default => throw new InvalidArgumentException('Unknown SUNAT_GATEWAY: '.config('finance.sunat.gateway')),
+        });
 
         // Policies: los módulos no tienen provider propio (sus rutas y comandos
         // se descubren solos), así que el registro de quién protege qué modelo
@@ -78,13 +103,14 @@ class DomainServiceProvider extends ServiceProvider
                 GenerateOrderGuidePdfJob::class,
                 SendOrderConfirmationMailJob::class,
                 ProjectShipmentJob::class,
+                ProjectBillingOrderCreatedJob::class,
             ],
             // Confirmar una orden todavía no tiene consumidor de negocio: se
             // reconoce para no bloquear el outbox.
             'order.confirmed' => [AcknowledgeEventJob::class],
             // Operaciones consume la cancelación para cerrar el envío si aún
-            // no salió a reparto.
-            'order.cancelled' => [CancelShipmentJob::class],
+            // no salió a reparto; Finanzas la marca no cobrable.
+            'order.cancelled' => [CancelShipmentJob::class, ProjectBillingOrderCancelledJob::class],
 
             // Eventos de Operaciones. Core mueve la orden con el embarque y la
             // entrega; el resto todavía no tiene consumidor real y se reconoce.
@@ -92,8 +118,25 @@ class DomainServiceProvider extends ServiceProvider
             'shipment.embarked' => [MarkOrderInTransitJob::class],
             'shipment.disembarked' => [AcknowledgeEventJob::class],
             'inventory.counted' => [AcknowledgeEventJob::class],
-            'delivery.completed' => [MarkOrderDeliveredJob::class],
+            'delivery.completed' => [MarkOrderDeliveredJob::class, MarkBillingOrderDeliveredJob::class],
             'delivery.failed' => [AcknowledgeEventJob::class],
+
+            // Finanzas: Core actualiza su proyección de cobro y el pipeline
+            // emite/transmite el comprobante.
+            'payment.registered' => [ProjectPaymentRegisteredJob::class, GenerateInvoiceJob::class],
+            'payment.refunded' => [ProjectPaymentRefundedJob::class],
+            'payment.voided' => [ProjectPaymentVoidedJob::class, VoidInvoiceJob::class],
+            'cash.closed' => [GenerateCashCloseReportJob::class],
+            'credit-note.issued' => [GenerateCreditNoteArtifactsJob::class],
+
+            // Acuses de documentos fiscales: evitan que un evento publicado sin
+            // consumidor de negocio tumbe el outbox.
+            'invoice.accepted' => [AcknowledgeEventJob::class],
+            'invoice.rejected' => [AcknowledgeEventJob::class],
+            'invoice.voided' => [AcknowledgeEventJob::class],
+            'invoice.void-rejected' => [AcknowledgeEventJob::class],
+            'credit-note.accepted' => [AcknowledgeEventJob::class],
+            'credit-note.rejected' => [AcknowledgeEventJob::class],
         ]));
     }
 }

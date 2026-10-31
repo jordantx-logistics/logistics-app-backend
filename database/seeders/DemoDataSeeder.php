@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Src\Finance\Invoice\Models\InvoiceSeries;
 use Src\Organization\Models\Agency;
 
 /**
@@ -29,5 +30,31 @@ class DemoDataSeeder extends Seeder
                 'is_active' => true,
             ],
         );
+
+        // Series fiscales de demostración: los datos reales se cargan por el
+        // endpoint admin `invoice-series` o el comando de configuración.
+        $agency = Agency::query()->where('code', 'LIM-01')->first();
+
+        if ($agency !== null) {
+            foreach (['boleta' => 'B001', 'factura' => 'F001'] as $documentType => $series) {
+                InvoiceSeries::updateOrCreate(
+                    [
+                        'agency_id' => $agency->id,
+                        'document_type' => $documentType,
+                        'series' => $series,
+                    ],
+                    [
+                        'issuer_ruc' => '20123456789',
+                        'issuer_name' => 'Logistics Demo SAC',
+                        'issuer_trade_name' => 'Logistics Demo',
+                        'issuer_address' => 'Av. Demo 123, Lima',
+                        'issuer_ubigeo' => '150101',
+                        'establishment_code' => '0000',
+                        'is_active' => true,
+                        'is_default' => true,
+                    ],
+                );
+            }
+        }
     }
 }

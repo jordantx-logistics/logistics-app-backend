@@ -69,6 +69,21 @@ class PermissionSeeder extends Seeder
         'delivery.view',
         'delivery.assign',
         'delivery.execute',
+
+        // Finanzas (Fase 5).
+        'payments.view',
+        'payments.create',
+        'cash.view',
+        'cash.open',
+        'cash.close',
+        'credit-notes.view',
+        'credit-notes.issue',
+        'voids.view',
+        'voids.request',
+        'voids.approve',
+        'invoices.view',
+        'invoices.retry',
+        'invoices.series',
     ];
 
     /**
@@ -87,18 +102,29 @@ class PermissionSeeder extends Seeder
             'shipments.view', 'shipments.receive', 'shipments.embark', 'shipments.disembark',
             'tracking.scan', 'tracking.view', 'inventory.manage',
             'delivery.view', 'delivery.assign',
+            'payments.view', 'payments.create',
+            'cash.view', 'cash.open', 'cash.close',
+            'credit-notes.view', 'credit-notes.issue',
+            'voids.view', 'voids.request', 'voids.approve',
+            'invoices.view', 'invoices.retry',
         ],
 
         'counter' => [
             'orders.view', 'orders.create', 'orders.update',
             'customers.view', 'customers.manage',
             'shipments.view', 'tracking.view',
+            'payments.view', 'payments.create',
+            'cash.view', 'cash.open', 'cash.close',
+            'credit-notes.view', 'invoices.view',
+            'voids.view', 'voids.request',
         ],
 
         'customer-service' => [
             'orders.view',
             'customers.view',
             'shipments.view', 'tracking.view',
+            'payments.view', 'credit-notes.view', 'credit-notes.issue',
+            'invoices.view', 'voids.view', 'voids.request',
         ],
 
         // Nacional de lectura: ve todas las órdenes (`hasNationalScope`) pero no
@@ -107,9 +133,17 @@ class PermissionSeeder extends Seeder
             'orders.view',
             'customers.view',
             'shipments.view', 'tracking.view', 'delivery.view',
+            'payments.view', 'cash.view', 'credit-notes.view', 'voids.view', 'invoices.view',
         ],
 
-        'cashier' => [],
+        'cashier' => [
+            'orders.view',
+            'customers.view',
+            'payments.view', 'payments.create',
+            'cash.view', 'cash.open', 'cash.close',
+            'credit-notes.view', 'invoices.view',
+            'voids.view', 'voids.request',
+        ],
 
         'warehouse-operator' => [
             'shipments.view', 'shipments.receive', 'shipments.embark', 'shipments.disembark',

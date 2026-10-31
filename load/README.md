@@ -109,3 +109,85 @@ del apartado anterior (`outbox:latency`), que compara `processed_at` con
 `created_at`; el criterio de la fase es p95 ≤ 5 s. Para aislar el consumidor en
 Docker Desktop, usa el bucle persistente `php scripts/outbox-loop.php 300`.
 
+## Fase 5 — Finanzas
+
+Los scripts `phase5-*.js` miden el SLO de la fase:
+
+- `phase5-payment.js`: p95 de `POST /finance/payments` ≤ 500 ms.
+- `phase5-cash.js`: p95 de `GET /finance/cash-sessions/current` ≤ 300 ms y del
+  cierre de caja ≤ 500 ms. El cierre se hace una sola vez en el `teardown`;
+  ejecútalo sin pagos en paralelo para que el esperado no cambie.
+
+Preparación (base local recién migrada):
+
+```bash
+docker compose exec app php artisan db:seed --class=DemoDataSeeder
+docker compose exec app php artisan db:seed --class=PermissionSeeder
+docker compose exec app php artisan orders:seed-volume --count=20
+```
+
+El usuario del token necesita una agencia primaria (`agency_user.is_primary`)
+para abrir caja, y la agencia necesita una serie fiscal activa. Con el admin de
+demo:
+
+```sql
+INSERT INTO agency_user (user_id, agency_id, is_primary, created_at, updated_at)
+VALUES (1, 1, 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE is_primary = 1, updated_at = NOW();
+```
+
+Obtén el token y abre la sesión con `POST /api/v1/finance/cash-sessions`.
+Después ejecuta la carga con una orden que tenga saldo y un importe pequeño
+para que el mismo pedido soporte todas las iteraciones:
+
+```bash
+k6 run \
+  -e BASE_URL=http://localhost:8000 \
+  -e TOKEN="$TOKEN" \
+  -e ORDER_ID=37 \
+  -e AMOUNT=0.01 \
+  -e VUS=2 -e DURATION=15s \
+  load/phase5-payment.js
+
+k6 run \
+  -e BASE_URL=http://localhost:8000 \
+  -e TOKEN="$TOKEN" \
+  -e VUS=2 -e DURATION=10s \
+  load/phase5-cash.js
+```
+
+Con Docker Desktop, el contenedor de k6 llega al host por
+`http://host.docker.internal:8000`:
+
+```bash
+docker run --rm -i \
+  -e BASE_URL=http://host.docker.internal:8000 \
+  -e TOKEN="$TOKEN" -e ORDER_ID=37 \
+  -v "$PWD/load:/scripts" grafana/k6 run /scripts/phase5-payment.js
+```
+
+La emisión del comprobante (XML/PDF/CDR) y la transmisión SUNAT son jobs: la
+respuesta del pago no las espera. La latencia del outbox se mide con
+`outbox:latency` y el criterio de la fase es p95 ≤ 60 s para el comprobante
+`accepted`/`rejected`.
+
+Cada iteración suma un pago a la misma orden y `paidAmountOf` los recorre todos:
+usa una orden con pocos pagos y espera a que el outbox se vacíe, o la medición
+reflejará los datos de carga anteriores y no el caso de uso.
+
+### Concurrencia de caja
+
+No es k6: `scripts/finance-concurrency-check.php` lanza procesos reales que
+ejecutan los casos de uso a la vez contra un MySQL desechable, con 10 rondas:
+
+```bash
+docker compose --profile concurrency up -d --wait mysql-concurrency
+
+docker compose exec \
+  -e DB_HOST=mysql-concurrency -e DB_DATABASE=logistics_concurrency \
+  -e DB_USERNAME=root -e DB_PASSWORD=root \
+  app php scripts/finance-concurrency-check.php 10
+
+docker compose --profile concurrency rm -sf mysql-concurrency
+```
+

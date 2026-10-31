@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Src\Shared\Traits\CanBeScopedByAgency;
 use Src\Shared\Traits\HasTicketIdentifiers;
 
@@ -113,6 +114,11 @@ class Order extends Model
     public function statusHistory(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('id');
+    }
+
+    public function paymentProjection(): HasOne
+    {
+        return $this->hasOne(OrderPaymentProjection::class);
     }
 
     /**

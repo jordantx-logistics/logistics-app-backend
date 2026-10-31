@@ -24,6 +24,7 @@ function contextLayerNames(): array
         'Adapters', 'Console', 'Contracts', 'Controllers', 'DTOs', 'Events', 'Exceptions',
         'Jobs', 'Logging', 'Mail', 'Middleware', 'Models', 'Pipelines', 'Policies',
         'Requests', 'Resources', 'Rules', 'Scope', 'Services', 'Traits', 'UseCases',
+        'ValueObjects',
     ];
 }
 
@@ -48,7 +49,13 @@ function contextOf(string $path): string
         $context[] = $segment;
     }
 
-    return implode('\\', $context);
+    $context = implode('\\', $context);
+
+    // Finanzas es un único contexto delimitado con cinco subcontextos internos
+    // (Payment, Cash, CreditNote, Void, Invoice). Los subcontextos pueden
+    // importarse entre sí y compartir FK intra-Finanzas; lo que sigue prohibido
+    // es que Finanzas importe Core u otro contexto, o al revés.
+    return str_starts_with($context, 'Finance') ? 'Finance' : $context;
 }
 
 it('no importa clases de otro contexto', function () {
@@ -88,11 +95,21 @@ it('no declara claves foráneas hacia tablas de otro contexto', function () {
     // pero sin FOREIGN KEY. Los tarifarios apuntan a `zones`/`locations`
     // (`Logistics/Location`), también sin FK.
     expect(Schema::getForeignKeys('orders'))->toBe([])
-        ->and(Schema::getForeignKeys('payments'))->toBe([])
         ->and(Schema::getForeignKeys('tariffs'))->toBe([]);
 
+    // `payments.cash_session_id` es la única FK de payments y apunta dentro de
+    // Finanzas (Cash), que la prueba trata como un solo contexto.
+    $paymentForeignTables = collect(Schema::getForeignKeys('payments'))
+        ->pluck('foreign_table')
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($paymentForeignTables)->toBe(['cash_sessions']);
+
     expect(Schema::hasColumns('orders', ['sender_id', 'receiver_id', 'origin_agency_id', 'destination_agency_id', 'created_by']))->toBeTrue()
-        ->and(Schema::hasColumns('payments', ['order_id', 'processed_by']))->toBeTrue()
+        ->and(Schema::hasColumns('payments', ['order_id', 'created_by']))->toBeTrue()
+        ->and(Schema::hasColumn('payments', 'processed_by'))->toBeFalse()
         ->and(Schema::hasColumns('tariffs', ['origin_zone_id', 'destination_zone_id', 'origin_location_id', 'destination_location_id']))->toBeTrue();
 });
 

@@ -4,6 +4,7 @@ namespace Src\Customer\Adapters;
 
 use Src\Customer\Models\Customer;
 use Src\Shared\Contracts\CustomerDirectory;
+use Src\Shared\DTOs\FiscalDocument;
 
 /**
  * Adaptador Eloquent del puerto `CustomerDirectory`. Vive en el contexto dueño
@@ -39,5 +40,27 @@ class EloquentCustomerDirectory implements CustomerDirectory
         }
 
         return $query->pluck('id')->all();
+    }
+
+    public function customerFiscalData(int $id): ?FiscalDocument
+    {
+        $customer = Customer::query()
+            ->select(['id', 'document_type', 'document_number'])
+            ->find($id);
+
+        if ($customer === null) {
+            return null;
+        }
+
+        $document = trim((string) $customer->document_number);
+
+        if ($document === '') {
+            return null;
+        }
+
+        return new FiscalDocument(
+            type: strtoupper((string) $customer->document_type),
+            number: $document,
+        );
     }
 }

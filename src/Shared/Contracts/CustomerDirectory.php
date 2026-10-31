@@ -2,6 +2,8 @@
 
 namespace Src\Shared\Contracts;
 
+use Src\Shared\DTOs\FiscalDocument;
+
 /**
  * Puerto hacia el contexto `Customer` (agregado `customers`).
  *
@@ -45,4 +47,12 @@ interface CustomerDirectory
      * @return list<int>
      */
     public function customerIdsByDocument(string $number, ?string $type = null): array;
+
+    /**
+     * Documento fiscal del cliente, si lo tiene.
+     *
+     * Lo usa Core al publicar `order.created` y Finanzas al emitir un
+     * comprobante; el consumidor nunca consulta `customers`.
+     */
+    public function customerFiscalData(int $id): ?FiscalDocument;
 }

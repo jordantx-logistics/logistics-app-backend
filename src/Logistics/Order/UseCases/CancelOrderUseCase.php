@@ -4,7 +4,10 @@ namespace Src\Logistics\Order\UseCases;
 
 use Illuminate\Support\Facades\DB;
 use Src\Logistics\Order\Models\Order;
+use Src\Logistics\Order\Models\OrderPaymentProjection;
 use Src\Logistics\Order\Services\OrderStatusMachine;
+use Src\Shared\Contracts\PaymentStatusQuery;
+use Src\Shared\Exceptions\BusinessRuleException;
 use Src\Shared\Models\OutboxEvent;
 
 /**
@@ -20,11 +23,25 @@ class CancelOrderUseCase
 {
     public function __construct(
         private readonly OrderStatusMachine $machine,
+        private readonly PaymentStatusQuery $payments,
     ) {}
 
     public function execute(Order $order, ?string $reason = null): Order
     {
         return DB::transaction(function () use ($order, $reason): Order {
+            $projection = OrderPaymentProjection::query()->where('order_id', $order->id)->first();
+            $netProjected = $projection === null
+                ? 0.0
+                : (float) $projection->paid_amount - (float) $projection->refunded_amount;
+
+            if ($netProjected > 0 || $this->payments->paidAmountOf($order->id)->isPositive()) {
+                throw new BusinessRuleException(
+                    message: 'The order cannot be cancelled because it has registered payments.',
+                    errorCode: 'ORDER_HAS_PAYMENT',
+                    statusCode: 409,
+                );
+            }
+
             $cancelled = $this->machine->transition($order, Order::STATUS_CANCELLED, $reason);
 
             OutboxEvent::create([

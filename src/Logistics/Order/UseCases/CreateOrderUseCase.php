@@ -12,6 +12,7 @@ use Src\Logistics\Order\Rules\ValidateDistinctAgencies;
 use Src\Logistics\Order\Rules\ValidateOrderWeight;
 use Src\Logistics\Order\Services\Pricing\PricingRequest;
 use Src\Logistics\Order\Services\Pricing\PricingService;
+use Src\Shared\Contracts\CustomerDirectory;
 use Src\Shared\Models\OutboxEvent;
 use Src\Shared\Pipelines\RulesPipeline;
 
@@ -29,6 +30,7 @@ class CreateOrderUseCase
 {
     public function __construct(
         private readonly PricingService $pricing,
+        private readonly CustomerDirectory $customers,
     ) {}
 
     public function execute(array $data): Order
@@ -77,6 +79,12 @@ class CreateOrderUseCase
             // evento con los mismos valores que quedaron guardados.
             $order->refresh();
 
+            $payerId = $order->payment_responsibility === Order::PAYMENT_RECEIVER
+                ? $order->receiver_id
+                : $order->sender_id;
+            $payerName = $this->customers->customerDisplayName($payerId) ?? "Customer #{$payerId}";
+            $fiscal = $this->customers->customerFiscalData($payerId);
+
             OrderStatusHistory::create([
                 'order_id' => $order->id,
                 'from_status' => null,
@@ -93,7 +101,15 @@ class CreateOrderUseCase
                     'status' => $order->status,
                     'origin_agency_id' => $order->origin_agency_id,
                     'destination_agency_id' => $order->destination_agency_id,
+                    'sender_id' => $order->sender_id,
+                    'receiver_id' => $order->receiver_id,
+                    'payment_responsibility' => $order->payment_responsibility,
+                    'payer_id' => $payerId,
+                    'payer_name' => $payerName,
+                    'customer_document' => $fiscal?->toArray(),
+                    'amount_due' => $order->total_amount,
                     'total_amount' => $order->total_amount,
+                    'currency' => 'PEN',
                     'created_by' => $order->created_by,
                     'created_at' => $order->created_at?->toIso8601String(),
                 ],
