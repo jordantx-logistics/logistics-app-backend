@@ -20,6 +20,7 @@ use Src\Finance\Payment\Adapters\RevenueReportSource;
 use Src\Finance\Payment\Jobs\MarkBillingOrderDeliveredJob;
 use Src\Finance\Payment\Jobs\ProjectBillingOrderCancelledJob;
 use Src\Finance\Payment\Jobs\ProjectBillingOrderCreatedJob;
+use Src\Fleet\Route\Adapters\EloquentFleetDirectory;
 use Src\Fleet\Route\Adapters\EloquentRouteDirectory;
 use Src\Fleet\Route\Adapters\FleetConsumptionReportSource;
 use Src\Fleet\Route\Adapters\FleetKpiSource;
@@ -67,6 +68,7 @@ use Src\Shared\Contracts\CustomerDirectory;
 use Src\Shared\Contracts\CustomerOrderQuery;
 use Src\Shared\Contracts\DeviceRegistrar;
 use Src\Shared\Contracts\EmployeeDirectory;
+use Src\Shared\Contracts\FleetDirectory;
 use Src\Shared\Contracts\LocationDirectory;
 use Src\Shared\Contracts\OrderQuery;
 use Src\Shared\Contracts\PaymentStatusQuery;
@@ -107,6 +109,7 @@ class DomainServiceProvider extends ServiceProvider
         $this->app->singleton(PaymentStatusQuery::class, EloquentPaymentStatusQuery::class);
         $this->app->singleton(UserDirectory::class, EloquentUserDirectory::class);
         $this->app->singleton(RouteDirectory::class, EloquentRouteDirectory::class);
+        $this->app->singleton(FleetDirectory::class, EloquentFleetDirectory::class);
         $this->app->singleton(SettingsReader::class, DatabaseSettingsReader::class);
 
         // Reportes y dashboard no conocen a los contextos: reciben lo que cada uno

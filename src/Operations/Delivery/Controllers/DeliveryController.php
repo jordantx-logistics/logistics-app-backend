@@ -79,20 +79,26 @@ class DeliveryController extends Controller
      * The authenticated courier's open deliveries, with recipient and address. With
      * `updated_since` it returns the courier's deliveries changed after that moment,
      * closed ones included. A delivery reassigned to someone else no longer appears.
+     * With `closed_today` it also returns the ones closed today, for the courier's history.
      *
      * @queryParam updated_since string ISO 8601 cursor. Example: 2026-10-20T10:00:00Z
+     * @queryParam closed_today boolean Include today's closed deliveries. Example: true
      *
      * @response 200 scenario="Route sheet" {"success":true,"message":"Route sheet retrieved successfully.","data":[{"id":1,"ticket_code":"A7F3Q8X4","ticket_number":"ORD-2026-000001","status":"assigned","attempt":1,"recipient_name":"Ana Pérez","recipient_phone":"999888777","recipient_address":"Av. Lima 123","requires_signature":true,"updated_at":"2026-10-20T10:00:00+00:00"}]}
      */
     public function routeSheet(Request $request, BuildRouteSheetUseCase $useCase): JsonResponse
     {
-        $data = $request->validate(['updated_since' => ['sometimes', 'date']]);
+        $data = $request->validate([
+            'updated_since' => ['sometimes', 'date'],
+            'closed_today' => ['sometimes', 'boolean'],
+        ]);
         $employeeId = $request->user()->employee_id;
 
         return $this->success(
             $useCase->execute(
                 $employeeId === null ? null : (int) $employeeId,
                 isset($data['updated_since']) ? Carbon::parse($data['updated_since']) : null,
+                (bool) ($data['closed_today'] ?? false),
             ),
             'Route sheet retrieved successfully.',
         );

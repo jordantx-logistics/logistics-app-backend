@@ -22,6 +22,7 @@ class AttendanceDayResource extends JsonResource
             'first_in_at' => $this->first_in_at,
             'last_out_at' => $this->last_out_at,
             'worked_minutes' => (int) $this->worked_minutes,
+            'lunch_minutes' => (int) $this->lunch_minutes,
             'late_minutes' => (int) $this->late_minutes,
             'status' => $this->status,
         ];

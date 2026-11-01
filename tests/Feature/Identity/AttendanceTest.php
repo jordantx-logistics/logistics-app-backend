@@ -88,6 +88,94 @@ it('calcula los minutos trabajados con la entrada y la salida', function () {
         ->and((int) $day->worked_minutes)->toBe(540);
 });
 
+it('completa la jornada con almuerzo y no lo cuenta como trabajo', function () {
+    $marks = [
+        [AttendanceRecord::TYPE_IN, '2026-10-15T08:00:00-05:00'],
+        [AttendanceRecord::TYPE_BREAK_START, '2026-10-15T12:30:00-05:00'],
+        [AttendanceRecord::TYPE_BREAK_END, '2026-10-15T13:30:00-05:00'],
+        [AttendanceRecord::TYPE_OUT, '2026-10-15T17:00:00-05:00'],
+    ];
+
+    foreach ($marks as [$type, $at]) {
+        $this->withHeaders($this->headers)
+            ->postJson('/api/v1/identity/attendance', attendancePayload($this->employee->id, $this->agency->id, [
+                'type' => $type,
+                'marked_at' => $at,
+            ]))
+            ->assertStatus(201);
+    }
+
+    $day = DB::table('attendance_days')->where('employee_id', $this->employee->id)->first();
+
+    expect($day->status)->toBe('complete')
+        ->and((int) $day->worked_minutes)->toBe(480)
+        ->and((int) $day->lunch_minutes)->toBe(60);
+});
+
+it('cuenta el almuerzo aunque se marque la salida sin volver', function () {
+    $marks = [
+        [AttendanceRecord::TYPE_IN, '2026-10-15T08:00:00-05:00'],
+        [AttendanceRecord::TYPE_BREAK_START, '2026-10-15T12:00:00-05:00'],
+        [AttendanceRecord::TYPE_OUT, '2026-10-15T12:45:00-05:00'],
+    ];
+
+    foreach ($marks as [$type, $at]) {
+        $this->withHeaders($this->headers)
+            ->postJson('/api/v1/identity/attendance', attendancePayload($this->employee->id, $this->agency->id, [
+                'type' => $type,
+                'marked_at' => $at,
+            ]))
+            ->assertStatus(201);
+    }
+
+    $day = DB::table('attendance_days')->where('employee_id', $this->employee->id)->first();
+
+    expect((int) $day->worked_minutes)->toBe(240)
+        ->and((int) $day->lunch_minutes)->toBe(45);
+});
+
+it('no permite volver del almuerzo sin haber salido', function () {
+    $this->withHeaders($this->headers)
+        ->postJson('/api/v1/identity/attendance', attendancePayload($this->employee->id, $this->agency->id))
+        ->assertStatus(201);
+
+    $this->withHeaders($this->headers)
+        ->postJson('/api/v1/identity/attendance', attendancePayload($this->employee->id, $this->agency->id, [
+            'type' => AttendanceRecord::TYPE_BREAK_END,
+            'marked_at' => '2026-10-15T13:00:00-05:00',
+        ]))
+        ->assertStatus(422)
+        ->assertJsonPath('data.error_code', 'ATTENDANCE_SEQUENCE_INVALID');
+});
+
+it('devuelve al empleado su propio consolidado y el almuerzo de su agencia', function () {
+    $this->agency->update(['lunch_minutes' => 45]);
+
+    $user = adminUser();
+    $user->removeRole('admin');
+    $user->assignRole('employee');
+    $user->forceFill(['employee_id' => $this->employee->id])->save();
+
+    $otro = Employee::factory()->create(['agency_id' => $this->agency->id]);
+
+    DB::table('attendance_days')->insert([
+        ['employee_id' => $this->employee->id, 'work_date' => '2026-10-15', 'worked_minutes' => 480, 'lunch_minutes' => 60, 'late_minutes' => 0, 'status' => 'complete'],
+        ['employee_id' => $otro->id, 'work_date' => '2026-10-15', 'worked_minutes' => 300, 'lunch_minutes' => 0, 'late_minutes' => 0, 'status' => 'complete'],
+    ]);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/identity/attendance/mine/days')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.lunch_minutes', 60);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/auth/me')
+        ->assertOk()
+        ->assertJsonPath('data.lunch_minutes', 45)
+        ->assertJsonPath('data.agency_names.'.$this->agency->id, $this->agency->name);
+});
+
 it('rechaza marcar con un empleado dado de baja', function () {
     $terminado = Employee::factory()->create([
         'agency_id' => $this->agency->id,

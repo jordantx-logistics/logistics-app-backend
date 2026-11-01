@@ -5,6 +5,7 @@ namespace Src\Identity\Attendance\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Src\Identity\Attendance\Models\AttendanceRecord;
 use Src\Identity\Attendance\Requests\RegisterAttendanceRequest;
 use Src\Identity\Attendance\Resources\AttendanceDayResource;
@@ -119,6 +120,31 @@ class AttendanceController extends Controller
         return $this->successPaginated(
             resource: AttendanceResource::collection($records),
             message: 'Attendance retrieved successfully.',
+        );
+    }
+
+    /**
+     * My Attendance Days
+     *
+     * El consolidado diario del empleado autenticado, del día más reciente al más antiguo.
+     *
+     * @queryParam per_page integer Rows per page (1..100, por defecto 15). Example: 15
+     *
+     * @response 200 {"success": true, "message": "Attendance days retrieved successfully.", "data": [{"employee_id": 55, "work_date": "2026-10-15", "first_in_at": "2026-10-15 08:02:11", "last_out_at": "2026-10-15 17:30:00", "worked_minutes": 508, "lunch_minutes": 60, "late_minutes": 0, "status": "complete"}]}
+     */
+    public function mineDays(Request $request): JsonResponse
+    {
+        $data = $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100']]);
+
+        $days = DB::table('attendance_days')
+            // Sin ficha de empleado no hay consolidado propio.
+            ->where('employee_id', $request->user()->employee_id ?? 0)
+            ->orderByDesc('work_date')
+            ->paginate((int) ($data['per_page'] ?? 15));
+
+        return $this->successPaginated(
+            resource: AttendanceDayResource::collection($days),
+            message: 'Attendance days retrieved successfully.',
         );
     }
 

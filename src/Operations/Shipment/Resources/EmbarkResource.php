@@ -13,7 +13,10 @@ class EmbarkResource extends JsonResource
             'id' => $this->id,
             'agency_id' => $this->agency_id,
             'vehicle_id' => $this->vehicle_id,
+            // Solo el listado los resuelve: es donde el personal elige el manifiesto.
+            'vehicle_plate' => $this->resource->getAttribute('vehicle_plate'),
             'driver_id' => $this->driver_id,
+            'driver_name' => $this->resource->getAttribute('driver_name'),
             'route_ref' => $this->route_ref,
             'departed_at' => $this->departed_at?->toIso8601String(),
             'items_count' => $this->items_count ?? ($this->relationLoaded('items') ? $this->items->count() : 0),

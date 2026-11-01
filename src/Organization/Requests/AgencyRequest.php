@@ -27,6 +27,8 @@ class AgencyRequest extends FormRequest
             // Ubigeo del distrito: lo usa el motor de tarifas (agencia → zona).
             'ubigeo' => ['nullable', 'string', 'size:6', app(UbigeoExists::class)],
             'is_active' => ['boolean'],
+            // Duración del almuerzo que la app de marcaciones muestra al personal.
+            'lunch_minutes' => ['sometimes', 'integer', 'min:0', 'max:240'],
         ];
     }
 }

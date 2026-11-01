@@ -25,7 +25,7 @@ class BuildRouteSheetUseCase
     /**
      * @return list<array<string, mixed>>
      */
-    public function execute(?int $employeeId, ?Carbon $updatedSince): array
+    public function execute(?int $employeeId, ?Carbon $updatedSince, bool $closedToday = false): array
     {
         if ($employeeId === null) {
             return [];
@@ -35,7 +35,10 @@ class BuildRouteSheetUseCase
             ->where('courier_id', $employeeId)
             ->when(
                 $updatedSince === null,
-                fn ($query) => $query->whereIn('status', self::OPEN_STATUSES),
+                fn ($query) => $query->where(function ($inner) use ($closedToday): void {
+                    $inner->whereIn('status', self::OPEN_STATUSES)
+                        ->when($closedToday, fn ($open) => $open->orWhere('updated_at', '>=', now()->startOfDay()));
+                }),
                 fn ($query) => $query->where('updated_at', '>=', $updatedSince),
             )
             ->orderBy('id')
@@ -52,6 +55,8 @@ class BuildRouteSheetUseCase
                 'ticket_number' => $delivery->ticket_number,
                 'status' => $delivery->status,
                 'attempt' => $delivery->attempt,
+                'delivered_at' => $delivery->delivered_at?->toIso8601String(),
+                'failure_reason' => $delivery->failure_reason,
                 'recipient_name' => $contact?->recipientName,
                 'recipient_phone' => $contact?->recipientPhone,
                 'recipient_address' => $contact?->recipientAddress,
