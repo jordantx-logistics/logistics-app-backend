@@ -1,0 +1,6 @@
+# Valores de `ingress-nginx`. La IP real del cliente llega de Cloudflare en CF-Connecting-IP;
+# el firewall del balanceador solo admite a Cloudflare (`infra/terraform/modules/edge`).
+controller:
+  config:
+    use-forwarded-headers: "true"
+    forwarded-for-header: CF-Connecting-IP

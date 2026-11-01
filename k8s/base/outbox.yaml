@@ -1,0 +1,51 @@
+# Consumidor del outbox en bucle. Dos réplicas: se reparten el lote por `lockForUpdate`, y
+# si una se detiene la otra sigue. No hay hueco aunque un rollout reinicie una de ellas.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outbox
+  labels: { app: outbox }
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app: outbox }
+  template:
+    metadata:
+      labels: { app: outbox }
+    spec:
+      imagePullSecrets: [{ name: registry-secrets }]
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: outbox
+          image: backend
+          envFrom:
+            - configMapRef: { name: app-config }
+            - secretRef: { name: app-secrets }
+            - secretRef: { name: db-secrets }
+            - secretRef: { name: redis-secrets }
+          env:
+            - { name: APP_ROLE, value: outbox }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 200m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: outbox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: outbox }

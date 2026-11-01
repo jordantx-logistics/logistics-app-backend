@@ -14,6 +14,7 @@ use Src\System\Middleware\EnforcePermission;
 use Src\System\Middleware\LogHttpRequest;
 use Src\System\Middleware\RecordHttpMetrics;
 use Src\System\Middleware\ResolveAgencyScope;
+use Src\System\Middleware\RouteDatabaseReads;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -31,9 +32,18 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') ? null : '/'
         );
 
+        // Primero de todo: la autenticación ya lee de la base.
+        $middleware->prepend(RouteDatabaseReads::class);
+
         $middleware->append(AssignRequestId::class);
         $middleware->append(LogHttpRequest::class);
         $middleware->append(RecordHttpMetrics::class);
+
+        // Detrás del Ingress, la IP y el esquema reales llegan en cabeceras. Solo se creen
+        // si vienen de los proxies indicados: si no, el `throttle` por IP se podría evadir.
+        if ($proxies = env('TRUSTED_PROXIES')) {
+            $middleware->trustProxies(at: explode(',', (string) $proxies));
+        }
 
         // Spatie v7 ya no registra sus alias: se declaran aquí. `permission`
         // pasa por `EnforcePermission`, que respeta el interruptor

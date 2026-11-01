@@ -149,3 +149,155 @@ jobs:
           name: openapi
           path: storage/app/private/scribe/openapi.yaml
           if-no-files-found: error
+
+  # La imagen de producción no lleva dependencias de desarrollo: si algo las necesita al
+  # arrancar, solo se ve construyéndola y levantándola de verdad.
+  production-image:
+    name: Imagen de producción
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Preparar Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Construir
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: production
+          load: true
+          tags: logistics-app-backend:production
+          cache-from: type=gha,scope=production
+          cache-to: type=gha,mode=max,scope=production
+
+      # Con las mismas restricciones que el securityContext de los pods.
+      - name: Arranca como usuario sin privilegios
+        run: |
+          docker run -d --name web \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            -e APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" \
+            -e LOG_CHANNEL=stderr -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
+            -e CACHE_STORE=array -e SESSION_DRIVER=array -e QUEUE_CONNECTION=sync \
+            -e METRICS_STORAGE=in-memory -e OCTANE_WORKERS=1 \
+            logistics-app-backend:production
+          for attempt in $(seq 1 30); do
+            if docker exec web sh -c 'wget -qO- http://127.0.0.1:8000/up > /dev/null'; then
+              test "$(docker exec web id -u)" = 10001
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error title=La imagen no arranca::$(docker logs web 2>&1 | tail -c 4000 | awk 'BEGIN { ORS = "%0A" } { print }')"
+          exit 1
+
+  # Primary, réplica y ProxySQL de verdad: SQLite no replica ni particiona.
+  scale:
+    name: Réplica y particiones
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Dependencias y entorno
+        run: |
+          docker compose build app
+          docker compose run --rm --no-deps app sh -c '
+            set -e
+            composer install --no-interaction --prefer-dist --no-progress
+            [ -f .env ] || cp .env.example .env
+            php artisan key:generate --force
+          '
+
+      - name: Levantar el stack de escala
+        shell: bash
+        run: sh scripts/scale-up.sh 2>&1 | tee -a ci.log
+
+      - name: Enrutamiento de lectura y escritura
+        shell: bash
+        run: docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile tools run --rm tools php scripts/replica-routing-check.php 2>&1 | tee -a ci.log
+
+      - name: Particiones, purga y cambio de tabla
+        shell: bash
+        run: docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile tools run --rm tools php scripts/partition-check.php 2>&1 | tee -a ci.log
+
+      # Criterio 10 de la Fase 9. No en local: satura un equipo de desarrollo.
+      - name: Corte de Redis con carga
+        shell: bash
+        run: sh scripts/redis-failover-check.sh 2>&1 | tee -a ci.log
+
+      # La API pública de GitHub no entrega los logs, pero sí las anotaciones.
+      - name: Publicar el final del log
+        if: failure()
+        shell: bash
+        run: |
+          [ -f ci.log ] || exit 0
+          message=$(tail -c 12000 ci.log | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | awk 'BEGIN { ORS = "%0A" } { print }')
+          echo "::error title=Final del log::$message"
+
+  # Criterios 5 y 8 de la Fase 9, sobre un clúster real. No en local, por el mismo motivo.
+  kubernetes:
+    name: Clúster kind
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Preparar Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Construir la imagen de producción
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: production
+          load: true
+          tags: logistics-app-backend:production
+          cache-from: type=gha,scope=production
+
+      - name: Instalar kind
+        run: |
+          curl -fsSL -o kind https://github.com/kubernetes-sigs/kind/releases/download/v0.27.0/kind-linux-amd64
+          sudo install kind /usr/local/bin/kind
+
+      - name: Comprobar el clúster
+        shell: bash
+        run: bash scripts/kind-check.sh 2>&1 | tee -a ci.log
+
+      # La API pública de GitHub no entrega los logs, pero sí las anotaciones.
+      - name: Publicar el final del log
+        if: failure()
+        shell: bash
+        run: |
+          [ -f ci.log ] || exit 0
+          message=$(tail -c 12000 ci.log | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | awk 'BEGIN { ORS = "%0A" } { print }')
+          echo "::error title=Final del log::$message"
+
+  infrastructure:
+    name: Manifiestos y Terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Manifiestos de Kubernetes
+        run: |
+          for overlay in kind staging prod; do
+            kubectl kustomize "k8s/overlays/$overlay" > "$overlay.yaml"
+            docker run --rm -v "$PWD:/w" -w /w ghcr.io/yannh/kubeconform:v0.6.7 \
+              -strict -summary -kubernetes-version 1.31.0 "$overlay.yaml"
+          done
+
+      - name: Terraform
+        run: |
+          terraform() { docker run --rm -v "$PWD:/w" -w "/w/$1" hashicorp/terraform:1.9.8 "${@:2}"; }
+          terraform infra/terraform fmt -check -recursive
+          for env in staging prod; do
+            terraform "infra/terraform/envs/$env" init -backend=false -input=false
+            terraform "infra/terraform/envs/$env" validate
+          done

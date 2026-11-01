@@ -12,6 +12,7 @@ use Src\Reporting\Services\ReportFileWriter;
 use Src\Shared\Contracts\Metrics;
 use Src\Shared\DTOs\ReportFilters;
 use Src\Shared\Exceptions\BusinessRuleException;
+use Src\Shared\Services\ReadWriteRouting;
 use Throwable;
 
 /**
@@ -55,13 +56,21 @@ final class GenerateReportExportJob implements ShouldQueue
         $temporary = tempnam(sys_get_temp_dir(), 'report');
 
         try {
-            $count = $writer->write(
-                $export->format,
-                $source->title(),
-                $source->columns(),
-                $source->rows($this->filters($export)),
-                $temporary,
-            );
+            // Solo las filas del reporte salen de la réplica: un reporte no debe cargar el primary.
+            $routing = app(ReadWriteRouting::class);
+            $routing->allowReplica();
+
+            try {
+                $count = $writer->write(
+                    $export->format,
+                    $source->title(),
+                    $source->columns(),
+                    $source->rows($this->filters($export)),
+                    $temporary,
+                );
+            } finally {
+                $routing->pinToPrimary();
+            }
 
             $path = sprintf(
                 '%s/%s/%d-%s.%s',

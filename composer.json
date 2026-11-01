@@ -17,6 +17,7 @@
         "laravel/octane": "^2.22",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "^3.35",
         "openspout/openspout": "^5.3",
         "promphp/prometheus_client_php": "^2.15",
         "spatie/laravel-permission": "^7.3"

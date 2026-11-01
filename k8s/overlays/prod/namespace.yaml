@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logistics-prod
+  labels:
+    env: prod
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: logistics-quota
+spec:
+  hard:
+    requests.cpu: "80"
+    requests.memory: 160Gi
+    limits.cpu: "160"
+    limits.memory: 320Gi
+    pods: "120"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: logistics-defaults
+spec:
+  limits:
+    - type: Container
+      default: { cpu: 500m, memory: 512Mi }
+      defaultRequest: { cpu: 200m, memory: 256Mi }

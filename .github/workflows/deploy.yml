@@ -1,0 +1,87 @@
+name: Deploy
+
+# Una sola imagen por commit, promovida por digest (ADR-0010): `main` despliega a staging y
+# un tag `vX.Y.Z` a producción, con la aprobación del GitHub Environment `production`.
+#
+# No se ha ejecutado nunca: necesita el clúster y los secretos del entorno. Mientras no
+# exista la variable `DEPLOY_ENABLED=true`, los trabajos se saltan.
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: registry.digitalocean.com/logistics/backend
+
+jobs:
+  build:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_TOKEN }}
+
+      - run: doctl registry login --expiry-seconds 1200
+
+      - uses: docker/setup-buildx-action@v4
+
+      - id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: production
+          push: true
+          tags: ${{ env.IMAGE }}:sha-${{ github.sha }}
+          cache-from: type=gha,scope=production
+          cache-to: type=gha,mode=max,scope=production
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'production' || 'staging' }}
+    env:
+      OVERLAY: ${{ startsWith(github.ref, 'refs/tags/') && 'prod' || 'staging' }}
+      NAMESPACE: ${{ startsWith(github.ref, 'refs/tags/') && 'logistics-prod' || 'logistics-staging' }}
+      CLUSTER: ${{ startsWith(github.ref, 'refs/tags/') && 'logistics-prod' || 'logistics-staging' }}
+      DIGEST: ${{ needs.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_TOKEN }}
+
+      - run: doctl kubernetes cluster kubeconfig save --expiry-seconds 1200 "$CLUSTER"
+
+      - name: Fijar la imagen por digest
+        working-directory: k8s/overlays/${{ env.OVERLAY }}
+        run: kustomize edit set image "backend=$IMAGE@$DIGEST"
+
+      - name: Migrar antes del rollout
+        run: |
+          kubectl -n "$NAMESPACE" delete job db-migrate --ignore-not-found
+          kubectl kustomize "k8s/overlays/$OVERLAY" > manifest.yaml
+          yq 'select(.kind == "Job")' manifest.yaml | kubectl apply -f -
+          kubectl -n "$NAMESPACE" wait --for=condition=complete --timeout=30m job/db-migrate
+
+      - name: Desplegar
+        run: |
+          yq 'select(.kind != "Job")' manifest.yaml | kubectl apply -f -
+          for workload in web horizon-high horizon-reports outbox proxysql; do
+            kubectl -n "$NAMESPACE" rollout status "deployment/$workload" --timeout=10m
+          done
+
+      - name: Revertir si el rollout falla
+        if: failure()
+        run: |
+          for workload in web horizon-high horizon-reports outbox; do
+            kubectl -n "$NAMESPACE" rollout undo "deployment/$workload" || true
+          done

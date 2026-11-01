@@ -4,6 +4,7 @@ require_once __DIR__.'/../Fleet/FleetHelpers.php';
 
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -16,6 +17,7 @@ use Src\Logistics\Order\Models\Order;
 use Src\Operations\Delivery\Models\Delivery;
 use Src\Operations\Shipment\Models\Embark;
 use Src\Operations\Shipment\Models\Shipment;
+use Src\Operations\Tracking\Models\Scan;
 use Src\Organization\Models\Agency;
 use Src\Shared\Models\SyncEvent;
 use Src\Shared\Services\ShipmentStatus;
@@ -201,6 +203,48 @@ describe('lote de entregas', function () {
 });
 
 describe('lote de escaneos', function () {
+    it('un rechazo no deshace los demás escaneos del lote', function () {
+        $this->actingAs(adminUser());
+        $agency = Agency::factory()->create();
+        $shipment = Shipment::factory()->create(['origin_agency_id' => $agency->id, 'current_location_agency_id' => $agency->id]);
+        $scan = fn (string $ticket): array => [
+            'scan_id' => (string) Str::uuid(),
+            'ticket_code' => $ticket,
+            'scan_type' => 'inventory',
+            'scanned_at' => now()->toIso8601String(),
+        ];
+
+        $this->postJson('/api/v1/operations/scans/sync', ['scans' => [
+            $scan($shipment->ticket_code),
+            $scan('NOEXISTE'),
+            $scan($shipment->ticket_code),
+        ]])->assertOk()->assertJsonPath('data.accepted', 2)->assertJsonPath('data.rejected', 1);
+
+        expect(DB::table('scans')->where('shipment_id', $shipment->id)->count())->toBe(2);
+    });
+
+    it('todo el lote comparte una transacción', function () {
+        $this->actingAs(adminUser());
+        $agency = Agency::factory()->create();
+        $shipment = Shipment::factory()->create(['origin_agency_id' => $agency->id, 'current_location_agency_id' => $agency->id]);
+        $base = DB::transactionLevel();
+        $levels = [];
+
+        Scan::creating(function () use (&$levels): void {
+            $levels[] = DB::transactionLevel();
+        });
+
+        $this->postJson('/api/v1/operations/scans/sync', ['scans' => [[
+            'scan_id' => (string) Str::uuid(),
+            'ticket_code' => $shipment->ticket_code,
+            'scan_type' => 'inventory',
+            'scanned_at' => now()->toIso8601String(),
+        ]]])->assertOk();
+
+        // El lote y el savepoint del escaneo.
+        expect($levels)->toBe([$base + 2]);
+    });
+
     it('reintentar un escaneo rechazado sigue informando el rechazo, no un duplicado', function () {
         $this->actingAs(adminUser());
         $shipment = Shipment::factory()->create([

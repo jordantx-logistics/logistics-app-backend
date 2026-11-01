@@ -2,6 +2,7 @@
 
 namespace Src\Operations\Tracking\UseCases;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Src\Operations\Tracking\Models\TrackingEvent;
 use Src\Shared\Contracts\ShipmentDirectory;
@@ -30,6 +31,13 @@ class TrackShipmentUseCase
 
         $events = TrackingEvent::query()
             ->where('shipment_id', $shipment->id)
+            // Con este límite MySQL descarta las particiones anteriores. Deja un mes de
+            // margen: un escaneo offline lleva la hora del dispositivo y puede ser anterior.
+            ->when($shipment->createdAt, fn ($query, string $createdAt) => $query->where(
+                'created_at',
+                '>=',
+                CarbonImmutable::parse($createdAt)->subMonth()->startOfMonth(),
+            ))
             ->orderBy('created_at')
             ->orderBy('id')
             ->get();

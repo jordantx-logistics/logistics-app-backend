@@ -1,0 +1,78 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Clúster kind de prueba (`scripts/kind-check.sh`): MySQL y Redis dentro del clúster en lugar
+# de los servicios gestionados. Los valores son de prueba y no se usan en ningún otro sitio.
+namespace: logistics-kind
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - dependencies.yaml
+
+images:
+  - name: backend
+    newName: logistics-app-backend
+    newTag: production
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - APP_URL=http://web:8000
+      - FILESYSTEM_DISK=local
+      - PARTITIONS_ARCHIVE_DISK=local
+      - OCTANE_WORKERS=2
+
+secretGenerator:
+  - name: proxysql-config
+    files:
+      - proxysql.cnf
+  - name: app-secrets
+    literals:
+      - APP_KEY=base64:bG9jYWwtc2NhbGUtc3RhY2sta2V5LTAxMjM0NTY3ODk=
+  - name: db-secrets
+    literals:
+      - DB_DATABASE=logistics_app
+      - DB_USERNAME=logistics
+      - DB_PASSWORD=secret
+      - DB_READ_USERNAME=logistics_read
+      - DB_READ_PASSWORD=read-local
+  - name: redis-secrets
+    literals:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  - name: spaces-secrets
+    literals:
+      - AWS_BUCKET=unused
+
+patches:
+  # Imagen cargada con `kind load`: no se puede descargar de ningún registro.
+  - target: { kind: Deployment, name: "web|horizon-.*|outbox" }
+    patch: |-
+      - { op: add, path: /spec/template/spec/containers/0/imagePullPolicy, value: Never }
+      - { op: remove, path: /spec/template/spec/imagePullSecrets }
+  - target: { kind: Job, name: db-migrate }
+    patch: |-
+      - { op: add, path: /spec/template/spec/containers/0/imagePullPolicy, value: Never }
+      - { op: remove, path: /spec/template/spec/imagePullSecrets }
+      - { op: add, path: /spec/ttlSecondsAfterFinished, value: 86400 }
+      # MySQL arranca a la vez que el Job.
+      - { op: replace, path: /spec/backoffLimit, value: 20 }
+  - target: { kind: CronJob }
+    patch: |-
+      - { op: add, path: /spec/jobTemplate/spec/template/spec/containers/0/imagePullPolicy, value: Never }
+      - { op: remove, path: /spec/jobTemplate/spec/template/spec/imagePullSecrets }
+  # Nodos de prueba pequeños: peticiones pequeñas, para que quepan varias réplicas.
+  - target: { kind: Deployment, name: web }
+    patch: |-
+      - { op: replace, path: /spec/template/spec/containers/0/resources/requests/cpu, value: 200m }
+      - { op: replace, path: /spec/template/spec/containers/0/resources/limits/cpu, value: "1" }
+  - target: { kind: Deployment, name: "horizon-.*" }
+    patch: |-
+      - { op: replace, path: /spec/template/spec/containers/0/resources/requests/cpu, value: 100m }
+  # Vuelve a la base en minutos: la prueba no espera lo que esperaría producción.
+  - target: { kind: HorizontalPodAutoscaler, name: web }
+    patch: |-
+      - { op: replace, path: /spec/behavior/scaleDown/stabilizationWindowSeconds, value: 60 }
+      - { op: replace, path: /spec/maxReplicas, value: 6 }

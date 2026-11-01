@@ -99,6 +99,7 @@ class EloquentShipmentDirectory implements ShipmentDirectory
             currentLocationAgencyId: $shipment->current_location_agency_id,
             status: $shipment->status,
             deliveredAt: $shipment->delivered_at?->toIso8601String(),
+            createdAt: $shipment->created_at?->toIso8601String(),
         );
     }
 }

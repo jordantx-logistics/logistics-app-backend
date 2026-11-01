@@ -13,9 +13,10 @@ it('configura las colas del spec con balanceo automático', function () {
         ->and($supervisor['balance'])->toBe('auto');
 });
 
-it('reparte las colas por entorno según 07-devops/01-entornos.md', function () {
+it('toma las colas de HORIZON_QUEUES en todos los entornos', function () {
     // Lo que no se define por entorno se hereda de `defaults`.
-    expect(config('horizon.environments.staging.supervisor-1.queue'))->toBe(['high', 'default'])
+    expect(config('horizon.defaults.supervisor-1.queue'))->toBe(['high', 'default', 'reports', 'sync'])
+        ->and(config('horizon.environments.staging.supervisor-1.queue'))->toBeNull()
         ->and(config('horizon.environments.production.supervisor-1.queue'))->toBeNull()
         ->and(config('horizon.environments.local.supervisor-1'))->toHaveKey('maxProcesses');
 });

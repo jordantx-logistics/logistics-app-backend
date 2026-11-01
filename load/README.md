@@ -218,3 +218,21 @@ docker compose --profile concurrency rm -sf mysql-concurrency
 vehículo en varias rutas, inicios y finales repetidos, lecturas de odómetro
 simultáneas, el tope de viático y las claves de idempotencia.
 
+## Fase 9 — Escala
+
+`phase9.js` combina órdenes, escaneos, tracking, listados y cobros sobre el stack de escala
+(primary, réplica y ProxySQL, con la imagen de producción). **Satura un equipo de desarrollo:**
+la medición que vale es la de staging, no la de un Docker Desktop.
+
+```bash
+sh scripts/scale-up.sh
+docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile tools run --rm \
+  -e LOAD_SHIPMENTS=200000 -e LOAD_EVENTS=3000000 tools \
+  php -d memory_limit=2G artisan db:seed --class='Database\Seeders\LoadTestSeeder' --force
+FACTOR=1 DURATION=3m sh scripts/load-run.sh
+sh scripts/scale-down.sh
+```
+
+`FACTOR` multiplica las tasas y `ONLY=scans,counter` limita los escenarios. El seeder deja los
+tokens en `load/fixture.json`, que no se versiona.
+
