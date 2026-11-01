@@ -13,4 +13,5 @@ $compose up -d --wait app nginx
 $compose up -d horizon scheduler mailpit
 $compose exec -T app php artisan migrate:fresh --seed --force
 $compose exec -T app php artisan db:seed --class='Database\Seeders\E2eSeeder' --force
+$compose exec -T app php artisan db:seed --class='Database\Seeders\E2eMobileSeeder' --force
 $compose exec -T app php artisan octane:reload
