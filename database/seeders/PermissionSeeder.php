@@ -57,6 +57,48 @@ class PermissionSeeder extends Seeder
         'attendance.register',
         'attendance.manage',
         'devices.manage',
+
+        // Operaciones / Tracking (Fase 4).
+        'shipments.view',
+        'shipments.receive',
+        'shipments.embark',
+        'shipments.disembark',
+        'tracking.scan',
+        'tracking.view',
+        'inventory.manage',
+        'delivery.view',
+        'delivery.assign',
+        'delivery.execute',
+
+        // Finanzas (Fase 5).
+        'payments.view',
+        'payments.create',
+        'cash.view',
+        'cash.open',
+        'cash.close',
+        'credit-notes.view',
+        'credit-notes.issue',
+        'voids.view',
+        'voids.request',
+        'voids.approve',
+        'invoices.view',
+        'invoices.retry',
+        'invoices.series',
+
+        // Flota (Fase 6).
+        'fleet.manage',
+        'routes.view',
+        'routes.manage',
+        'routes.execute',
+        'expenses.register',
+        'expenses.approve',
+
+        // Web Backoffice (Fase 7).
+        'dashboard.view',
+        'incidents.view',
+        'incidents.manage',
+        'reports.view',
+        'settings.manage',
     ];
 
     /**
@@ -72,16 +114,37 @@ class PermissionSeeder extends Seeder
             'orders.view', 'orders.create', 'orders.update', 'orders.confirm', 'orders.cancel',
             'customers.view', 'customers.manage',
             'agencies.view', 'agencies.manage',
+            'shipments.view', 'shipments.receive', 'shipments.embark', 'shipments.disembark',
+            'tracking.scan', 'tracking.view', 'inventory.manage',
+            'delivery.view', 'delivery.assign',
+            'payments.view', 'payments.create',
+            'cash.view', 'cash.open', 'cash.close',
+            'credit-notes.view', 'credit-notes.issue',
+            'voids.view', 'voids.request', 'voids.approve',
+            'invoices.view', 'invoices.retry',
+            'routes.view', 'routes.manage', 'routes.execute',
+            'expenses.register', 'expenses.approve',
+            'dashboard.view', 'incidents.view', 'incidents.manage', 'reports.view',
         ],
 
         'counter' => [
             'orders.view', 'orders.create', 'orders.update',
             'customers.view', 'customers.manage',
+            'shipments.view', 'tracking.view',
+            'payments.view', 'payments.create',
+            'cash.view', 'cash.open', 'cash.close',
+            'credit-notes.view', 'invoices.view',
+            'voids.view', 'voids.request',
+            'dashboard.view', 'incidents.view',
         ],
 
         'customer-service' => [
             'orders.view',
             'customers.view',
+            'shipments.view', 'tracking.view',
+            'payments.view', 'credit-notes.view', 'credit-notes.issue',
+            'invoices.view', 'voids.view', 'voids.request',
+            'dashboard.view', 'incidents.view', 'incidents.manage',
         ],
 
         // Nacional de lectura: ve todas las órdenes (`hasNationalScope`) pero no
@@ -89,13 +152,31 @@ class PermissionSeeder extends Seeder
         'analyst' => [
             'orders.view',
             'customers.view',
+            'shipments.view', 'tracking.view', 'delivery.view',
+            'payments.view', 'cash.view', 'credit-notes.view', 'voids.view', 'invoices.view',
+            'routes.view',
+            'dashboard.view', 'incidents.view', 'reports.view',
         ],
 
-        // Sin permisos todavía: llegan con su módulo y su fase.
-        'cashier' => [],
-        'warehouse-operator' => [],
-        'driver' => [],
-        'courier' => [],
+        'cashier' => [
+            'orders.view',
+            'customers.view',
+            'payments.view', 'payments.create',
+            'cash.view', 'cash.open', 'cash.close',
+            'credit-notes.view', 'invoices.view',
+            'voids.view', 'voids.request',
+            'dashboard.view',
+        ],
+
+        'warehouse-operator' => [
+            'shipments.view', 'shipments.receive', 'shipments.embark', 'shipments.disembark',
+            'tracking.scan', 'tracking.view', 'inventory.manage',
+            'dashboard.view',
+        ],
+
+        'driver' => ['tracking.view', 'routes.view', 'routes.execute', 'expenses.register', 'dashboard.view'],
+
+        'courier' => ['delivery.view', 'delivery.execute', 'tracking.view', 'dashboard.view'],
 
         // Marcaciones propias (Fase 2): el único rol operativo que ya tiene
         // permiso; los de RRHH llegan con los endpoints de Identity.

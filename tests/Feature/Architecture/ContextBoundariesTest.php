@@ -24,6 +24,7 @@ function contextLayerNames(): array
         'Adapters', 'Console', 'Contracts', 'Controllers', 'DTOs', 'Events', 'Exceptions',
         'Jobs', 'Logging', 'Mail', 'Middleware', 'Models', 'Pipelines', 'Policies',
         'Requests', 'Resources', 'Rules', 'Scope', 'Services', 'Traits', 'UseCases',
+        'ValueObjects',
     ];
 }
 
@@ -48,7 +49,20 @@ function contextOf(string $path): string
         $context[] = $segment;
     }
 
-    return implode('\\', $context);
+    $context = implode('\\', $context);
+
+    // Finanzas es un único contexto delimitado con cinco subcontextos internos
+    // (Payment, Cash, CreditNote, Void, Invoice). Los subcontextos pueden
+    // importarse entre sí y compartir FK intra-Finanzas; lo que sigue prohibido
+    // es que Finanzas importe Core u otro contexto, o al revés.
+    // Flota sigue el mismo criterio con Driver, Vehicle, Route y Expense.
+    foreach (['Finance', 'Fleet'] as $singleContext) {
+        if (str_starts_with($context, $singleContext)) {
+            return $singleContext;
+        }
+    }
+
+    return $context;
 }
 
 it('no importa clases de otro contexto', function () {
@@ -88,12 +102,34 @@ it('no declara claves foráneas hacia tablas de otro contexto', function () {
     // pero sin FOREIGN KEY. Los tarifarios apuntan a `zones`/`locations`
     // (`Logistics/Location`), también sin FK.
     expect(Schema::getForeignKeys('orders'))->toBe([])
-        ->and(Schema::getForeignKeys('payments'))->toBe([])
         ->and(Schema::getForeignKeys('tariffs'))->toBe([]);
 
+    // `payments.cash_session_id` es la única FK de payments y apunta dentro de
+    // Finanzas (Cash), que la prueba trata como un solo contexto.
+    $paymentForeignTables = collect(Schema::getForeignKeys('payments'))
+        ->pluck('foreign_table')
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($paymentForeignTables)->toBe(['cash_sessions']);
+
     expect(Schema::hasColumns('orders', ['sender_id', 'receiver_id', 'origin_agency_id', 'destination_agency_id', 'created_by']))->toBeTrue()
-        ->and(Schema::hasColumns('payments', ['order_id', 'processed_by']))->toBeTrue()
+        ->and(Schema::hasColumns('payments', ['order_id', 'created_by']))->toBeTrue()
+        ->and(Schema::hasColumn('payments', 'processed_by'))->toBeFalse()
         ->and(Schema::hasColumns('tariffs', ['origin_zone_id', 'destination_zone_id', 'origin_location_id', 'destination_location_id']))->toBeTrue();
+});
+
+it('deja las referencias de Flota a otros contextos sin clave foránea', function () {
+    // Usuarios y agencias son de otros contextos. Las FK de Flota solo apuntan a
+    // tablas de Flota.
+    $fleetTables = ['drivers', 'vehicles', 'routes', 'route_segments', 'expenses', 'mileage_logs'];
+
+    foreach ($fleetTables as $table) {
+        $foreignTables = collect(Schema::getForeignKeys($table))->pluck('foreign_table')->all();
+
+        expect(array_diff($foreignTables, $fleetTables))->toBe([], "{$table} tiene una FK fuera de Flota");
+    }
 });
 
 it('deja las referencias de Identity a agencies sin clave foránea', function () {

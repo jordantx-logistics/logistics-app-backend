@@ -21,7 +21,7 @@ Ver `CONTRIBUTING.md` y `docker-compose.yml`.
 - `docker compose exec app php artisan scribe:generate` — regenera la documentación de API.
 - `docker compose exec app php artisan permission:cache-reset` — vacía la caché de roles/permisos de Spatie (Redis). Necesario si se tocan las tablas de permisos a mano. Al cambiar el catálogo (`PermissionSeeder`) hay que sembrar **y recargar** los workers: el seeder invalida su caché, pero Octane además guarda la colección de permisos en memoria, así que sin `octane:reload` un permiso nuevo responde `403` en vivo aunque `GET /auth/me` ya lo liste (pasó al estrenar `orders.view`).
 - `docker compose exec app php artisan octane:reload` — recarga los workers tras cambiar código. Vale igual para `scheduler` y `horizon`: también aguantan la aplicación en memoria, así que un comando o un job nuevos no existen hasta reiniciarlos. Los workers leen **toda** la configuración al arrancar: un `config/*.php` nuevo (p. ej. `cors.php`) tampoco existe hasta recargar — con el worker viejo el CORS seguía con los valores por defecto del paquete (`Access-Control-Allow-Origin: *`, sin credenciales) y el navegador rechazaba el login de la SPA aunque los tests pasaran.
-- `docker compose exec scheduler php artisan outbox:consume` — publica en las colas los eventos pendientes del outbox (lo agenda el rol `scheduler` cada 5 s; a mano sirve para depurar, con `--limit=N`).
+- `docker compose exec scheduler php artisan outbox:consume` — publica en las colas los eventos pendientes del outbox (lo agenda el rol `scheduler` cada segundo; a mano sirve para depurar, con `--limit=N`).
 - `docker compose exec scheduler php artisan metrics:collect` — recalcula los gauges de cola y outbox (agendado cada 15 s).
 - `docker compose logs -f app` — logs JSON del servicio web.
 - `docker compose build app` — obligatorio tras tocar `Dockerfile` o `docker/entrypoint.sh` (se copian en la imagen, no están montados).
@@ -129,15 +129,23 @@ Horizon (Fase 1) gestiona los workers sobre **Redis**. El worker es el servicio 
 - Acceso: en local entra cualquiera; fuera de local, solo los emails de `HORIZON_ALLOWED_EMAILS` (vacía = nadie). En staging/producción la barrera de verdad es el borde (Cloudflare Access) y el panel no se publica. La gate vive en `app/Providers/HorizonServiceProvider.php` y `tests/Feature/System/HorizonTest.php` la fija.
 - Al instalar o actualizar un paquete hace falta `php artisan octane:reload`: los workers de Octane llevan la aplicación en memoria y las rutas nuevas (por ejemplo `/horizon`) no existen hasta recargar.
 
+### Escala (Fase 9)
+
+- `docker-compose.scale.yml` y `scripts/scale-up.sh`: primary, réplica y ProxySQL con la imagen de producción. **Saturan un equipo de desarrollo**; en CI corren en el job `scale`.
+- Lecturas: `RouteDatabaseReads` y `ReadWriteRouting` (`src/Shared/Services`). Solo un `GET` lee de la réplica. No uses `@@variables` en SQL: fijan la sesión en ProxySQL.
+- `partitions:create-next`, `partitions:purge`, `partitions:migrate` y `outbox:archive` (`config/partitions.php`). SQLite no particiona: lo específico de MySQL se comprueba con `scripts/partition-check.php`.
+- `docker build --target production` es la imagen desplegable: sin dependencias de desarrollo y con uid 10001. Una clase de desarrollo en `config/` rompe el arranque.
+- Infraestructura: `k8s/` (Kustomize) e `infra/terraform/`.
+
 ### Outbox (asincronía)
 
 Los UseCases escriben un `OutboxEvent` en la misma transacción que el cambio de dominio; nadie despacha jobs a mano (`spec/02-objetivo/05-asincronia-y-eventos.md`).
 
-- `outbox:consume` (`src/Shared/Console/Commands/ConsumeOutboxCommand.php`) lo agenda el rol `scheduler` cada 5 s —el SLO es `pending` → `processed` con p95 ≤ 5 s—. Reclama el lote con `lockForUpdate` (dos consumidores no publican el mismo evento), lo pasa a `processing` y lo marca `processed` al despacharlo. Si el despacho falla reintenta con backoff exponencial (`config/outbox.php`) y, agotados los intentos, queda `failed` para inspección manual.
+- En Kubernetes corre como Deployment (`outbox:consume --daemon`, con `OUTBOX_DAEMON=true`). En local, `outbox:consume` (`src/Shared/Console/Commands/ConsumeOutboxCommand.php`) lo agenda el rol `scheduler` cada segundo —el SLO es `pending` → `processed` con p95 ≤ 5 s; un lote pequeño y un tick frecuente evitan que la espera del scheduler se coma el presupuesto—. Reclama el lote con `lockForUpdate` (dos consumidores no publican el mismo evento), lo pasa a `processing` y lo marca `processed` al despacharlo; los `processed` del lote se actualizan en un solo `UPDATE`. Si el despacho falla reintenta con backoff exponencial (`config/outbox.php`) y, agotados los intentos, queda `failed` para inspección manual.
 - Un evento atascado en `processing` (el consumidor murió a mitad) vuelve a `pending` pasados `outbox.processing_timeout` segundos. Un `event_type` que nadie consume va directo a `failed`: es un hueco de configuración, reintentarlo no arregla nada.
 - El mapa `event_type` → jobs se compone en `app/Providers/DomainServiceProvider.php` (`Src\Shared\Services\OutboxEventMap`), porque `Shared` no importa contextos (ADR-0006); cada job decide su cola con `onQueue()`.
 - Idempotencia: `ProcessedEvents::once($outboxEventId, self::class, ...)` ejecuta el efecto y anota `(evento, handler)` en `processed_events` dentro de la misma transacción, y el índice único cubre la carrera de dos workers. El outbox es *at-least-once*: el evento se marca `processed` al **publicarse**, no al ejecutarse el job.
-- Jobs de referencia: `GenerateOrderGuidePdfJob` y `SendOrderConfirmationMailJob` en `default`, `ProjectOrderCreatedJob` en `sync` (placeholder de la Fase 4). El de la guía guarda por ahora un borrador HTML en `storage/app/private/orders/<ticket_code>/`: el documento definitivo (y el motor PDF) es de la Fase 3.
+- Jobs de referencia: `GenerateOrderGuidePdfJob` y `SendOrderConfirmationMailJob` en `default`, `ProjectShipmentJob` en `sync` (proyección de `order.created` a `shipments`, Fase 4). El de la guía genera el PDF con `OrderGuideService` (dompdf + QR del `ticket_code`) y lo guarda en `storage/app/private/orders/<ticket_code>/guia.pdf`.
 
 ### API docs
 

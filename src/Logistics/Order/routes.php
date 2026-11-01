@@ -30,6 +30,10 @@ Route::prefix('api/v1/logistics')
             ->whereNumber('order');
 
         Route::middleware('permission:orders.update')
+            ->patch('orders/{order}', [OrderController::class, 'update'])
+            ->whereNumber('order');
+
+        Route::middleware('permission:orders.update')
             ->patch('orders/{order}/delivery', [OrderController::class, 'updateDelivery'])
             ->whereNumber('order');
     });

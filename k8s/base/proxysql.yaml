@@ -1,0 +1,67 @@
+# Pool y enrutamiento hacia MySQL. La configuración incluye credenciales, por eso va en el
+# Secret `proxysql-config` (clave `proxysql.cnf`), con la forma de `docker/proxysql/proxysql.cnf`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxysql
+  labels: { app: proxysql }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: proxysql }
+  template:
+    metadata:
+      labels: { app: proxysql }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: proxysql
+          image: proxysql/proxysql:2.7.3
+          # La imagen no define ENTRYPOINT: con `args` se intentaría ejecutar "-f".
+          command: ["proxysql", "-f", "--idle-threads", "-c", "/etc/proxysql/proxysql.cnf", "-D", "/var/lib/proxysql"]
+          ports:
+            - { name: mysql, containerPort: 6033 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          readinessProbe:
+            tcpSocket: { port: mysql }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: mysql }
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 500m, memory: 256Mi }
+            limits: { cpu: "2", memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/proxysql, readOnly: true }
+            - { name: data, mountPath: /var/lib/proxysql }
+      volumes:
+        - name: config
+          secret: { secretName: proxysql-config }
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxysql
+  labels: { app: proxysql }
+spec:
+  selector: { app: proxysql }
+  ports:
+    - { name: mysql, port: 6033, targetPort: mysql }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: proxysql
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: proxysql }

@@ -13,7 +13,12 @@ return [
     |
     */
 
-    'batch' => (int) env('OUTBOX_BATCH', 100),
+    'batch' => (int) env('OUTBOX_BATCH', 200),
+
+    // En Kubernetes el consumidor es un Deployment aparte (`outbox:consume --daemon`):
+    // un CronJob con `everySecond()` deja huecos de hasta ~2 min si se salta un disparo.
+    // Con `true`, el scheduler no lo lanza y los gauges pasan a cada minuto.
+    'daemon' => (bool) env('OUTBOX_DAEMON', false),
 
     // Intentos de publicación antes de marcar el evento como `failed`. Un
     // evento agotado se inspecciona y se reprocesa a mano (spec 05).

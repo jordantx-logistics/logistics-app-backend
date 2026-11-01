@@ -117,6 +117,26 @@ services:
     networks:
       - logistics-network
 
+  # MySQL desechable para `scripts/finance-concurrency-check.php`, que recrea su
+  # base: vive en memoria y no comparte datos ni credenciales con `mysql`.
+  #   docker compose --profile concurrency up -d --wait mysql-concurrency
+  mysql-concurrency:
+    profiles: ["concurrency"]
+    image: mysql:8.0
+    command: --sql-mode=STRICT_ALL_TABLES
+    environment:
+      MYSQL_DATABASE: logistics_concurrency
+      MYSQL_ROOT_PASSWORD: root
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - logistics-network
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped

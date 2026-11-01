@@ -3,14 +3,21 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Knuckles\Scribe\Scribe;
+use Laravel\Sanctum\Events\TokenAuthenticated;
+use Laravel\Sanctum\Sanctum;
+use Src\Identity\User\Models\AccessToken;
 use Src\Shared\Scope\AgencyScope;
+use Src\Shared\Services\ReadWriteRouting;
 use Symfony\Component\HttpFoundation\Request;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureReadWriteRouting();
         $this->configureRateLimiting();
         $this->configurePasswordResetUrl();
         $this->configureScribeAuthentication();
@@ -44,6 +52,26 @@ class AppServiceProvider extends ServiceProvider
                 'flag' => 'AUTHZ_ENFORCE=false',
             ]);
         }
+    }
+
+    /**
+     * Comandos y jobs leen del primary: deciden y escriben sobre lo que leen. La
+     * excepción es la generación de reportes, que libera la réplica ella misma.
+     */
+    private function configureReadWriteRouting(): void
+    {
+        Sanctum::usePersonalAccessTokenModel(AccessToken::class);
+
+        $routing = $this->app->make(ReadWriteRouting::class);
+
+        if ($this->app->runningInConsole()) {
+            $routing->pinToPrimary();
+        }
+
+        Queue::before(fn () => $routing->pinToPrimary());
+
+        Event::listen(TokenAuthenticated::class, fn (TokenAuthenticated $event) => $routing->pinIfWroteRecently($event->token->tokenable_id));
+        Event::listen(Authenticated::class, fn (Authenticated $event) => $routing->pinIfWroteRecently($event->user->getAuthIdentifier()));
     }
 
     /**

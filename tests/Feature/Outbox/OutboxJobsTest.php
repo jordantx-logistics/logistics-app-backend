@@ -6,10 +6,13 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Src\Customer\Models\Customer;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
-use Src\Logistics\Order\Jobs\ProjectOrderCreatedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
 use Src\Logistics\Order\Mail\OrderConfirmationMail;
 use Src\Logistics\Order\Models\Order;
+use Src\Operations\Shipment\Jobs\ProjectOrderCreatedJob;
+use Src\Operations\Shipment\Models\Shipment;
+use Src\Operations\Tracking\Models\TrackingEvent;
+use Src\Shared\Jobs\AcknowledgeEventJob;
 use Src\Shared\Models\ProcessedEvent;
 
 /*
@@ -129,16 +132,43 @@ it('no reescribe la guía en un reintento', function () {
     expect(Storage::disk(GenerateOrderGuidePdfJob::DISK)->get($job->path()))->toBe('ya estaba');
 });
 
-it('deja constancia de la proyección pendiente hacia Operaciones', function () {
-    Log::spy();
+it('proyecta order.created en el envío operativo y su primer tracking', function () {
+    $order = Order::factory()->create([
+        'origin_agency_id' => 10,
+        'destination_agency_id' => 20,
+    ]);
 
-    $job = new ProjectOrderCreatedJob(4, ['order_id' => 10]);
+    $job = new ProjectOrderCreatedJob(4, [
+        'order_id' => $order->id,
+        'ticket_code' => $order->ticket_code,
+        'ticket_number' => $order->ticket_number,
+        'origin_agency_id' => 10,
+        'destination_agency_id' => 20,
+        'created_at' => now()->toIso8601String(),
+    ]);
 
     app()->call([$job, 'handle']);
 
+    $shipment = Shipment::query()->where('order_id', $order->id)->first();
+
+    expect($shipment)->not->toBeNull()
+        ->and($shipment->status)->toBe(Shipment::STATUS_CREATED)
+        ->and($shipment->current_location_agency_id)->toBe(10)
+        ->and(TrackingEvent::query()->where('shipment_id', $shipment->id)->where('event_type', 'created')->count())->toBe(1)
+        ->and(ProcessedEvent::query()->where('handler', ProjectOrderCreatedJob::class)->exists())->toBeTrue();
+});
+
+it('reconoce un evento sin consumidor y lo registra una sola vez', function () {
+    Log::spy();
+
+    $job = new AcknowledgeEventJob(77, ['order_id' => 10, 'ticket_code' => 'A7F3Q8X4']);
+
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+
     Log::shouldHaveReceived('info')
-        ->with('ops.projection_pending', Mockery::type('array'))
+        ->with('outbox.acknowledged_without_consumer', Mockery::type('array'))
         ->once();
 
-    expect(ProcessedEvent::query()->where('handler', ProjectOrderCreatedJob::class)->exists())->toBeTrue();
+    expect(ProcessedEvent::query()->where('handler', AcknowledgeEventJob::class)->count())->toBe(1);
 });

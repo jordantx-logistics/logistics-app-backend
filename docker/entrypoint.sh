@@ -7,6 +7,13 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
+# En la imagen de producción, la configuración se fija al arrancar: depende del entorno
+# del pod y por eso no puede ir en la imagen.
+if [ "${CACHE_APP_ON_BOOT:-false}" = "true" ]; then
+  php artisan config:cache --quiet
+  php artisan route:cache --quiet
+fi
+
 case "${APP_ROLE:-web}" in
   web)
     # `--log-level` hace que Octane imprima en crudo el stderr del proceso
@@ -26,6 +33,9 @@ case "${APP_ROLE:-web}" in
     ;;
   scheduler)
     exec php artisan schedule:work
+    ;;
+  outbox)
+    exec php artisan outbox:consume --daemon
     ;;
   *)
     echo "APP_ROLE desconocido: ${APP_ROLE}" >&2

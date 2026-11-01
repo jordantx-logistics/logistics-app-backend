@@ -5,6 +5,7 @@ namespace Src\Identity\User\Resources;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Src\Shared\Contracts\EmployeeDirectory;
 
 /**
  * Usuario autenticado con su contexto de autorización: lo que el frontend
@@ -29,6 +30,11 @@ class MeResource extends JsonResource
             'roles' => $user->getRoleNames()->values()->all(),
             'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
             'agencies' => $user->agencyIds(),
+            // La app corporativa marca por empleado y la de reparto pide sus entregas.
+            'employee_id' => $user->employee_id,
+            'employee_agency_id' => $user->employee_id === null
+                ? null
+                : app(EmployeeDirectory::class)->employeeAgencyId((int) $user->employee_id),
         ];
     }
 }

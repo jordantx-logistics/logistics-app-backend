@@ -46,6 +46,22 @@ class AgencyController extends Controller
     }
 
     /**
+     * List agency options
+     *
+     * Active agencies with the minimum data for a selector, without the agency
+     * scope: an order can travel to an agency outside the user's.
+     *
+     * @response 200 scenario="Options" {"success": true, "message": "Agency options retrieved successfully.", "data": [{"id": 1, "code": "LIM01", "name": "Lima Centro"}]}
+     */
+    public function options(): JsonResponse
+    {
+        return $this->success(
+            data: Agency::query()->where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+            message: 'Agency options retrieved successfully.',
+        );
+    }
+
+    /**
      * Create Agency
      *
      * Registers a new branch location where packages can be originated or received.

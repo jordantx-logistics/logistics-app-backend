@@ -1,0 +1,123 @@
+# Todo lo agendado de minuto en adelante. El consumidor del outbox no está aquí.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scheduler
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          imagePullSecrets: [{ name: registry-secrets }]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: scheduler
+              image: backend
+              command: ["/usr/local/bin/entrypoint.sh", "php", "artisan", "schedule:run"]
+              envFrom:
+                - configMapRef: { name: app-config }
+                - secretRef: { name: app-secrets }
+                - secretRef: { name: db-secrets }
+                - secretRef: { name: redis-secrets }
+                - secretRef: { name: spaces-secrets }
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: { drop: [ALL] }
+              resources:
+                requests: { cpu: 100m, memory: 192Mi }
+                limits: { cpu: 500m, memory: 384Mi }
+---
+# Archivo de outbox y purga de particiones: pueden durar horas, así que no bloquean el
+# scheduler. `partitions:purge` usa disco temporal para el archivo del mes.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: outbox-archive
+spec:
+  schedule: "30 2 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          imagePullSecrets: [{ name: registry-secrets }]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: outbox-archive
+              image: backend
+              command: ["/usr/local/bin/entrypoint.sh", "php", "artisan", "outbox:archive"]
+              envFrom:
+                - configMapRef: { name: app-config }
+                - secretRef: { name: app-secrets }
+                - secretRef: { name: db-secrets }
+                - secretRef: { name: redis-secrets }
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: { drop: [ALL] }
+              resources:
+                requests: { cpu: 200m, memory: 256Mi }
+                limits: { cpu: "1", memory: 512Mi }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: partitions-purge
+spec:
+  schedule: "30 3 1 * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      # Sin reintento automático: si falla, el mes queda sin borrar y se mira el Job.
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          imagePullSecrets: [{ name: registry-secrets }]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: partitions-purge
+              image: backend
+              command: ["/usr/local/bin/entrypoint.sh", "php", "artisan", "partitions:purge"]
+              envFrom:
+                - configMapRef: { name: app-config }
+                - secretRef: { name: app-secrets }
+                - secretRef: { name: db-secrets }
+                - secretRef: { name: redis-secrets }
+                - secretRef: { name: spaces-secrets }
+              env:
+                - { name: TMPDIR, value: /scratch }
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: { drop: [ALL] }
+              volumeMounts:
+                - { name: scratch, mountPath: /scratch }
+              resources:
+                requests: { cpu: 500m, memory: 512Mi, ephemeral-storage: 50Gi }
+                limits: { cpu: "2", memory: 1Gi, ephemeral-storage: 200Gi }
+          volumes:
+            - name: scratch
+              emptyDir: {}

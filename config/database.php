@@ -62,6 +62,30 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+
+            // Sin `DB_READ_HOST` hay un solo host, como antes de la Fase 9. Con él, ProxySQL
+            // enruta por usuario: `DB_USERNAME` al primary y `DB_READ_USERNAME` a las réplicas.
+            ...(env('DB_READ_HOST') ? [
+                'read' => [
+                    'host' => env('DB_READ_HOST'),
+                    'username' => env('DB_READ_USERNAME', env('DB_USERNAME', 'root')),
+                    'password' => env('DB_READ_PASSWORD', env('DB_PASSWORD', '')),
+                ],
+                'write' => ['host' => env('DB_HOST', '127.0.0.1')],
+                'sticky' => true,
+            ] : []),
+        ],
+
+        // Lee el estado de la réplica directamente, sin ProxySQL: alimenta
+        // `db_replication_lag_seconds` y por eso no puede caer en el primary.
+        'replica_monitor' => [
+            'driver' => 'mysql',
+            'host' => env('DB_REPLICA_MONITOR_HOST'),
+            'port' => env('DB_REPLICA_MONITOR_PORT', '3306'),
+            'username' => env('DB_REPLICA_MONITOR_USERNAME'),
+            'password' => env('DB_REPLICA_MONITOR_PASSWORD'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
         ],
 
         'mariadb' => [
@@ -143,6 +167,9 @@ return [
     |
     */
 
+    // Segundos que un usuario lee del primary tras escribir (`ReadWriteRouting`).
+    'read_your_writes_seconds' => (int) env('DB_READ_YOUR_WRITES_SECONDS', 5),
+
     'redis' => [
 
         'client' => env('REDIS_CLIENT', 'phpredis'),
@@ -160,6 +187,19 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            'max_retries' => env('REDIS_MAX_RETRIES', 3),
+            'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
+            'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
+            'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
+        ],
+
+        'session' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_SESSION_DB', '2'),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
             'backoff_base' => env('REDIS_BACKOFF_BASE', 100),

@@ -33,11 +33,47 @@ use Throwable;
 class ConsumeOutboxCommand extends Command
 {
     protected $signature = 'outbox:consume
-                            {--limit= : Eventos por pasada (por defecto, `outbox.batch`)}';
+                            {--limit= : Eventos por pasada (por defecto, `outbox.batch`)}
+                            {--daemon : Repite las pasadas hasta recibir SIGTERM}
+                            {--sleep=1 : Segundos de espera del daemon cuando no hay eventos}';
 
     protected $description = 'Publica en las colas los eventos pendientes del outbox.';
 
+    private bool $stopping = false;
+
     public function handle(OutboxEventMap $map, Dispatcher $bus): int
+    {
+        if (! $this->option('daemon')) {
+            $this->pass($map, $bus);
+
+            return self::SUCCESS;
+        }
+
+        // Termina la pasada en curso antes de salir: lo reclamado no queda en
+        // `processing` hasta que venza `processing_timeout`.
+        pcntl_async_signals(true);
+        pcntl_signal(SIGTERM, fn () => $this->stopping = true);
+        pcntl_signal(SIGINT, fn () => $this->stopping = true);
+
+        while (! $this->stopping) {
+            try {
+                if ($this->pass($map, $bus) === 0) {
+                    sleep(max(1, (int) $this->option('sleep')));
+                }
+            } catch (Throwable $error) {
+                // Base o Redis caídos: se reintenta, no se deja morir al pod por un corte breve.
+                Log::error('outbox.pass_failed', ['error' => $error->getMessage()]);
+                sleep(max(1, (int) $this->option('sleep')));
+            }
+        }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @return int eventos reclamados en la pasada
+     */
+    private function pass(OutboxEventMap $map, Dispatcher $bus): int
     {
         if (($recovered = $this->recoverAbandoned()) > 0) {
             Log::warning('outbox.recovered', ['events' => $recovered]);
@@ -45,21 +81,33 @@ class ConsumeOutboxCommand extends Command
 
         $published = 0;
         $failed = 0;
+        $publishedIds = [];
+        $failures = [];
 
         foreach ($this->claim((int) ($this->option('limit') ?: config('outbox.batch'))) as $event) {
             try {
                 $this->publish($event, $map, $bus);
-                $this->markProcessed($event);
+                $publishedIds[] = $event->id;
                 $published++;
             } catch (Throwable $error) {
-                $this->reschedule($event, $error);
+                $failures[] = [$event, $error];
                 $failed++;
             }
         }
 
-        $this->info("Eventos publicados: {$published}; fallidos: {$failed}.");
+        // Un solo UPDATE por lote: marcar cada evento por separado convertía el
+        // consumidor en 200 autocommits por pasada y hundía el throughput.
+        $this->markProcessed($publishedIds);
 
-        return self::SUCCESS;
+        foreach ($failures as [$event, $error]) {
+            $this->reschedule($event, $error);
+        }
+
+        if (! $this->option('daemon')) {
+            $this->info("Eventos publicados: {$published}; fallidos: {$failed}.");
+        }
+
+        return $published + $failed;
     }
 
     /**
@@ -113,9 +161,16 @@ class ConsumeOutboxCommand extends Command
         }
     }
 
-    private function markProcessed(OutboxEvent $event): void
+    /**
+     * @param  list<int>  $ids
+     */
+    private function markProcessed(array $ids): void
     {
-        OutboxEvent::query()->whereKey($event->id)->update([
+        if ($ids === []) {
+            return;
+        }
+
+        OutboxEvent::query()->whereIn('id', $ids)->update([
             'status' => OutboxEvent::STATUS_PROCESSED,
             'processed_at' => now(),
             'error' => null,

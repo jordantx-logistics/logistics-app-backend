@@ -3,10 +3,12 @@
 namespace Src\System\Console\Commands;
 
 use Illuminate\Console\Command;
+use Src\Shared\Contracts\Metrics;
 use Src\System\Services\Metrics\MetricsRecorder;
 use Src\System\Services\Metrics\OutboxBacklogGauge;
 use Src\System\Services\Metrics\QueueBacklogGauge;
 use Src\System\Services\Metrics\QueueFailedCounter;
+use Src\System\Services\Metrics\ReplicationLagGauge;
 
 /**
  * Gauges que no se pueden calcular en el scrape
@@ -29,6 +31,8 @@ class CollectMetricsCommand extends Command
         QueueBacklogGauge $backlog,
         QueueFailedCounter $failures,
         OutboxBacklogGauge $outbox,
+        ReplicationLagGauge $replication,
+        Metrics $metrics,
     ): int {
         foreach ((array) config('outbox.queues') as $queue) {
             if (($size = $backlog->value($queue)) !== null) {
@@ -41,6 +45,10 @@ class CollectMetricsCommand extends Command
         $sample = $outbox->sample();
 
         $recorder->recordOutboxBacklog($sample['pending'], $sample['oldest_seconds']);
+
+        if (($lag = $replication->value()) !== null) {
+            $metrics->gauge('db_replication_lag_seconds', $lag, help: 'Seconds the read replica is behind the primary');
+        }
 
         return self::SUCCESS;
     }

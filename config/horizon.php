@@ -224,7 +224,8 @@ return [
             // Juego completo de colas (05-asincronia-y-eventos.md y
             // 07-devops/01-entornos.md). `sync` es el nombre de una cola, no la
             // conexión `sync` que fijan los tests en `phpunit.xml`.
-            'queue' => ['high', 'default', 'reports', 'sync'],
+            // Kubernetes reparte las colas en dos Deployments (`k8s/base/horizon.yaml`).
+            'queue' => explode(',', (string) env('HORIZON_QUEUES', 'high,default,reports,sync')),
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,
@@ -245,20 +246,18 @@ return [
             ],
         ],
 
-        // Staging: solo alta y normal prioridad.
+        // Staging ensaya producción: mismas colas, menos procesos.
         'staging' => [
             'supervisor-1' => [
-                'queue' => ['high', 'default'],
-                'maxProcesses' => 5,
+                'maxProcesses' => (int) env('HORIZON_MAX_PROCESSES', 5),
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
         ],
 
-        // Producción: el juego completo de colas.
         'production' => [
             'supervisor-1' => [
-                'maxProcesses' => 10,
+                'maxProcesses' => (int) env('HORIZON_MAX_PROCESSES', 10),
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],

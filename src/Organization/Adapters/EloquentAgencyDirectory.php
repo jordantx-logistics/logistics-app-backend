@@ -34,4 +34,11 @@ class EloquentAgencyDirectory implements AgencyDirectory
 
         return is_string($name) ? $name : null;
     }
+
+    public function agencyCode(int $id): ?string
+    {
+        $code = Agency::query()->whereKey($id)->value('code');
+
+        return is_string($code) ? $code : null;
+    }
 }

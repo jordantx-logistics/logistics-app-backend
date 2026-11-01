@@ -9,6 +9,7 @@
 /.idea
 /.nova
 /.phpunit.cache
+/build
 /.vscode
 /.zed
 /auth.json
@@ -34,3 +35,5 @@ frankenphp-worker.php
 /.scribe
 /resources/views/scribe
 /public/vendor/scribe
+load/fixture.json
+storage/coverage.xml

@@ -1,8 +1,11 @@
 <?php
 
+use Illuminate\Support\Facades\Cache;
 use Src\Logistics\Location\Models\Location;
 use Src\Logistics\Location\Models\Zone;
+use Src\Logistics\Tariff\Adapters\EloquentTariffDirectory;
 use Src\Logistics\Tariff\Models\Tariff;
+use Src\Shared\Contracts\Metrics;
 use Src\Shared\Contracts\TariffDirectory;
 
 /*
@@ -255,4 +258,32 @@ it('resuelve el tarifario por alcance: ubicación > zonas > nacional', function 
         ->toBe($national->id)
         ->and($directory->findForRoute('express', null, null, null, null))
         ->toBeNull();
+});
+
+it('cachea el tarifario como array y cuenta hits y misses', function () {
+    $tariff = Tariff::factory()->create(['code' => 'TAR-CACHE']);
+
+    $metrics = new class implements Metrics
+    {
+        /** @var list<array{name: string, labels: array<string, string|int>, by: float}> */
+        public array $increments = [];
+
+        public function increment(string $name, array $labels = [], float $by = 1, string $help = ''): void
+        {
+            $this->increments[] = ['name' => $name, 'labels' => $labels, 'by' => $by];
+        }
+
+        public function gauge(string $name, float $value, array $labels = [], string $help = ''): void {}
+    };
+
+    $directory = new EloquentTariffDirectory($metrics);
+
+    $first = $directory->findForRoute('standard', null, null, null, null);
+    $second = $directory->findForRoute('standard', null, null, null, null);
+
+    expect($first?->id)->toBe($tariff->id)
+        ->and($second?->id)->toBe($tariff->id)
+        ->and(array_column($metrics->increments, 'name'))
+        ->toBe(['tariff_cache_misses_total', 'tariff_cache_hits_total'])
+        ->and(Cache::tags(['tariffs'])->get('tariff:standard:-:-:-:-'))->toBeArray();
 });

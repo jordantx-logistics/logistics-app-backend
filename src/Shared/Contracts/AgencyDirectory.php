@@ -38,4 +38,10 @@ interface AgencyDirectory
      * Nombre de la agencia (lo usa la guía de remisión).
      */
     public function agencyName(int $id): ?string;
+
+    /**
+     * Código corto de la agencia (p. ej. `LIM01`), usado en la numeración
+     * visible de comprobantes.
+     */
+    public function agencyCode(int $id): ?string;
 }

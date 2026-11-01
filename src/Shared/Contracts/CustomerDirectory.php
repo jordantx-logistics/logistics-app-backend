@@ -2,6 +2,8 @@
 
 namespace Src\Shared\Contracts;
 
+use Src\Shared\DTOs\FiscalDocument;
+
 /**
  * Puerto hacia el contexto `Customer` (agregado `customers`).
  *
@@ -34,4 +36,28 @@ interface CustomerDirectory
      * puede mostrar ids. `null` si el cliente ya no existe.
      */
     public function customerDisplayName(int $id): ?string;
+
+    /**
+     * Teléfono del cliente, para que el repartidor pueda contactarlo.
+     */
+    public function customerPhone(int $id): ?string;
+
+    /**
+     * Ids de los clientes que tienen ese documento.
+     *
+     * El listado de órdenes filtra por documento del remitente/destinatario.
+     * Sin `$type` se buscan todos los tipos: el número no es único por sí solo
+     * (un DNI y un RUC pueden coincidir), así que puede devolver más de uno.
+     *
+     * @return list<int>
+     */
+    public function customerIdsByDocument(string $number, ?string $type = null): array;
+
+    /**
+     * Documento fiscal del cliente, si lo tiene.
+     *
+     * Lo usa Core al publicar `order.created` y Finanzas al emitir un
+     * comprobante; el consumidor nunca consulta `customers`.
+     */
+    public function customerFiscalData(int $id): ?FiscalDocument;
 }

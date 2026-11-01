@@ -20,6 +20,8 @@ Route::prefix('api/v1/identity/attendance')->middleware('auth:sanctum')->group(f
         ->middleware('permission:attendance.view');
     Route::get('/summary', [AttendanceController::class, 'summary'])
         ->middleware('permission:attendance.view');
+    Route::get('/mine', [AttendanceController::class, 'mine'])
+        ->middleware('permission:attendance.register');
     Route::post('/', [AttendanceController::class, 'store'])
         ->middleware('permission:attendance.register');
     Route::post('/{attendance}/void', [AttendanceController::class, 'void'])

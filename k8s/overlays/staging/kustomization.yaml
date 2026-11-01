@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logistics-staging
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+
+images:
+  - name: backend
+    newName: registry.digitalocean.com/logistics/backend
+    newTag: IMAGE_TAG
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - APP_ENV=staging
+      - APP_URL=https://api.staging.logistica.pe
+      - LOG_LEVEL=debug
+      - OCTANE_WORKERS=4
+      - AWS_DEFAULT_REGION=sfo3
+      - AWS_ENDPOINT=https://sfo3.digitaloceanspaces.com
+      - AWS_USE_PATH_STYLE_ENDPOINT=false
+      - SUNAT_MODE=beta
+
+patches:
+  - target: { kind: HorizontalPodAutoscaler, name: web }
+    patch: |-
+      - { op: replace, path: /spec/minReplicas, value: 2 }
+      - { op: replace, path: /spec/maxReplicas, value: 6 }
+  - target: { kind: Deployment, name: web }
+    patch: |-
+      - { op: replace, path: /spec/replicas, value: 2 }
+  - target: { kind: PodDisruptionBudget, name: web }
+    patch: |-
+      - { op: replace, path: /spec/minAvailable, value: 1 }

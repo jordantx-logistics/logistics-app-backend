@@ -83,6 +83,48 @@ it('cotiza con el tarifario, el peso volumétrico y los tramos', function () {
         ->assertJsonPath('data.tariff_id', $tariff->id);
 });
 
+it('cobra por volumen cuando el tarifario no tiene factor volumétrico', function () {
+    config(['pricing.engine' => 'tariff']);
+
+    // `volumetric_factor = 0`: el peso facturable es el real y el volumen se
+    // cobra aparte por m³ (rama contraria a la del test anterior).
+    nationalTariff([
+        'volumetric_factor' => 0,
+        'price_per_m3' => 100,
+        'min_charge' => 0,
+    ]);
+
+    $this->withHeaders($this->headers)
+        ->postJson('/api/v1/logistics/orders/quote', [
+            'origin_agency_id' => $this->origin->id,
+            'destination_agency_id' => $this->destination->id,
+            'weight_kg' => 10,
+            'volume_m3' => 2,
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.engine', 'tariff')
+        ->assertJsonPath('data.chargeable_weight_kg', 10)
+        ->assertJsonPath('data.weight_amount', 25)
+        ->assertJsonPath('data.total_amount', 230) // 5 + 25 + 2 × 100
+        ->assertJsonPath('data.breakdown.volumetric_weight_kg', 0)
+        ->assertJsonPath('data.breakdown.volume_amount', 200);
+});
+
+it('rechaza la cotización si el peso facturable supera el máximo del tarifario', function () {
+    config(['pricing.engine' => 'tariff']);
+
+    nationalTariff(['max_weight_kg' => 5, 'volumetric_factor' => 0]);
+
+    $this->withHeaders($this->headers)
+        ->postJson('/api/v1/logistics/orders/quote', [
+            'origin_agency_id' => $this->origin->id,
+            'destination_agency_id' => $this->destination->id,
+            'weight_kg' => 10,
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('data.error_code', 'WEIGHT_EXCEEDED');
+});
+
 it('usa el motor legacy cuando PRICING_ENGINE=legacy', function () {
     config(['pricing.engine' => 'legacy']);
 

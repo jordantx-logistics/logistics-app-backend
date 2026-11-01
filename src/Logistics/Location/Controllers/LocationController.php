@@ -22,6 +22,30 @@ class LocationController extends Controller
     public const MAX_PER_PAGE = 200;
 
     /**
+     * List location options
+     *
+     * Active locations with the minimum data for a selector.
+     *
+     * @queryParam q string required Search by ubigeo, district, province or department. Example: LIMA
+     *
+     * @response 200 scenario="Options" {"success": true, "message": "Location options retrieved successfully.", "data": [{"id": 1, "ubigeo": "150101", "department": "LIMA", "province": "LIMA", "district": "LIMA"}]}
+     */
+    public function options(Request $request): JsonResponse
+    {
+        $data = $request->validate(['q' => ['required', 'string', 'min:2', 'max:100']]);
+
+        return $this->success(
+            data: Location::query()
+                ->where('is_active', true)
+                ->search($data['q'])
+                ->orderBy('ubigeo')
+                ->limit(20)
+                ->get(['id', 'ubigeo', 'department', 'province', 'district']),
+            message: 'Location options retrieved successfully.',
+        );
+    }
+
+    /**
      * List Locations
      *
      * @queryParam q string Search by ubigeo, district, province or department. Example: LIMA
