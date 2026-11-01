@@ -1,0 +1,42 @@
+# Stack aislado para los E2E de Playwright: otro proyecto de compose, con su MySQL,
+# su Redis y su almacenamiento, para no tocar los datos de desarrollo. Se usa con
+# `scripts/e2e-up.sh` y se borra con `scripts/e2e-down.sh`.
+name: logistics-e2e
+
+x-e2e-env: &e2e-env
+  FRONTEND_URL: http://localhost:5199
+  SANCTUM_STATEFUL_DOMAINS: localhost:5199
+  APP_URL: http://localhost:8100
+  APP_ENV: local
+
+services:
+  app:
+    environment: *e2e-env
+    volumes:
+      - e2e-storage:/var/www/storage/app
+
+  horizon:
+    environment: *e2e-env
+    volumes:
+      - e2e-storage:/var/www/storage/app
+
+  scheduler:
+    environment: *e2e-env
+    volumes:
+      - e2e-storage:/var/www/storage/app
+
+  nginx:
+    ports: !override
+      - "8100:80"
+
+  mysql:
+    ports: !override []
+
+  redis:
+    ports: !override []
+
+  mailpit:
+    ports: !override []
+
+volumes:
+  e2e-storage:
