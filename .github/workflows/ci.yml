@@ -173,9 +173,11 @@ jobs:
           cache-from: type=gha,scope=production
           cache-to: type=gha,mode=max,scope=production
 
+      # Con las mismas restricciones que el securityContext de los pods.
       - name: Arranca como usuario sin privilegios
         run: |
           docker run -d --name web \
+            --cap-drop=ALL --security-opt=no-new-privileges \
             -e APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" \
             -e LOG_CHANNEL=stderr -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
             -e CACHE_STORE=array -e SESSION_DRIVER=array -e QUEUE_CONNECTION=sync \

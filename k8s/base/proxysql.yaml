@@ -22,7 +22,8 @@ spec:
       containers:
         - name: proxysql
           image: proxysql/proxysql:2.7.3
-          args: ["-f", "--idle-threads", "-c", "/etc/proxysql/proxysql.cnf", "-D", "/var/lib/proxysql"]
+          # La imagen no define ENTRYPOINT: con `args` se intentaría ejecutar "-f".
+          command: ["proxysql", "-f", "--idle-threads", "-c", "/etc/proxysql/proxysql.cnf", "-D", "/var/lib/proxysql"]
           ports:
             - { name: mysql, containerPort: 6033 }
           securityContext:

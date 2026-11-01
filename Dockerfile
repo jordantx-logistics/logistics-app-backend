@@ -46,9 +46,11 @@ COPY docker/php/opcache.production.ini /usr/local/etc/php/conf.d/99-opcache.ini
 COPY . /var/www
 
 # Octane crea el script del worker al arrancar si no existe, y aquí no podría: `public/`
-# no es del usuario de la imagen.
+# no es del usuario de la imagen. La capability de la imagen base (abrir puertos bajos, que
+# aquí no se usan) impide ejecutar el binario en un pod con `allowPrivilegeEscalation: false`.
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts \
     && rm /usr/local/bin/composer \
+    && setcap -r /usr/local/bin/frankenphp \
     && cp vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php public/frankenphp-worker.php \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs storage/app bootstrap/cache /data/caddy /config/caddy \
     && APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= php artisan package:discover --ansi \

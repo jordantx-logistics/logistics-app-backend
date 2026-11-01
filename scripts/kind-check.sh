@@ -21,6 +21,8 @@ diagnose() {
   k get events --sort-by=.lastTimestamp | tail -15 || true
   for pod in $(k get pods --no-headers 2>/dev/null | awk '$2 !~ /^([0-9]+)\/\1$/ && $3 != "Completed" { print $1 }'); do
     echo "--- $pod"
+    # Un contenedor que ni llega a ejecutarse no deja log: el motivo está en su estado.
+    k describe pod "$pod" | grep -A5 -E 'Last State|State:' | cut -c1-300 || true
     k logs "$pod" --all-containers --tail=15 2>&1 | cut -c1-300 || true
   done
 }
@@ -44,7 +46,8 @@ kubectl -n kube-system rollout status deployment/metrics-server --timeout=180s
 
 kubectl kustomize k8s/overlays/kind | kubectl apply -f -
 
-k wait --for=condition=complete --timeout=300s job/db-migrate
+# Los reintentos del Job se espacian: el primero tras el arranque de MySQL puede tardar minutos.
+k wait --for=condition=complete --timeout=600s job/db-migrate
 
 for workload in proxysql web horizon-high horizon-reports outbox; do
   k rollout status "deployment/$workload" --timeout=300s
@@ -53,9 +56,10 @@ ok "todas las cargas arrancan y quedan listas"
 
 test "$(k exec deploy/web -- id -u)" = 10001 && ok "web corre sin root" || fail "web corre sin root"
 
-# Producción aplica `restricted`. Solo pueden incumplirlo los sustitutos de prueba.
+# Producción aplica `restricted`. Solo pueden incumplirlo los sustitutos de prueba. Cada pod
+# que lo incumple sale como "Warning: <pod>: <motivos>", tras una cabecera sin ese formato.
 violations=$(kubectl label --dry-run=server --overwrite namespace "$ns" \
-  pod-security.kubernetes.io/enforce=restricted 2>&1 | grep -E 'Warning: .*"' | grep -vE '"(mysql|redis)-' || true)
+  pod-security.kubernetes.io/enforce=restricted 2>&1 | grep -E '^Warning: [a-z0-9.-]+: ' | grep -vE '^Warning: (mysql|redis)-' || true)
 if [ -z "$violations" ]; then ok "los pods cumplen restricted"; else echo "$violations"; fail "los pods cumplen restricted"; fi
 
 # Sonda continua contra el Service: cuenta peticiones y fallos mientras se opera el clúster.
