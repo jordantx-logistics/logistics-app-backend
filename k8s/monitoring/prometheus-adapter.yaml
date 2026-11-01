@@ -1,0 +1,15 @@
+# Valores de `prometheus-community/prometheus-adapter`, en el namespace `monitoring`.
+# Expone el backlog de cola como métrica externa para el HPA de `horizon-high`.
+prometheus:
+  url: http://kps-kube-prometheus-stack-prometheus.monitoring.svc
+  port: 9090
+
+rules:
+  default: false
+  external:
+    - seriesQuery: 'queue_backlog{env!=""}'
+      resources: { template: "<<.Resource>>" }
+      name:
+        matches: queue_backlog
+        as: queue_backlog
+      metricsQuery: 'max(<<.Series>>{<<.LabelMatchers>>}) by (queue)'

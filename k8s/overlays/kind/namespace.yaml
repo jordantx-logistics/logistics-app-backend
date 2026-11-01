@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logistics-kind
+  labels:
+    env: kind
+    # Igual que producción, salvo por lo que aporta `dependencies.yaml`, que no se despliega allí.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted

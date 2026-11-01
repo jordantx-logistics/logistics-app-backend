@@ -1,0 +1,40 @@
+# ProxySQL del stack de escala. El enrutamiento es por usuario, no por reglas sobre el
+# SQL: `logistics` siempre va al primary y `logistics_read` a las réplicas. Así el `sticky`
+# de Laravel, que elige entre dos conexiones, significa lo mismo aquí y en la app.
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin;radmin:radmin"
+    mysql_ifaces="0.0.0.0:6032"
+}
+
+mysql_variables=
+{
+    threads=4
+    max_connections=2048
+    interfaces="0.0.0.0:6033"
+    server_version="8.0.40"
+    monitor_username="proxysql_monitor"
+    monitor_password="monitor-local"
+    monitor_replication_lag_interval=2000
+    # Sin dato de lag (replicación parada) cuenta como 60 s: supera el tope de 30 y la
+    # réplica sale del pool.
+    monitor_slave_lag_when_null=60
+    connect_retries_on_failure=5
+}
+
+# hostgroup 10 = escritura; 20 = lectura. El primary está también en el 20 con peso
+# mínimo: cuando la réplica sale del pool, las lecturas se desvían a él.
+mysql_servers=
+(
+    { address="mysql", port=3306, hostgroup=10, max_connections=200 },
+    { address="mysql-replica", port=3306, hostgroup=20, weight=1000, max_replication_lag=30, max_connections=200 },
+    { address="mysql", port=3306, hostgroup=20, weight=1, max_connections=50 }
+)
+
+mysql_users=
+(
+    { username="logistics", password="secret", default_hostgroup=10, transaction_persistent=1 },
+    { username="logistics_read", password="read-local", default_hostgroup=20 }
+)

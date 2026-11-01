@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_ENV: production
+  APP_DEBUG: "false"
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: info
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  DB_CONNECTION: mysql
+  # ProxySQL, no el host de MySQL: enruta por usuario al primary o a las réplicas.
+  DB_HOST: proxysql
+  DB_PORT: "6033"
+  DB_READ_HOST: proxysql
+  # El consumidor corre como Deployment; el CronJob del scheduler no lo lanza.
+  OUTBOX_DAEMON: "true"
+  PARTITIONS_MAINTENANCE_IN_SCHEDULER: "false"
+  PARTITIONS_ARCHIVE_DISK: s3
+  FILESYSTEM_DISK: s3
+  # El límite del contenedor no lo ve `auto`: contaría las CPU del nodo.
+  OCTANE_WORKERS: "8"
+  OCTANE_MAX_REQUESTS: "1000"
+  # Por encima del timeout de un reporte (280 s): si no, el job se duplicaría.
+  REDIS_QUEUE_RETRY_AFTER: "300"
+  # Red de pods del clúster: el Ingress es el único proxy en quien se confía.
+  TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16

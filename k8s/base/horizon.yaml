@@ -1,0 +1,127 @@
+# Dos grupos para que `reports` no compita con `high`. No reciben tráfico ni tienen Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: horizon-high
+  labels: { app: horizon, pool: high }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: horizon, pool: high }
+  template:
+    metadata:
+      labels: { app: horizon, pool: high }
+    spec:
+      imagePullSecrets: [{ name: registry-secrets }]
+      terminationGracePeriodSeconds: 90
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: horizon
+          image: backend
+          envFrom:
+            - configMapRef: { name: app-config }
+            - secretRef: { name: app-secrets }
+            - secretRef: { name: db-secrets }
+            - secretRef: { name: redis-secrets }
+            - secretRef: { name: spaces-secrets }
+          env:
+            - { name: APP_ROLE, value: horizon }
+            - { name: HORIZON_QUEUES, value: "high,default,sync" }
+            - { name: HORIZON_MAX_PROCESSES, value: "10" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          livenessProbe:
+            exec: { command: ["php", "artisan", "horizon:status"] }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 300m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: horizon-reports
+  labels: { app: horizon, pool: reports }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: horizon, pool: reports }
+  template:
+    metadata:
+      labels: { app: horizon, pool: reports }
+    spec:
+      imagePullSecrets: [{ name: registry-secrets }]
+      # Un reporte puede durar 280 s (`GenerateReportExportJob`).
+      terminationGracePeriodSeconds: 300
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: horizon
+          image: backend
+          envFrom:
+            - configMapRef: { name: app-config }
+            - secretRef: { name: app-secrets }
+            - secretRef: { name: db-secrets }
+            - secretRef: { name: redis-secrets }
+            - secretRef: { name: spaces-secrets }
+          env:
+            - { name: APP_ROLE, value: horizon }
+            - { name: HORIZON_QUEUES, value: reports }
+            - { name: HORIZON_MAX_PROCESSES, value: "4" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          livenessProbe:
+            exec: { command: ["php", "artisan", "horizon:status"] }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { cpu: "2", memory: 2Gi }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: horizon-high
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: horizon, pool: high }
+---
+# Escala por CPU: es lo que ve cualquier clúster. El overlay de producción añade el backlog
+# de la cola como métrica externa, que necesita prometheus-adapter (`k8s/monitoring/`).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: horizon-high
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: horizon-high
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 75 }
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      policies: [{ type: Pods, value: 1, periodSeconds: 120 }]

@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logistics-prod
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+
+images:
+  - name: backend
+    newName: registry.digitalocean.com/logistics/backend
+    # El pipeline fija el digest con `kustomize edit set image` antes de aplicar.
+    newTag: IMAGE_TAG
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - APP_URL=https://api.logistica.pe
+      - AWS_DEFAULT_REGION=sfo3
+      - AWS_ENDPOINT=https://sfo3.digitaloceanspaces.com
+      - AWS_USE_PATH_STYLE_ENDPOINT=false
+      - SUNAT_MODE=production
+
+patches:
+  # Backlog de `high` como métrica externa: necesita `k8s/monitoring/prometheus-adapter.yaml`.
+  - target: { kind: HorizontalPodAutoscaler, name: horizon-high }
+    patch: |-
+      - op: add
+        path: /spec/metrics/-
+        value:
+          type: External
+          external:
+            metric:
+              name: queue_backlog
+              selector:
+                matchLabels: { queue: high }
+            target: { type: AverageValue, averageValue: "500" }

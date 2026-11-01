@@ -1,0 +1,31 @@
+# ProxySQL del clúster de prueba. Sin réplica: el grupo de lectura apunta al mismo MySQL.
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin;radmin:radmin"
+    mysql_ifaces="0.0.0.0:6032"
+}
+
+mysql_variables=
+{
+    threads=2
+    max_connections=1024
+    interfaces="0.0.0.0:6033"
+    server_version="8.0.40"
+    monitor_username="proxysql_monitor"
+    monitor_password="monitor-local"
+    connect_retries_on_failure=10
+}
+
+mysql_servers=
+(
+    { address="mysql", port=3306, hostgroup=10, max_connections=100 },
+    { address="mysql", port=3306, hostgroup=20, max_connections=100 }
+)
+
+mysql_users=
+(
+    { username="logistics", password="secret", default_hostgroup=10, transaction_persistent=1 },
+    { username="logistics_read", password="read-local", default_hostgroup=20 }
+)

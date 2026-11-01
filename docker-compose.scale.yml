@@ -1,0 +1,190 @@
+# Stack de escala de la Fase 9: primary, réplica y ProxySQL en local, en otro proyecto de
+# compose para no tocar los datos de desarrollo. Se usa con `scripts/scale-up.sh`.
+name: logistics-scale
+
+x-scale-env: &scale-env
+  APP_NAME: Logistics
+  APP_ENV: production
+  APP_DEBUG: "false"
+  # Clave solo de este stack local: no cifra nada real.
+  APP_KEY: base64:bG9jYWwtc2NhbGUtc3RhY2sta2V5LTAxMjM0NTY3ODk=
+  APP_URL: http://localhost:8200
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: warning
+  DB_CONNECTION: mysql
+  DB_HOST: proxysql
+  DB_PORT: "6033"
+  DB_DATABASE: logistics_app
+  DB_USERNAME: logistics
+  DB_PASSWORD: secret
+  DB_READ_HOST: proxysql
+  DB_READ_USERNAME: logistics_read
+  DB_READ_PASSWORD: read-local
+  DB_REPLICA_MONITOR_HOST: mysql-replica
+  DB_REPLICA_MONITOR_USERNAME: proxysql_monitor
+  DB_REPLICA_MONITOR_PASSWORD: monitor-local
+  REDIS_HOST: redis
+  REDIS_PASSWORD: ""
+  REDIS_PORT: "6379"
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  FILESYSTEM_DISK: local
+  OUTBOX_DAEMON: "true"
+
+x-scale-image: &scale-image
+  image: ${SCALE_IMAGE:-logistics-app-backend:production}
+  pull_policy: never
+
+services:
+  app:
+    <<: *scale-image
+    build: !reset null
+    environment:
+      <<: *scale-env
+      APP_ROLE: web
+      OCTANE_WORKERS: "${SCALE_OCTANE_WORKERS:-8}"
+      OCTANE_MAX_REQUESTS: "${SCALE_OCTANE_MAX_REQUESTS:-1000}"
+    volumes: !override
+      - scale-storage:/var/www/storage/app
+    depends_on: !override
+      proxysql:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  horizon:
+    <<: *scale-image
+    profiles: !reset []
+    environment:
+      <<: *scale-env
+      APP_ROLE: horizon
+    volumes: !override
+      - scale-storage:/var/www/storage/app
+    depends_on: !override
+      proxysql:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    <<: *scale-image
+    environment:
+      <<: *scale-env
+      APP_ROLE: scheduler
+    volumes: !override
+      - scale-storage:/var/www/storage/app
+    depends_on: !override
+      proxysql:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  outbox:
+    <<: *scale-image
+    environment:
+      <<: *scale-env
+      APP_ROLE: outbox
+    healthcheck:
+      disable: true
+    depends_on:
+      proxysql:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - logistics-network
+
+  # Imagen de desarrollo, con el código montado: migraciones, seeders y comprobaciones.
+  tools:
+    profiles: ["tools"]
+    image: logistics-app-backend:local
+    environment:
+      <<: *scale-env
+      APP_ENV: local
+      CACHE_APP_ON_BOOT: "false"
+    entrypoint: []
+    volumes:
+      - .:/var/www
+      - scale-storage:/var/www/storage/app
+    depends_on:
+      proxysql:
+        condition: service_started
+    networks:
+      - logistics-network
+
+  nginx:
+    ports: !override
+      - "8200:80"
+
+  # Los ajustes van por argumentos: MySQL ignora un .cnf montado desde Windows
+  # porque lo ve con permisos de escritura para todos.
+  mysql:
+    command: !override
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+      - --default-authentication-plugin=mysql_native_password
+      - --sql-mode=STRICT_ALL_TABLES
+    ports: !override []
+    volumes: !override
+      - scale-primary:/var/lib/mysql
+      - ./docker/mysql/scale-users.sql:/docker-entrypoint-initdb.d/10-users.sql:ro
+
+  mysql-replica:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --server-id=2
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+      - --log-replica-updates=ON
+      - --read-only=ON
+      - --default-authentication-plugin=mysql_native_password
+      - --sql-mode=STRICT_ALL_TABLES
+    # Sin base ni usuarios propios: los recibe del primary por la replicación.
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - scale-replica:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - logistics-network
+
+  proxysql:
+    image: proxysql/proxysql:2.7.3
+    restart: unless-stopped
+    volumes:
+      - ./docker/proxysql/proxysql.cnf:/etc/proxysql.cnf:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mysql-replica:
+        condition: service_healthy
+    networks:
+      - logistics-network
+
+  redis:
+    ports: !override []
+    volumes: !override
+      - scale-redis:/data
+
+  mailpit:
+    ports: !override []
+
+volumes:
+  scale-storage:
+  scale-primary:
+  scale-replica:
+  scale-redis:
