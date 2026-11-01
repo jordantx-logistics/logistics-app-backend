@@ -20,6 +20,9 @@ tags:
     name: 'Customer - Persons'
     description: "\nAPIs for managing individual customers."
   -
+    name: Dashboard
+    description: "\nIndicadores según lo que cada rol puede ver."
+  -
     name: 'Finance - Cash closures'
     description: "\nAprobación o rechazo de cierres con descuadre y descarga del reporte PDF."
   -
@@ -68,6 +71,9 @@ tags:
     name: 'Identity - Users'
     description: "\nAPIs para administrar usuarios, su estado y su ámbito de agencia (UC-01, UC-06, UC-07, UC-16)."
   -
+    name: Incidents
+    description: "\nIncidencias sobre órdenes, con responsable y plazo de atención."
+  -
     name: 'Logistics - Agency coverages'
     description: "\nQué ubicaciones atiende una agencia destino, con qué modalidad y con qué\nrecargo de reparto. `agency_id` es de `Organization` y se valida por puerto."
   -
@@ -109,6 +115,12 @@ tags:
   -
     name: 'Permission - Roles'
     description: "\nAPIs para gestionar roles del sistema."
+  -
+    name: Reports
+    description: "\nExportaciones asíncronas de reportes operativos y financieros."
+  -
+    name: Settings
+    description: "\nParámetros de negocio editables por el administrador."
   -
     name: 'System - Health'
     description: "\nReadiness del servicio: comprueba base de datos, Redis y colas."
@@ -1109,6 +1121,39 @@ paths:
                 - document_number
                 - first_name
                 - last_name
+  /api/v1/dashboard/kpis:
+    get:
+      summary: 'Dashboard indicators'
+      operationId: dashboardIndicators
+      description: "Only the indicators your permissions allow, limited to your agency scope.\nThey may lag up to a minute."
+      parameters: []
+      responses:
+        200:
+          description: Indicators
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        label:
+                          type: string
+                        value:
+                          type: string
+                        format:
+                          type: string
+      tags:
+        - Dashboard
   /api/v1/finance/cash-closures:
     get:
       summary: 'List cash closures'
@@ -7429,6 +7474,767 @@ paths:
         required: true
         schema:
           type: integer
+  /api/v1/incidents:
+    get:
+      summary: 'List incidents'
+      operationId: listIncidents
+      description: ''
+      parameters:
+        -
+          in: query
+          name: status
+          description: '`open`, `in_progress`, `resolved` or `closed`.'
+          required: false
+          schema:
+            type: string
+            description: '`open`, `in_progress`, `resolved` or `closed`.'
+        -
+          in: query
+          name: type
+          description: '`damage`, `loss`, `delay`, `billing` or `other`.'
+          required: false
+          schema:
+            type: string
+            description: '`damage`, `loss`, `delay`, `billing` or `other`.'
+        -
+          in: query
+          name: priority
+          description: '`low`, `normal`, `high` or `urgent`.'
+          required: false
+          schema:
+            type: string
+            description: '`low`, `normal`, `high` or `urgent`.'
+        -
+          in: query
+          name: order_id
+          description: 'Filter by order.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by order.'
+        -
+          in: query
+          name: ticket_code
+          description: 'Filter by ticket code.'
+          required: false
+          schema:
+            type: string
+            description: 'Filter by ticket code.'
+        -
+          in: query
+          name: assigned_to
+          description: 'Filter by responsible user.'
+          required: false
+          schema:
+            type: integer
+            description: 'Filter by responsible user.'
+        -
+          in: query
+          name: overdue
+          description: 'Only active incidents past their deadline.'
+          required: false
+          schema:
+            type: boolean
+            description: 'Only active incidents past their deadline.'
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        order_id:
+                          type: integer
+                        ticket_code:
+                          type: string
+                        origin_agency_id:
+                          type: integer
+                        destination_agency_id:
+                          type: integer
+                        type:
+                          type: string
+                        priority:
+                          type: string
+                        status:
+                          type: string
+                        description:
+                          type: string
+                        assigned_to:
+                          type: string
+                          nullable: true
+                        due_at:
+                          type: string
+                        is_overdue:
+                          type: boolean
+                        resolution_note:
+                          type: string
+                          nullable: true
+                        resolved_at:
+                          type: string
+                          nullable: true
+                        closed_at:
+                          type: string
+                          nullable: true
+                        created_by:
+                          type: integer
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - Incidents
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  enum:
+                    - open
+                    - in_progress
+                    - resolved
+                    - closed
+                type:
+                  type: string
+                  description: ''
+                  enum:
+                    - damage
+                    - loss
+                    - delay
+                    - billing
+                    - other
+                priority:
+                  type: string
+                  description: ''
+                  enum:
+                    - low
+                    - normal
+                    - high
+                    - urgent
+                order_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                ticket_code:
+                  type: string
+                  description: 'Must be 8 characters.'
+                assigned_to:
+                  type: integer
+                  description: 'Must be at least 1.'
+                overdue:
+                  type: boolean
+                  description: ''
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Open an incident'
+      operationId: openAnIncident
+      description: 'The deadline comes from the incident type.'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      priority:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      assigned_to:
+                        type: string
+                        nullable: true
+                      due_at:
+                        type: string
+                      is_overdue:
+                        type: boolean
+                      resolution_note:
+                        type: string
+                        nullable: true
+                      resolved_at:
+                        type: string
+                        nullable: true
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - Incidents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                  description: 'Must be at least 1.'
+                type:
+                  type: string
+                  description: ''
+                  enum:
+                    - damage
+                    - loss
+                    - delay
+                    - billing
+                    - other
+                priority:
+                  type: string
+                  description: ''
+                  enum:
+                    - low
+                    - normal
+                    - high
+                    - urgent
+                description:
+                  type: string
+                  description: 'Must not be greater than 2000 characters.'
+              required:
+                - order_id
+                - type
+                - description
+  '/api/v1/incidents/{incident}':
+    get:
+      summary: 'Show an incident'
+      operationId: showAnIncident
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      priority:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      assigned_to:
+                        type: string
+                        nullable: true
+                      due_at:
+                        type: string
+                      is_overdue:
+                        type: boolean
+                      resolution_note:
+                        type: string
+                        nullable: true
+                      resolved_at:
+                        type: string
+                        nullable: true
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - Incidents
+    parameters:
+      -
+        in: path
+        name: incident
+        description: 'Incident id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/incidents/{incident}/assignees':
+    get:
+      summary: 'List who can attend an incident'
+      operationId: listWhoCanAttendAnIncident
+      description: "Users with `incidents.manage` that cover the incident's agencies."
+      parameters: []
+      responses:
+        200:
+          description: Candidates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+      tags:
+        - Incidents
+    parameters:
+      -
+        in: path
+        name: incident
+        description: 'Incident id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/incidents/{incident}/assign':
+    post:
+      summary: 'Assign an incident'
+      operationId: assignAnIncident
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      priority:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      assigned_to:
+                        type: string
+                        nullable: true
+                      due_at:
+                        type: string
+                      is_overdue:
+                        type: boolean
+                      resolution_note:
+                        type: string
+                        nullable: true
+                      resolved_at:
+                        type: string
+                        nullable: true
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - Incidents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  description: 'Responsible user.'
+              required:
+                - user_id
+    parameters:
+      -
+        in: path
+        name: incident
+        description: 'Incident id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/incidents/{incident}/start':
+    post:
+      summary: 'Start attending an incident'
+      operationId: startAttendingAnIncident
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      priority:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      assigned_to:
+                        type: string
+                        nullable: true
+                      due_at:
+                        type: string
+                      is_overdue:
+                        type: boolean
+                      resolution_note:
+                        type: string
+                        nullable: true
+                      resolved_at:
+                        type: string
+                        nullable: true
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - Incidents
+    parameters:
+      -
+        in: path
+        name: incident
+        description: 'Incident id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/incidents/{incident}/resolve':
+    post:
+      summary: 'Resolve an incident'
+      operationId: resolveAnIncident
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      priority:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      assigned_to:
+                        type: string
+                        nullable: true
+                      due_at:
+                        type: string
+                      is_overdue:
+                        type: boolean
+                      resolution_note:
+                        type: string
+                        nullable: true
+                      resolved_at:
+                        type: string
+                        nullable: true
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - Incidents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+                  description: 'What was done.'
+                  nullable: true
+              required:
+                - note
+    parameters:
+      -
+        in: path
+        name: incident
+        description: 'Incident id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/incidents/{incident}/close':
+    post:
+      summary: 'Close an incident'
+      operationId: closeAnIncident
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      priority:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      assigned_to:
+                        type: string
+                        nullable: true
+                      due_at:
+                        type: string
+                      is_overdue:
+                        type: boolean
+                      resolution_note:
+                        type: string
+                        nullable: true
+                      resolved_at:
+                        type: string
+                        nullable: true
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - Incidents
+    parameters:
+      -
+        in: path
+        name: incident
+        description: 'Incident id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/incidents/{incident}/reopen':
+    post:
+      summary: 'Reopen an incident'
+      operationId: reopenAnIncident
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      order_id:
+                        type: integer
+                      ticket_code:
+                        type: string
+                      origin_agency_id:
+                        type: integer
+                      destination_agency_id:
+                        type: integer
+                      type:
+                        type: string
+                      priority:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      assigned_to:
+                        type: string
+                        nullable: true
+                      due_at:
+                        type: string
+                      is_overdue:
+                        type: boolean
+                      resolution_note:
+                        type: string
+                        nullable: true
+                      resolved_at:
+                        type: string
+                        nullable: true
+                      closed_at:
+                        type: string
+                        nullable: true
+                      created_by:
+                        type: integer
+                      created_at:
+                        type: string
+      tags:
+        - Incidents
+    parameters:
+      -
+        in: path
+        name: incident
+        description: 'Incident id.'
+        required: true
+        schema:
+          type: integer
   /api/v1/logistics/agency-coverages:
     get:
       summary: 'List Agency Coverages'
@@ -7684,6 +8490,61 @@ paths:
         required: true
         schema:
           type: integer
+  /api/v1/logistics/locations/options:
+    get:
+      summary: 'List location options'
+      operationId: listLocationOptions
+      description: 'Active locations with the minimum data for a selector.'
+      parameters:
+        -
+          in: query
+          name: q
+          description: 'Search by ubigeo, district, province or department.'
+          required: true
+          schema:
+            type: string
+            description: 'Search by ubigeo, district, province or department.'
+      responses:
+        200:
+          description: Options
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ubigeo:
+                          type: string
+                        department:
+                          type: string
+                        province:
+                          type: string
+                        district:
+                          type: string
+      tags:
+        - 'Logistics - Locations'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                q:
+                  type: string
+                  description: 'Must be at least 2 characters. Must not be greater than 100 characters.'
+              required:
+                - q
   /api/v1/logistics/locations:
     get:
       summary: 'List Locations'
@@ -12224,6 +13085,37 @@ paths:
         required: true
         schema:
           type: string
+  /api/v1/organization/agencies/options:
+    get:
+      summary: 'List agency options'
+      operationId: listAgencyOptions
+      description: "Active agencies with the minimum data for a selector, without the agency\nscope: an order can travel to an agency outside the user's."
+      parameters: []
+      responses:
+        200:
+          description: Options
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        code:
+                          type: string
+                        name:
+                          type: string
+      tags:
+        - 'Organization - Agencies'
   /api/v1/organization/agencies:
     get:
       summary: 'List Agencies'
@@ -12987,6 +13879,487 @@ paths:
         required: true
         schema:
           type: integer
+  /api/v1/reports/catalog:
+    get:
+      summary: 'List available reports'
+      operationId: listAvailableReports
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: Catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        title:
+                          type: string
+                        columns:
+                          type: array
+                          items:
+                            type: string
+                        statuses:
+                          type: array
+                          items:
+                            type: string
+      tags:
+        - Reports
+  /api/v1/reports/exports:
+    get:
+      summary: 'List my exports'
+      operationId: listMyExports
+      description: ''
+      parameters:
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        report:
+                          type: string
+                        format:
+                          type: string
+                        filters:
+                          type: object
+                          properties:
+                            to:
+                              type: string
+                            from:
+                              type: string
+                            status:
+                              type: string
+                              nullable: true
+                            agency_ids:
+                              type: string
+                              nullable: true
+                        status:
+                          type: string
+                        row_count:
+                          type: string
+                          nullable: true
+                        error_code:
+                          type: string
+                          nullable: true
+                        started_at:
+                          type: string
+                          nullable: true
+                        completed_at:
+                          type: string
+                          nullable: true
+                        expires_at:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              nullable: true
+                            label:
+                              type: string
+                            page:
+                              type: string
+                              nullable: true
+                            active:
+                              type: boolean
+                      path:
+                        type: string
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                  success:
+                    type: string
+                  message:
+                    type: string
+      tags:
+        - Reports
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+    post:
+      summary: 'Request an export'
+      operationId: requestAnExport
+      description: "The file is generated in the background: poll the export until it is\n`ready` or `failed`."
+      parameters: []
+      responses:
+        202:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      report:
+                        type: string
+                      format:
+                        type: string
+                      filters:
+                        type: object
+                        properties:
+                          to:
+                            type: string
+                          from:
+                            type: string
+                          status:
+                            type: string
+                            nullable: true
+                          agency_ids:
+                            type: string
+                            nullable: true
+                      status:
+                        type: string
+                      row_count:
+                        type: string
+                        nullable: true
+                      error_code:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      completed_at:
+                        type: string
+                        nullable: true
+                      expires_at:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                report:
+                  type: string
+                  description: 'Report key from the catalog. Must not be greater than 50 characters.'
+                format:
+                  type: string
+                  description: '`csv`, `xlsx` or `pdf`.'
+                  enum:
+                    - csv
+                    - xlsx
+                    - pdf
+                from:
+                  type: string
+                  description: 'First day (inclusive). Must be a valid date in the format <code>Y-m-d</code>.'
+                to:
+                  type: string
+                  description: 'Last day (inclusive). Must be a valid date in the format <code>Y-m-d</code>. Must be a date after or equal to <code>from</code>.'
+                agency_id:
+                  type: integer
+                  description: 'One agency; without it, your whole scope. Must be at least 1.'
+                  nullable: true
+                status:
+                  type: string
+                  description: 'One of the statuses the report accepts. Must not be greater than 30 characters.'
+                  nullable: true
+              required:
+                - report
+                - format
+                - from
+                - to
+  '/api/v1/reports/exports/{export}':
+    get:
+      summary: 'Show an export'
+      operationId: showAnExport
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      report:
+                        type: string
+                      format:
+                        type: string
+                      filters:
+                        type: object
+                        properties:
+                          to:
+                            type: string
+                          from:
+                            type: string
+                          status:
+                            type: string
+                            nullable: true
+                          agency_ids:
+                            type: string
+                            nullable: true
+                      status:
+                        type: string
+                      row_count:
+                        type: string
+                        nullable: true
+                      error_code:
+                        type: string
+                        nullable: true
+                      started_at:
+                        type: string
+                        nullable: true
+                      completed_at:
+                        type: string
+                        nullable: true
+                      expires_at:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+      tags:
+        - Reports
+    parameters:
+      -
+        in: path
+        name: export
+        description: 'Export id.'
+        required: true
+        schema:
+          type: integer
+  '/api/v1/reports/exports/{export}/download':
+    get:
+      summary: 'Download an export'
+      operationId: downloadAnExport
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: File
+          content:
+            text/plain:
+              schema:
+                type: string
+        409:
+          description: 'Not ready'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  error_code:
+                    type: string
+      tags:
+        - Reports
+    parameters:
+      -
+        in: path
+        name: export
+        description: 'Export id.'
+        required: true
+        schema:
+          type: integer
+  /api/v1/settings:
+    get:
+      summary: 'List business settings'
+      operationId: listBusinessSettings
+      description: "Returns the effective value of each editable parameter and the value that\napplies when nothing is stored."
+      parameters: []
+      responses:
+        200:
+          description: Settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        group:
+                          type: string
+                        label:
+                          type: string
+                        type:
+                          type: string
+                        options:
+                          type: string
+                          nullable: true
+                        min:
+                          type: integer
+                        max:
+                          type: integer
+                        value:
+                          type: string
+                        default:
+                          type: string
+                        is_overridden:
+                          type: boolean
+                        updated_by:
+                          type: string
+                          nullable: true
+                        updated_at:
+                          type: string
+                          nullable: true
+      tags:
+        - Settings
+    patch:
+      summary: 'Update business settings'
+      operationId: updateBusinessSettings
+      description: "The batch is atomic and audited: an invalid value leaves every parameter as\nit was."
+      parameters: []
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        group:
+                          type: string
+                        label:
+                          type: string
+                        type:
+                          type: string
+                        options:
+                          type: string
+                          nullable: true
+                        min:
+                          type: integer
+                        max:
+                          type: integer
+                        value:
+                          type: string
+                        default:
+                          type: string
+                        is_overridden:
+                          type: boolean
+                        updated_by:
+                          type: integer
+                        updated_at:
+                          type: string
+      tags:
+        - Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                settings:
+                  type: array
+                  description: 'Parameters to change. Must have at least 1 items.'
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        description: 'Setting key.'
+                      value:
+                        type: string
+                        description: 'New value.'
+                    required:
+                      - key
+                      - value
+              required:
+                - settings
   /api/v1/health:
     get:
       summary: Readiness
