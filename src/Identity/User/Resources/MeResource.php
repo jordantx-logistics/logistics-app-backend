@@ -5,6 +5,7 @@ namespace Src\Identity\User\Resources;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Src\Shared\Contracts\AgencyDirectory;
 use Src\Shared\Contracts\EmployeeDirectory;
 
 /**
@@ -20,6 +21,12 @@ class MeResource extends JsonResource
     {
         /** @var User $user */
         $user = $this->resource;
+        $agencyIds = $user->agencyIds();
+        $employeeAgencyId = $user->employee_id === null
+            ? null
+            : app(EmployeeDirectory::class)->employeeAgencyId((int) $user->employee_id);
+        $agencies = app(AgencyDirectory::class);
+        $names = $agencies->agencyNames(array_values(array_filter([...$agencyIds, $employeeAgencyId])));
 
         return [
             'user' => [
@@ -29,12 +36,13 @@ class MeResource extends JsonResource
             ],
             'roles' => $user->getRoleNames()->values()->all(),
             'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
-            'agencies' => $user->agencyIds(),
+            'agencies' => $agencyIds,
+            // Las apps muestran la agencia en la que se trabaja, no su id.
+            'agency_names' => (object) $names,
             // La app corporativa marca por empleado y la de reparto pide sus entregas.
             'employee_id' => $user->employee_id,
-            'employee_agency_id' => $user->employee_id === null
-                ? null
-                : app(EmployeeDirectory::class)->employeeAgencyId((int) $user->employee_id),
+            'employee_agency_id' => $employeeAgencyId,
+            'lunch_minutes' => $employeeAgencyId === null ? null : $agencies->agencyLunchMinutes($employeeAgencyId),
         ];
     }
 }

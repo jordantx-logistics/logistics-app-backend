@@ -24,6 +24,7 @@ class Agency extends Model
         'timezone',
         'is_active',
         'opened_at',
+        'lunch_minutes',
     ];
 
     protected function casts(): array

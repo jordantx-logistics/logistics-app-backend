@@ -28,7 +28,7 @@ class ValidateAttendanceSequence
      */
     private const ALLOWED_PREVIOUS = [
         AttendanceRecord::TYPE_IN => [null, AttendanceRecord::TYPE_OUT, AttendanceRecord::TYPE_BREAK_END],
-        AttendanceRecord::TYPE_OUT => [AttendanceRecord::TYPE_IN, AttendanceRecord::TYPE_BREAK_START],
+        AttendanceRecord::TYPE_OUT => [AttendanceRecord::TYPE_IN, AttendanceRecord::TYPE_BREAK_START, AttendanceRecord::TYPE_BREAK_END],
         AttendanceRecord::TYPE_BREAK_START => [AttendanceRecord::TYPE_IN],
         AttendanceRecord::TYPE_BREAK_END => [AttendanceRecord::TYPE_BREAK_START],
     ];

@@ -6504,6 +6504,65 @@ paths:
                 per_page:
                   type: integer
                   description: 'Must be at least 1. Must not be greater than 100.'
+  /api/v1/identity/attendance/mine/days:
+    get:
+      summary: 'My Attendance Days'
+      operationId: myAttendanceDays
+      description: 'El consolidado diario del empleado autenticado, del día más reciente al más antiguo.'
+      parameters:
+        -
+          in: query
+          name: per_page
+          description: 'Rows per page (1..100, por defecto 15).'
+          required: false
+          schema:
+            type: integer
+            description: 'Rows per page (1..100, por defecto 15).'
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employee_id:
+                          type: integer
+                        work_date:
+                          type: string
+                        first_in_at:
+                          type: string
+                        last_out_at:
+                          type: string
+                        worked_minutes:
+                          type: integer
+                        lunch_minutes:
+                          type: integer
+                        late_minutes:
+                          type: integer
+                        status:
+                          type: string
+      tags:
+        - 'Identity - Attendance'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
   '/api/v1/identity/attendance/{attendance_id}/void':
     post:
       summary: 'Void Attendance'
@@ -11427,7 +11486,7 @@ paths:
     get:
       summary: 'My route sheet'
       operationId: myRouteSheet
-      description: "The authenticated courier's open deliveries, with recipient and address. With\n`updated_since` it returns the courier's deliveries changed after that moment,\nclosed ones included. A delivery reassigned to someone else no longer appears."
+      description: "The authenticated courier's open deliveries, with recipient and address. With\n`updated_since` it returns the courier's deliveries changed after that moment,\nclosed ones included. A delivery reassigned to someone else no longer appears.\nWith `closed_today` it also returns the ones closed today, for the courier's history."
       parameters:
         -
           in: query
@@ -11437,6 +11496,14 @@ paths:
           schema:
             type: string
             description: 'ISO 8601 cursor.'
+        -
+          in: query
+          name: closed_today
+          description: "Include today's closed deliveries."
+          required: false
+          schema:
+            type: boolean
+            description: "Include today's closed deliveries."
       responses:
         200:
           description: 'Route sheet'
@@ -11486,6 +11553,9 @@ paths:
                 updated_since:
                   type: string
                   description: 'Must be a valid date.'
+                closed_today:
+                  type: boolean
+                  description: ''
   /api/v1/operations/deliveries/batch:
     post:
       summary: 'Sync a batch of delivery events'
@@ -11885,6 +11955,14 @@ paths:
             description: 'date Filter up to this date.'
         -
           in: query
+          name: search
+          description: 'Part of the vehicle plate or the route reference.'
+          required: false
+          schema:
+            type: string
+            description: 'Part of the vehicle plate or the route reference.'
+        -
+          in: query
           name: per_page
           description: 'Rows per page (1..100).'
           required: false
@@ -11910,8 +11988,14 @@ paths:
                           type: integer
                         vehicle_id:
                           type: integer
+                        vehicle_plate:
+                          type: string
+                          nullable: true
                         driver_id:
                           type: integer
+                        driver_name:
+                          type: string
+                          nullable: true
                         route_ref:
                           type: string
                         departed_at:
@@ -12004,6 +12088,9 @@ paths:
                 departed_to:
                   type: string
                   description: 'Must be a valid date. Must be a date after or equal to <code>departed_from</code>.'
+                search:
+                  type: string
+                  description: 'Must be at least 1 character. Must not be greater than 40 characters.'
                 per_page:
                   type: integer
                   description: ''
@@ -12029,8 +12116,14 @@ paths:
                         type: integer
                       vehicle_id:
                         type: integer
+                      vehicle_plate:
+                        type: string
+                        nullable: true
                       driver_id:
                         type: integer
+                      driver_name:
+                        type: string
+                        nullable: true
                       route_ref:
                         type: string
                       departed_at:
@@ -12132,8 +12225,14 @@ paths:
                         type: integer
                       vehicle_id:
                         type: integer
+                      vehicle_plate:
+                        type: string
+                        nullable: true
                       driver_id:
                         type: integer
+                      driver_name:
+                        type: string
+                        nullable: true
                       route_ref:
                         type: string
                       departed_at:
@@ -13586,6 +13685,8 @@ paths:
                           nullable: true
                         is_active:
                           type: boolean
+                        lunch_minutes:
+                          type: integer
                   success:
                     type: string
                   message:
@@ -13631,6 +13732,8 @@ paths:
                         nullable: true
                       is_active:
                         type: boolean
+                      lunch_minutes:
+                        type: integer
                   success:
                     type: string
                   message:
@@ -13677,6 +13780,9 @@ paths:
                 is_active:
                   type: boolean
                   description: ''
+                lunch_minutes:
+                  type: integer
+                  description: 'Must be at least 0. Must not be greater than 240.'
               required:
                 - code
                 - name
@@ -13720,6 +13826,8 @@ paths:
                         nullable: true
                       is_active:
                         type: boolean
+                      lunch_minutes:
+                        type: integer
                   success:
                     type: string
                   message:
@@ -13765,6 +13873,8 @@ paths:
                         nullable: true
                       is_active:
                         type: boolean
+                      lunch_minutes:
+                        type: integer
                   success:
                     type: string
                   message:
@@ -13811,6 +13921,9 @@ paths:
                 is_active:
                   type: boolean
                   description: ''
+                lunch_minutes:
+                  type: integer
+                  description: 'Must be at least 0. Must not be greater than 240.'
               required:
                 - code
                 - name

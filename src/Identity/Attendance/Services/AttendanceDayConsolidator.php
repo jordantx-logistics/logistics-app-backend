@@ -13,8 +13,10 @@ use Src\Identity\Attendance\Models\AttendanceRecord;
  * el query builder (`updateOrInsert`) en vez de con un modelo Eloquent de clave
  * compuesta.
  *
- * `worked_minutes` suma cada tramo `in`→`out`; `first_in_at`/`last_out_at` son la
- * primera entrada y la última salida. `late_minutes` siempre es 0: sin turnos en
+ * `worked_minutes` suma el tiempo entre `in` y `out` sin el descanso, que va a
+ * `lunch_minutes`; `first_in_at`/`last_out_at` son la primera entrada y la última
+ * salida. Volver del descanso reanuda el trabajo sin otro `in`, y una salida durante
+ * el descanso lo cierra. `late_minutes` siempre es 0: sin turnos en
  * el alcance (`fase-02`) no hay hora de referencia con la que comparar.
  */
 class AttendanceDayConsolidator
@@ -44,20 +46,36 @@ class AttendanceDayConsolidator
         $firstIn = null;
         $lastOut = null;
         $openIn = null;
+        $openBreak = null;
         $workedMinutes = 0;
+        $lunchMinutes = 0;
 
         foreach ($records as $record) {
-            if ($record->type === AttendanceRecord::TYPE_IN) {
-                $openIn ??= $record->marked_at;
-                $firstIn ??= $record->marked_at;
-            } elseif ($record->type === AttendanceRecord::TYPE_OUT) {
-                if ($openIn !== null) {
-                    $workedMinutes += (int) $openIn->diffInMinutes($record->marked_at);
-                    $openIn = null;
-                }
+            $at = $record->marked_at;
 
-                $lastOut = $record->marked_at;
+            if ($record->type === AttendanceRecord::TYPE_IN) {
+                $openIn ??= $at;
+                $firstIn ??= $at;
+
+                continue;
             }
+
+            if ($openIn !== null) {
+                $workedMinutes += (int) $openIn->diffInMinutes($at);
+                $openIn = null;
+            }
+
+            if ($openBreak !== null) {
+                $lunchMinutes += (int) $openBreak->diffInMinutes($at);
+                $openBreak = null;
+            }
+
+            match ($record->type) {
+                AttendanceRecord::TYPE_BREAK_START => $openBreak = $at,
+                AttendanceRecord::TYPE_BREAK_END => $openIn = $at,
+                AttendanceRecord::TYPE_OUT => $lastOut = $at,
+                default => null,
+            };
         }
 
         DB::table('attendance_days')->updateOrInsert(
@@ -66,6 +84,7 @@ class AttendanceDayConsolidator
                 'first_in_at' => $firstIn,
                 'last_out_at' => $lastOut,
                 'worked_minutes' => $workedMinutes,
+                'lunch_minutes' => $lunchMinutes,
                 'late_minutes' => 0,
                 'status' => $firstIn !== null && $lastOut !== null
                     ? self::STATUS_COMPLETE

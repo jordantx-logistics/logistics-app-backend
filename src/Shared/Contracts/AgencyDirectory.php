@@ -44,4 +44,17 @@ interface AgencyDirectory
      * visible de comprobantes.
      */
     public function agencyCode(int $id): ?string;
+
+    /**
+     * Nombres de varias agencias de una vez, por id. Las que no existen no aparecen.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, string>
+     */
+    public function agencyNames(array $ids): array;
+
+    /**
+     * Minutos de almuerzo que la agencia concede a su personal.
+     */
+    public function agencyLunchMinutes(int $id): ?int;
 }

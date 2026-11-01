@@ -94,6 +94,16 @@ it('exige ubicación resoluble para el reparto a domicilio', function () {
             {
                 return 'LIM01';
             }
+
+            public function agencyNames(array $ids): array
+            {
+                return [];
+            }
+
+            public function agencyLunchMinutes(int $id): ?int
+            {
+                return 60;
+            }
         },
         coverages: new class implements CoverageDirectory
         {

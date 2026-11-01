@@ -20,6 +20,7 @@ class AgencyResource extends JsonResource
             'department' => $this->department,
             'ubigeo' => $this->ubigeo,
             'is_active' => $this->is_active,
+            'lunch_minutes' => $this->lunch_minutes,
         ];
     }
 }

@@ -30,6 +30,7 @@ class EmbarkController extends Controller
      * @queryParam updated_since date Only embarks changed after this moment. Example: 2026-10-20T10:00:00Z
      * @queryParam departed_from date Filter from this date. Example: 2026-10-01
      * @queryParam departed_to date Filter up to this date. Example: 2026-10-31
+     * @queryParam search string Part of the vehicle plate or the route reference. Example: B7K
      * @queryParam per_page integer Rows per page (1..100). Example: 15
      *
      * @apiResourceCollection Src\Operations\Shipment\Resources\EmbarkResource
