@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use Src\Customer\Adapters\EloquentCustomerDirectory;
+use Src\Finance\Cash\Adapters\CashClosuresReportSource;
+use Src\Finance\Cash\Adapters\CashKpiSource;
 use Src\Finance\Cash\Jobs\GenerateCashCloseReportJob;
 use Src\Finance\Invoice\Adapters\FakeSunatGateway;
 use Src\Finance\Invoice\Contracts\SunatGateway;
@@ -13,10 +15,14 @@ use Src\Finance\Invoice\Jobs\GenerateCreditNoteArtifactsJob;
 use Src\Finance\Invoice\Jobs\GenerateInvoiceJob;
 use Src\Finance\Invoice\Jobs\VoidInvoiceJob;
 use Src\Finance\Payment\Adapters\EloquentPaymentStatusQuery;
+use Src\Finance\Payment\Adapters\PaymentsKpiSource;
+use Src\Finance\Payment\Adapters\RevenueReportSource;
 use Src\Finance\Payment\Jobs\MarkBillingOrderDeliveredJob;
 use Src\Finance\Payment\Jobs\ProjectBillingOrderCancelledJob;
 use Src\Finance\Payment\Jobs\ProjectBillingOrderCreatedJob;
 use Src\Fleet\Route\Adapters\EloquentRouteDirectory;
+use Src\Fleet\Route\Adapters\FleetConsumptionReportSource;
+use Src\Fleet\Route\Adapters\FleetKpiSource;
 use Src\Identity\Attendance\Models\AttendanceRecord;
 use Src\Identity\Attendance\Policies\AttendancePolicy;
 use Src\Identity\Device\Adapters\EloquentDeviceRegistrar;
@@ -24,10 +30,14 @@ use Src\Identity\Employee\Adapters\EloquentEmployeeDirectory;
 use Src\Identity\Employee\Models\Employee;
 use Src\Identity\Employee\Policies\EmployeePolicy;
 use Src\Identity\User\Adapters\EloquentUserDirectory;
+use Src\Incident\Adapters\IncidentsKpiSource;
+use Src\Incident\Adapters\IncidentsReportSource;
 use Src\Logistics\Location\Adapters\EloquentCoverageDirectory;
 use Src\Logistics\Location\Adapters\EloquentLocationDirectory;
 use Src\Logistics\Order\Adapters\EloquentCustomerOrderQuery;
 use Src\Logistics\Order\Adapters\EloquentOrderQuery;
+use Src\Logistics\Order\Adapters\OrdersKpiSource;
+use Src\Logistics\Order\Adapters\OrdersReportSource;
 use Src\Logistics\Order\Jobs\GenerateOrderGuidePdfJob;
 use Src\Logistics\Order\Jobs\MarkOrderDeliveredJob;
 use Src\Logistics\Order\Jobs\MarkOrderInTransitJob;
@@ -37,14 +47,20 @@ use Src\Logistics\Order\Jobs\ProjectPaymentVoidedJob;
 use Src\Logistics\Order\Jobs\SendOrderConfirmationMailJob;
 use Src\Logistics\Tariff\Adapters\EloquentTariffDirectory;
 use Src\Operations\Shipment\Adapters\EloquentShipmentDirectory;
+use Src\Operations\Shipment\Adapters\ShipmentsKpiSource;
 use Src\Operations\Shipment\Jobs\AlertRouteFinishedWithPendingJob;
 use Src\Operations\Shipment\Jobs\CancelShipmentJob;
 use Src\Operations\Shipment\Jobs\MarkRouteShipmentsInTransitJob;
 use Src\Operations\Shipment\Jobs\ProjectOrderCreatedJob as ProjectShipmentJob;
 use Src\Operations\Tracking\Adapters\EloquentTrackingRecorder;
+use Src\Operations\Tracking\Adapters\TrackingReportSource;
 use Src\Organization\Adapters\EloquentAgencyDirectory;
 use Src\Organization\Models\Agency;
 use Src\Organization\Policies\AgencyPolicy;
+use Src\Reporting\Controllers\DashboardController;
+use Src\Reporting\Jobs\GenerateReportExportJob;
+use Src\Reporting\Services\ReportCatalog;
+use Src\Settings\Adapters\DatabaseSettingsReader;
 use Src\Shared\Contracts\AgencyDirectory;
 use Src\Shared\Contracts\CoverageDirectory;
 use Src\Shared\Contracts\CustomerDirectory;
@@ -55,6 +71,7 @@ use Src\Shared\Contracts\LocationDirectory;
 use Src\Shared\Contracts\OrderQuery;
 use Src\Shared\Contracts\PaymentStatusQuery;
 use Src\Shared\Contracts\RouteDirectory;
+use Src\Shared\Contracts\SettingsReader;
 use Src\Shared\Contracts\ShipmentDirectory;
 use Src\Shared\Contracts\TariffDirectory;
 use Src\Shared\Contracts\TrackingRecorder;
@@ -90,6 +107,29 @@ class DomainServiceProvider extends ServiceProvider
         $this->app->singleton(PaymentStatusQuery::class, EloquentPaymentStatusQuery::class);
         $this->app->singleton(UserDirectory::class, EloquentUserDirectory::class);
         $this->app->singleton(RouteDirectory::class, EloquentRouteDirectory::class);
+        $this->app->singleton(SettingsReader::class, DatabaseSettingsReader::class);
+
+        // Reportes y dashboard no conocen a los contextos: reciben lo que cada uno
+        // aporta. Si un contexto añade un reporte, solo se etiqueta aquí.
+        $this->app->tag([
+            OrdersReportSource::class,
+            RevenueReportSource::class,
+            CashClosuresReportSource::class,
+            TrackingReportSource::class,
+            FleetConsumptionReportSource::class,
+            IncidentsReportSource::class,
+        ], 'reporting.sources');
+        $this->app->tag([
+            OrdersKpiSource::class,
+            PaymentsKpiSource::class,
+            CashKpiSource::class,
+            ShipmentsKpiSource::class,
+            FleetKpiSource::class,
+            IncidentsKpiSource::class,
+        ], 'reporting.kpis');
+        $this->app->when(ReportCatalog::class)->needs('$sources')->giveTagged('reporting.sources');
+        $this->app->when(DashboardController::class)->needs('$sources')->giveTagged('reporting.kpis');
+
         // Sin caída silenciosa al simulado: un valor desconocido en producción
         // dejaría de emitir comprobantes reales sin que nadie lo note (ADR-0011).
         $this->app->singleton(SunatGateway::class, fn (): SunatGateway => match (config('finance.sunat.gateway')) {
@@ -153,6 +193,9 @@ class DomainServiceProvider extends ServiceProvider
             'route.segment-completed' => [AcknowledgeEventJob::class],
             'route.cancelled' => [AcknowledgeEventJob::class],
             'expense.registered' => [AcknowledgeEventJob::class],
+
+            // Reportes: la exportación se genera en la cola `reports`.
+            'report.export-requested' => [GenerateReportExportJob::class],
         ]));
     }
 }

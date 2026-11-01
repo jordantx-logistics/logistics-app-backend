@@ -30,3 +30,9 @@ Schedule::command('metrics:collect')->everyFifteenSeconds();
 // meses. Es idempotente y barato; un fallo puntual no deja el mes siguiente sin
 // partición.
 Schedule::command('tracking:create-next-partition')->dailyAt('02:15');
+
+// Incidencias que superan su plazo: se avisa una vez de cada una.
+Schedule::command('incidents:alert-overdue')->everyFifteenMinutes();
+
+// Exportaciones vencidas: retención de 7 días (`config/reporting.php`).
+Schedule::command('reports:purge-expired')->dailyAt('03:00');

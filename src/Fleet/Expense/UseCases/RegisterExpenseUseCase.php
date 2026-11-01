@@ -11,6 +11,7 @@ use Src\Fleet\Route\Services\FleetEvidenceStore;
 use Src\Fleet\Route\Services\OdometerRecorder;
 use Src\Fleet\Route\Services\RouteActorGuard;
 use Src\Fleet\Vehicle\Models\Vehicle;
+use Src\Shared\Contracts\SettingsReader;
 use Src\Shared\Exceptions\BusinessRuleException;
 use Src\Shared\Models\OutboxEvent;
 use Src\Shared\Scope\AgencyScope;
@@ -30,6 +31,7 @@ class RegisterExpenseUseCase
         private readonly RouteActorGuard $guard,
         private readonly OdometerRecorder $odometer,
         private readonly FleetEvidenceStore $evidence,
+        private readonly SettingsReader $settings,
     ) {}
 
     /**
@@ -164,7 +166,7 @@ class RegisterExpenseUseCase
             ->pluck('amount')
             ->reduce(fn (Money $total, mixed $value): Money => $total->add(Money::fromDecimal((string) $value)), Money::zero());
 
-        if ($registered->add($amount)->greaterThan(Money::fromDecimal((string) config('fleet.per_diem_max')))) {
+        if ($registered->add($amount)->greaterThan(Money::fromDecimal((string) $this->settings->get('fleet.per_diem_max')))) {
             throw new BusinessRuleException(
                 message: 'The per diem exceeds the limit per route.',
                 errorCode: 'EXPENSE_PER_DIEM_LIMIT',

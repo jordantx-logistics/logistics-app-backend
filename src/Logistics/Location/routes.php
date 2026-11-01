@@ -14,6 +14,12 @@ use Src\Logistics\Location\Controllers\ZoneController;
  * desactivan con `is_active` o se reagrupan, nunca se borran (una orden
  * histórica puede apuntar a esa ubicación).
  */
+// Selector de ubicación de reparto del alta de orden: quien registra órdenes no
+// administra el maestro, pero sí tiene que poder elegir una.
+Route::prefix('api/v1/logistics')
+    ->middleware(['auth:sanctum', 'permission:orders.create'])
+    ->get('locations/options', [LocationController::class, 'options']);
+
 Route::prefix('api/v1/logistics')
     ->middleware(['auth:sanctum', 'permission:locations.manage'])
     ->group(function () {

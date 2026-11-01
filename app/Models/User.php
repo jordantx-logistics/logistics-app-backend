@@ -43,7 +43,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    private const NATIONAL_ROLES = ['admin', 'analyst'];
+    public const NATIONAL_ROLES = ['admin', 'analyst'];
 
     /** Usuario operativo. */
     public const STATUS_ACTIVE = 'active';

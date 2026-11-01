@@ -7,6 +7,7 @@ use Src\Fleet\Route\Models\FleetRoute;
 use Src\Fleet\Route\Models\MileageLog;
 use Src\Fleet\Route\ValueObjects\Odometer;
 use Src\Fleet\Vehicle\Models\Vehicle;
+use Src\Shared\Contracts\SettingsReader;
 use Src\Shared\ValueObjects\Money;
 
 /**
@@ -16,6 +17,7 @@ class RouteSummaryService
 {
     public function __construct(
         private readonly ConsumptionCalculator $calculator,
+        private readonly SettingsReader $settings,
     ) {}
 
     /**
@@ -47,8 +49,19 @@ class RouteSummaryService
             'total_cost' => $total->toDecimal(),
             'km_per_liter' => $kmPerLiter,
             'cost_per_km' => $this->calculator->costPerKm($km, (float) $total->toDecimal()),
-            'is_anomalous' => $this->calculator->isAnomalous($kmPerLiter, config("fleet.consumption.{$vehicleType}")),
+            'is_anomalous' => $this->calculator->isAnomalous($kmPerLiter, $this->consumptionRange($vehicleType)),
         ];
+    }
+
+    /**
+     * @return array{min: float, max: float}|null
+     */
+    private function consumptionRange(?string $vehicleType): ?array
+    {
+        $min = $this->settings->get("fleet.consumption.{$vehicleType}.min");
+        $max = $this->settings->get("fleet.consumption.{$vehicleType}.max");
+
+        return $min === null || $max === null ? null : ['min' => (float) $min, 'max' => (float) $max];
     }
 
     /**

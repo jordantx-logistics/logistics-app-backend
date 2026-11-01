@@ -92,6 +92,13 @@ class PermissionSeeder extends Seeder
         'routes.execute',
         'expenses.register',
         'expenses.approve',
+
+        // Web Backoffice (Fase 7).
+        'dashboard.view',
+        'incidents.view',
+        'incidents.manage',
+        'reports.view',
+        'settings.manage',
     ];
 
     /**
@@ -117,6 +124,7 @@ class PermissionSeeder extends Seeder
             'invoices.view', 'invoices.retry',
             'routes.view', 'routes.manage', 'routes.execute',
             'expenses.register', 'expenses.approve',
+            'dashboard.view', 'incidents.view', 'incidents.manage', 'reports.view',
         ],
 
         'counter' => [
@@ -127,6 +135,7 @@ class PermissionSeeder extends Seeder
             'cash.view', 'cash.open', 'cash.close',
             'credit-notes.view', 'invoices.view',
             'voids.view', 'voids.request',
+            'dashboard.view', 'incidents.view',
         ],
 
         'customer-service' => [
@@ -135,6 +144,7 @@ class PermissionSeeder extends Seeder
             'shipments.view', 'tracking.view',
             'payments.view', 'credit-notes.view', 'credit-notes.issue',
             'invoices.view', 'voids.view', 'voids.request',
+            'dashboard.view', 'incidents.view', 'incidents.manage',
         ],
 
         // Nacional de lectura: ve todas las órdenes (`hasNationalScope`) pero no
@@ -145,6 +155,7 @@ class PermissionSeeder extends Seeder
             'shipments.view', 'tracking.view', 'delivery.view',
             'payments.view', 'cash.view', 'credit-notes.view', 'voids.view', 'invoices.view',
             'routes.view',
+            'dashboard.view', 'incidents.view', 'reports.view',
         ],
 
         'cashier' => [
@@ -154,16 +165,18 @@ class PermissionSeeder extends Seeder
             'cash.view', 'cash.open', 'cash.close',
             'credit-notes.view', 'invoices.view',
             'voids.view', 'voids.request',
+            'dashboard.view',
         ],
 
         'warehouse-operator' => [
             'shipments.view', 'shipments.receive', 'shipments.embark', 'shipments.disembark',
             'tracking.scan', 'tracking.view', 'inventory.manage',
+            'dashboard.view',
         ],
 
-        'driver' => ['tracking.view', 'routes.view', 'routes.execute', 'expenses.register'],
+        'driver' => ['tracking.view', 'routes.view', 'routes.execute', 'expenses.register', 'dashboard.view'],
 
-        'courier' => ['delivery.view', 'delivery.execute', 'tracking.view'],
+        'courier' => ['delivery.view', 'delivery.execute', 'tracking.view', 'dashboard.view'],
 
         // Marcaciones propias (Fase 2): el único rol operativo que ya tiene
         // permiso; los de RRHH llegan con los endpoints de Identity.

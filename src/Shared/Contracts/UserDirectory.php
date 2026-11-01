@@ -15,4 +15,13 @@ interface UserDirectory
 
     /** Nombre del usuario, para mostrar al chofer. */
     public function userName(int $id): ?string;
+
+    /**
+     * Usuarios con ese permiso que alcanzan alguna de las agencias, incluidos los
+     * de alcance nacional.
+     *
+     * @param  list<int>  $agencyIds
+     * @return list<array{id: int, name: string}>
+     */
+    public function usersWithPermission(string $permission, array $agencyIds): array;
 }
