@@ -188,7 +188,7 @@ jobs:
             fi
             sleep 2
           done
-          docker logs web
+          echo "::error title=La imagen no arranca::$(docker logs web 2>&1 | tail -c 4000 | awk 'BEGIN { ORS = "%0A" } { print }')"
           exit 1
 
   # Primary, réplica y ProxySQL de verdad: SQLite no replica ni particiona.
@@ -211,17 +211,30 @@ jobs:
           '
 
       - name: Levantar el stack de escala
-        run: sh scripts/scale-up.sh
+        shell: bash
+        run: sh scripts/scale-up.sh 2>&1 | tee -a ci.log
 
       - name: Enrutamiento de lectura y escritura
-        run: docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile tools run --rm tools php scripts/replica-routing-check.php
+        shell: bash
+        run: docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile tools run --rm tools php scripts/replica-routing-check.php 2>&1 | tee -a ci.log
 
       - name: Particiones, purga y cambio de tabla
-        run: docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile tools run --rm tools php scripts/partition-check.php
+        shell: bash
+        run: docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile tools run --rm tools php scripts/partition-check.php 2>&1 | tee -a ci.log
 
       # Criterio 10 de la Fase 9. No en local: satura un equipo de desarrollo.
       - name: Corte de Redis con carga
-        run: sh scripts/redis-failover-check.sh
+        shell: bash
+        run: sh scripts/redis-failover-check.sh 2>&1 | tee -a ci.log
+
+      # La API pública de GitHub no entrega los logs, pero sí las anotaciones.
+      - name: Publicar el final del log
+        if: failure()
+        shell: bash
+        run: |
+          [ -f ci.log ] || exit 0
+          message=$(tail -c 12000 ci.log | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | awk 'BEGIN { ORS = "%0A" } { print }')
+          echo "::error title=Final del log::$message"
 
   # Criterios 5 y 8 de la Fase 9, sobre un clúster real. No en local, por el mismo motivo.
   kubernetes:
@@ -250,7 +263,17 @@ jobs:
           sudo install kind /usr/local/bin/kind
 
       - name: Comprobar el clúster
-        run: bash scripts/kind-check.sh
+        shell: bash
+        run: bash scripts/kind-check.sh 2>&1 | tee -a ci.log
+
+      # La API pública de GitHub no entrega los logs, pero sí las anotaciones.
+      - name: Publicar el final del log
+        if: failure()
+        shell: bash
+        run: |
+          [ -f ci.log ] || exit 0
+          message=$(tail -c 12000 ci.log | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | awk 'BEGIN { ORS = "%0A" } { print }')
+          echo "::error title=Final del log::$message"
 
   infrastructure:
     name: Manifiestos y Terraform

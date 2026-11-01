@@ -98,7 +98,7 @@ services:
   # Imagen de desarrollo, con el código montado: migraciones, seeders y comprobaciones.
   tools:
     profiles: ["tools"]
-    image: logistics-app-backend:local
+    image: ${APP_IMAGE:-logistics-app-backend:local}
     environment:
       <<: *scale-env
       APP_ENV: local

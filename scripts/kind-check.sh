@@ -12,6 +12,20 @@ ok() { echo "OK    $1"; }
 fail() { echo "FALLO $1"; failures=$((failures + 1)); }
 k() { kubectl -n "$ns" "$@"; }
 
+# Si algo aborta el script, deja lo necesario para saber por qué.
+diagnose() {
+  code=$?
+  [ "$code" -eq 0 ] && return
+  echo "--- diagnóstico (salida $code)"
+  k get pods -o wide || true
+  k get events --sort-by=.lastTimestamp | tail -15 || true
+  for pod in $(k get pods --no-headers 2>/dev/null | awk '$2 !~ /^([0-9]+)\/\1$/ && $3 != "Completed" { print $1 }'); do
+    echo "--- $pod"
+    k logs "$pod" --all-containers --tail=15 2>&1 | cut -c1-300 || true
+  done
+}
+trap diagnose EXIT
+
 cat <<'EOF' | kind create cluster --name "$cluster" --wait 120s --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4

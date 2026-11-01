@@ -25,3 +25,5 @@ storage/pail
 *.log
 # Scribe es de desarrollo: sus clases no existen en la imagen de producción.
 config/scribe.php
+# Lo crea Octane en local; en la imagen se copia al construir (Dockerfile).
+public/frankenphp-worker.php
