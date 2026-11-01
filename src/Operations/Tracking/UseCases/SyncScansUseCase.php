@@ -2,7 +2,7 @@
 
 namespace Src\Operations\Tracking\UseCases;
 
-use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Src\Operations\Tracking\Models\Scan;
 use Src\Shared\Contracts\ShipmentDirectory;
@@ -33,6 +33,19 @@ class SyncScansUseCase
      * @return array{accepted: int, duplicated: int, rejected: int, items: list<array<string, mixed>>}
      */
     public function execute(array $data, AgencyScope $scope): array
+    {
+        // Un solo commit por lote: con uno por escaneo, 20M de eventos al día son cientos
+        // de fsync por segundo en el primary. Cada escaneo sigue siendo independiente,
+        // porque su transacción anidada es un savepoint. Si el lote cae entero, el PDA lo
+        // reintenta, y el `scan_id` hace que eso no duplique nada.
+        return DB::transaction(fn (): array => $this->syncLot($data, $scope), 3);
+    }
+
+    /**
+     * @param  array{device_id?: ?string, scans: list<array<string, mixed>>}  $data
+     * @return array{accepted: int, duplicated: int, rejected: int, items: list<array<string, mixed>>}
+     */
+    private function syncLot(array $data, AgencyScope $scope): array
     {
         $accepted = 0;
         $duplicated = 0;
@@ -84,8 +97,10 @@ class SyncScansUseCase
                     'error_code' => $exception->errorCode,
                     'message' => $exception->getMessage(),
                 ];
-            } catch (QueryException) {
-                // Carrera con otro worker sobre el índice único de `scan_id`.
+            } catch (UniqueConstraintViolationException) {
+                // Carrera con otro worker sobre el índice único de `scan_id`. Cualquier otro
+                // error de la base sube: un interbloqueo deshace el lote entero y hay que
+                // reintentarlo, no darlo por duplicado.
                 $duplicated++;
                 $results[] = [
                     'scan_id' => $scan['scan_id'],
@@ -250,7 +265,7 @@ class SyncScansUseCase
                     'longitude' => $scan['longitude'] ?? null,
                 ], fn (mixed $value): bool => $value !== null),
             ]);
-        } catch (QueryException) {
+        } catch (UniqueConstraintViolationException) {
             // Otro worker insertó el mismo `scan_id`; la evidencia ya está.
         }
     }

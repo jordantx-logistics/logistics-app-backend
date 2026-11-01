@@ -21,5 +21,6 @@ final class ShipmentSnapshot
         public readonly ?int $currentLocationAgencyId,
         public readonly string $status,
         public readonly ?string $deliveredAt = null,
+        public readonly ?string $createdAt = null,
     ) {}
 }

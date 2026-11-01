@@ -234,12 +234,12 @@ it('lista envíos, embarks, recepciones y entregas con filtros', function () {
 });
 
 it('registra el comando de particiones y lo agenda a diario', function () {
-    $this->artisan('tracking:create-next-partition')
-        ->expectsOutput('tracking_events is not partitioned on this driver; nothing to do.')
+    $this->artisan('partitions:create-next')
+        ->expectsOutput('Partitioning does not apply to this driver; nothing to do.')
         ->assertSuccessful();
 
     $events = collect(app(Schedule::class)->events())
-        ->filter(fn ($event): bool => str_contains((string) $event->command, 'tracking:create-next-partition'));
+        ->filter(fn ($event): bool => str_contains((string) $event->command, 'partitions:create-next'));
 
     expect($events)->toHaveCount(1)
         ->and($events->first()->expression)->toBe('15 2 * * *');

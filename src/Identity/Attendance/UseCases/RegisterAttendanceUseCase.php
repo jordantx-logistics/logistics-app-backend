@@ -2,6 +2,7 @@
 
 namespace Src\Identity\Attendance\UseCases;
 
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Src\Identity\Attendance\Models\AttendanceRecord;
 use Src\Identity\Attendance\Rules\ValidateAttendanceAgency;
@@ -46,7 +47,26 @@ class RegisterAttendanceUseCase
             ValidateAttendanceSequence::class,
         ]);
 
+        try {
+            return $this->store($data);
+        } catch (UniqueConstraintViolationException) {
+            // Dos reintentos simultáneos: ambos pasaron la regla, y solo uno gana la clave.
+            throw new BusinessRuleException(
+                message: 'This attendance has already been registered.',
+                errorCode: 'ATTENDANCE_DUPLICATE',
+                statusCode: 409,
+            );
+        }
+    }
+
+    private function store(array $data): AttendanceRecord
+    {
         return DB::transaction(function () use ($data): AttendanceRecord {
+            DB::table('attendance_idempotency_keys')->insert([
+                'idempotency_key' => $data['idempotency_key'],
+                'created_at' => now(),
+            ]);
+
             $record = AttendanceRecord::create([
                 'employee_id' => $data['employee_id'],
                 'agency_id' => (int) $data['agency_id'],
