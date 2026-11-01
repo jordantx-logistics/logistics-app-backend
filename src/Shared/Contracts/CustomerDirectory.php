@@ -38,6 +38,11 @@ interface CustomerDirectory
     public function customerDisplayName(int $id): ?string;
 
     /**
+     * Teléfono del cliente, para que el repartidor pueda contactarlo.
+     */
+    public function customerPhone(int $id): ?string;
+
+    /**
      * Ids de los clientes que tienen ese documento.
      *
      * El listado de órdenes filtra por documento del remitente/destinatario.

@@ -27,6 +27,7 @@ class EmbarkController extends Controller
      *
      * @queryParam page integer Page to return. Example: 2
      * @queryParam agency integer Filter by origin agency. Example: 42
+     * @queryParam updated_since date Only embarks changed after this moment. Example: 2026-10-20T10:00:00Z
      * @queryParam departed_from date Filter from this date. Example: 2026-10-01
      * @queryParam departed_to date Filter up to this date. Example: 2026-10-31
      * @queryParam per_page integer Rows per page (1..100). Example: 15

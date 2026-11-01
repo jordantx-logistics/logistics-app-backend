@@ -20,6 +20,9 @@ Route::prefix('api/v1/fleet')
             Route::post('routes/{route}/cancel', [RouteController::class, 'cancel'])->whereNumber('route');
         });
 
+        Route::post('sync', [RouteController::class, 'sync'])
+            ->middleware('permission:routes.execute|expenses.register');
+
         Route::middleware('permission:routes.execute')->group(function (): void {
             Route::post('routes/{route}/start', [RouteController::class, 'start'])->whereNumber('route');
             Route::post('routes/{route}/segments/{segment}/complete', [RouteController::class, 'completeSegment'])

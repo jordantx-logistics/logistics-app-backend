@@ -4,17 +4,25 @@ namespace Src\Operations\Delivery\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Src\Operations\Delivery\Requests\AssignDeliveryRequest;
 use Src\Operations\Delivery\Requests\CompleteDeliveryRequest;
 use Src\Operations\Delivery\Requests\FailDeliveryRequest;
 use Src\Operations\Delivery\Requests\ListDeliveriesRequest;
+use Src\Operations\Delivery\Requests\SyncDeliveriesRequest;
+use Src\Operations\Delivery\Requests\UploadDeliveryEvidenceRequest;
 use Src\Operations\Delivery\Resources\DeliveryResource;
 use Src\Operations\Delivery\UseCases\AssignForDeliveryUseCase;
+use Src\Operations\Delivery\UseCases\BuildRouteSheetUseCase;
 use Src\Operations\Delivery\UseCases\CompleteDeliveryUseCase;
+use Src\Operations\Delivery\UseCases\DeliveryEvidenceStore;
 use Src\Operations\Delivery\UseCases\FailDeliveryUseCase;
 use Src\Operations\Delivery\UseCases\ListDeliveriesUseCase;
 use Src\Operations\Delivery\UseCases\StartDeliveryUseCase;
+use Src\Operations\Delivery\UseCases\SyncDeliveriesUseCase;
 use Src\Shared\Scope\AgencyScope;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @group Operations - Delivery
@@ -66,6 +74,79 @@ class DeliveryController extends Controller
     }
 
     /**
+     * My route sheet
+     *
+     * The authenticated courier's open deliveries, with recipient and address. With
+     * `updated_since` it returns the courier's deliveries changed after that moment,
+     * closed ones included. A delivery reassigned to someone else no longer appears.
+     *
+     * @queryParam updated_since string ISO 8601 cursor. Example: 2026-10-20T10:00:00Z
+     *
+     * @response 200 scenario="Route sheet" {"success":true,"message":"Route sheet retrieved successfully.","data":[{"id":1,"ticket_code":"A7F3Q8X4","ticket_number":"ORD-2026-000001","status":"assigned","attempt":1,"recipient_name":"Ana Pérez","recipient_phone":"999888777","recipient_address":"Av. Lima 123","requires_signature":true,"updated_at":"2026-10-20T10:00:00+00:00"}]}
+     */
+    public function routeSheet(Request $request, BuildRouteSheetUseCase $useCase): JsonResponse
+    {
+        $data = $request->validate(['updated_since' => ['sometimes', 'date']]);
+        $employeeId = $request->user()->employee_id;
+
+        return $this->success(
+            $useCase->execute(
+                $employeeId === null ? null : (int) $employeeId,
+                isset($data['updated_since']) ? Carbon::parse($data['updated_since']) : null,
+            ),
+            'Route sheet retrieved successfully.',
+        );
+    }
+
+    /**
+     * Sync a batch of delivery events
+     *
+     * Each event is applied on its own and reported as accepted, duplicated or
+     * rejected. Retrying an applied `event_id` never repeats the effect.
+     *
+     * @bodyParam items object[] required Up to 25 events.
+     * @bodyParam items[].event_id string required Client-generated UUID. Example: 8a8f0a52-4f1e-4f54-9c9e-3f0c5b0a6d11
+     * @bodyParam items[].action string required `start`, `complete` or `fail`. Example: start
+     * @bodyParam items[].delivery_id integer required Delivery id. Example: 1
+     *
+     * @response 200 scenario="Batch processed" {"success":true,"message":"Delivery events synchronized successfully.","data":{"accepted":1,"duplicated":0,"rejected":0,"items":[{"event_id":"8a8f0a52-4f1e-4f54-9c9e-3f0c5b0a6d11","status":"accepted"}]}}
+     */
+    public function batch(SyncDeliveriesRequest $request, SyncDeliveriesUseCase $useCase, AgencyScope $scope): JsonResponse
+    {
+        return $this->success($useCase->execute($request->items(), $scope), 'Delivery events synchronized successfully.');
+    }
+
+    /**
+     * Upload delivery evidence
+     *
+     * Returns the route to send when completing the delivery. Retrying replaces the
+     * file, so it never accumulates copies.
+     *
+     * @urlParam delivery integer required Delivery id. Example: 1
+     *
+     * @response 201 scenario="Stored" {"success":true,"message":"Evidence stored successfully.","data":{"path":"deliveries/1/photo.jpg"}}
+     */
+    public function uploadEvidence(int $delivery, UploadDeliveryEvidenceRequest $request, DeliveryEvidenceStore $store, AgencyScope $scope): JsonResponse
+    {
+        $path = $store->store($delivery, (string) $request->validated('type'), $request->file('file'), $scope);
+
+        return $this->success(['path' => $path], 'Evidence stored successfully.', 201);
+    }
+
+    /**
+     * Download delivery evidence
+     *
+     * @urlParam delivery integer required Delivery id. Example: 1
+     * @urlParam type string required `signature` or `photo`. Example: photo
+     *
+     * @response 200 scenario="File" binary
+     */
+    public function downloadEvidence(int $delivery, string $type, DeliveryEvidenceStore $store, AgencyScope $scope): StreamedResponse
+    {
+        return $store->download($delivery, $type, $scope);
+    }
+
+    /**
      * Assign shipments for delivery
      *
      * @bodyParam agency_id integer required Delivery agency. Example: 42
@@ -102,7 +183,7 @@ class DeliveryController extends Controller
     /**
      * Complete a delivery
      *
-     * Evidence is recorded as routes (`deliveries/...`); Fase 4 does not upload files.
+     * Evidence is recorded as routes (`deliveries/...`), returned by the evidence upload.
      *
      * @urlParam delivery integer required Delivery id. Example: 1
      *

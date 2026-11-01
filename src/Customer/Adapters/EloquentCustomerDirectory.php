@@ -31,6 +31,13 @@ class EloquentCustomerDirectory implements CustomerDirectory
         return is_string($name) ? $name : null;
     }
 
+    public function customerPhone(int $id): ?string
+    {
+        $phone = Customer::query()->whereKey($id)->value('phone');
+
+        return is_string($phone) ? $phone : null;
+    }
+
     public function customerIdsByDocument(string $number, ?string $type = null): array
     {
         $query = Customer::query()->where('document_number', $number);

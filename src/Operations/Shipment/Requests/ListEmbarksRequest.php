@@ -15,6 +15,7 @@ class ListEmbarksRequest extends FormRequest
     {
         return [
             'agency' => ['sometimes', 'integer', 'min:1'],
+            'updated_since' => ['sometimes', 'date'],
             'departed_from' => ['sometimes', 'date'],
             'departed_to' => ['sometimes', 'date', 'after_or_equal:departed_from'],
             'per_page' => ['sometimes', 'integer'],

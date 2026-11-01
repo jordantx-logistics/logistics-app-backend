@@ -4,6 +4,7 @@ namespace Src\Fleet\Route\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Src\Fleet\Route\Models\FleetRoute;
 use Src\Fleet\Route\Models\MileageLog;
 use Src\Fleet\Route\Requests\AssignRouteRequest;
@@ -12,6 +13,7 @@ use Src\Fleet\Route\Requests\ListRoutesRequest;
 use Src\Fleet\Route\Requests\RegisterMileageRequest;
 use Src\Fleet\Route\Requests\RouteOdometerRequest;
 use Src\Fleet\Route\Requests\StoreRouteRequest;
+use Src\Fleet\Route\Requests\SyncFleetEventsRequest;
 use Src\Fleet\Route\Resources\MileageLogResource;
 use Src\Fleet\Route\Resources\RouteResource;
 use Src\Fleet\Route\Resources\RouteSegmentResource;
@@ -24,6 +26,7 @@ use Src\Fleet\Route\UseCases\CreateRouteUseCase;
 use Src\Fleet\Route\UseCases\FinishRouteUseCase;
 use Src\Fleet\Route\UseCases\RegisterMileageUseCase;
 use Src\Fleet\Route\UseCases\StartRouteUseCase;
+use Src\Fleet\Route\UseCases\SyncFleetEventsUseCase;
 use Src\Shared\Exceptions\BusinessRuleException;
 use Src\Shared\Scope\AgencyScope;
 
@@ -35,6 +38,25 @@ use Src\Shared\Scope\AgencyScope;
 class RouteController extends Controller
 {
     /**
+     * Sync a batch of fleet events
+     *
+     * Each event is applied on its own and reported as accepted, duplicated or
+     * rejected. Events carrying a file use their multipart endpoint, with the
+     * `event_id` as `idempotency_key`.
+     *
+     * @bodyParam items object[] required Up to 25 events.
+     * @bodyParam items[].event_id string required Client-generated UUID. Example: 8a8f0a52-4f1e-4f54-9c9e-3f0c5b0a6d11
+     * @bodyParam items[].type string required `route.start`, `route.finish`, `segment.complete`, `mileage` or `expense`. Example: route.start
+     * @bodyParam items[].route_id integer required Route id. Example: 1
+     *
+     * @response 200 scenario="Batch processed" {"success":true,"message":"Fleet events synchronized successfully.","data":{"accepted":1,"duplicated":0,"rejected":0,"items":[{"event_id":"8a8f0a52-4f1e-4f54-9c9e-3f0c5b0a6d11","status":"accepted"}]}}
+     */
+    public function sync(SyncFleetEventsRequest $request, SyncFleetEventsUseCase $useCase, AgencyScope $scope): JsonResponse
+    {
+        return $this->success($useCase->execute($request->items(), $scope), 'Fleet events synchronized successfully.');
+    }
+
+    /**
      * List routes
      *
      * @queryParam status string One status or a comma-separated list. Example: assigned,in_progress
@@ -44,6 +66,7 @@ class RouteController extends Controller
      * @queryParam ticket_number string Exact route number. Example: RUT-2026-000001
      * @queryParam departure_from string Planned departure from. Example: 2026-11-01
      * @queryParam departure_to string Planned departure to. Example: 2026-11-30
+     * @queryParam updated_since string Only routes changed after this moment. Example: 2026-11-01T10:00:00Z
      * @queryParam per_page integer Rows per page (1..100). Example: 15
      *
      * @apiResourceCollection Src\Fleet\Route\Resources\RouteResource
@@ -86,6 +109,10 @@ class RouteController extends Controller
 
         if ($request->filled('departure_to')) {
             $query->whereDate('planned_departure_at', '<=', $request->input('departure_to'));
+        }
+
+        if ($request->filled('updated_since')) {
+            $query->where('updated_at', '>=', Carbon::parse($request->input('updated_since')));
         }
 
         return $this->successPaginated(

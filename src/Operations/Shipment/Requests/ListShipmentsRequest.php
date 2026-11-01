@@ -22,6 +22,7 @@ class ListShipmentsRequest extends FormRequest
             'destination_agency_id' => ['sometimes', 'integer', 'min:1'],
             'ticket_code' => ['sometimes', 'string', 'max:8'],
             'ticket_number' => ['sometimes', 'string', 'max:20'],
+            'updated_since' => ['sometimes', 'date'],
             'created_from' => ['sometimes', 'date'],
             'created_to' => ['sometimes', 'date', 'after_or_equal:created_from'],
             'per_page' => ['sometimes', 'integer'],

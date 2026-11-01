@@ -30,6 +30,7 @@ class ShipmentController extends Controller
      * @queryParam ticket_code string Exact 8-char ticket code. Example: A7F3Q8X4
      * @queryParam ticket_number string Ticket number prefix. Example: ORD-2026
      * @queryParam created_from date Filter from this date. Example: 2026-10-01
+     * @queryParam updated_since date Only shipments changed after this moment. Example: 2026-10-20T10:00:00Z
      * @queryParam created_to date Filter up to this date. Example: 2026-10-31
      * @queryParam per_page integer Rows per page (1..100). Example: 15
      *

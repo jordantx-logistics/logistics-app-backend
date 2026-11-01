@@ -3,6 +3,7 @@
 namespace Src\Operations\Shipment\UseCases;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Src\Operations\Shipment\Models\Shipment;
 use Src\Shared\Scope\AgencyScope;
 
@@ -48,6 +49,10 @@ class ListShipmentsUseCase
 
         if (isset($filters['ticket_number'])) {
             $query->where('ticket_number', 'like', strtoupper((string) $filters['ticket_number']).'%');
+        }
+
+        if (isset($filters['updated_since'])) {
+            $query->where('updated_at', '>=', Carbon::parse($filters['updated_since']));
         }
 
         if (isset($filters['created_from'])) {

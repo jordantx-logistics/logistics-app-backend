@@ -42,6 +42,20 @@ class SyncScansUseCase
         foreach ($data['scans'] as $scan) {
             $existing = Scan::query()->where('scan_id', $scan['scan_id'])->first();
 
+            // Un escaneo rechazado se guarda como evidencia, pero nunca se aplicó: decir
+            // `duplicated` haría creer al PDA que sí. Sigue siendo el mismo rechazo.
+            if ($existing !== null && ($existing->payload['rejected'] ?? false) === true) {
+                $rejected++;
+                $results[] = [
+                    'scan_id' => $scan['scan_id'],
+                    'status' => 'rejected',
+                    'error_code' => $existing->payload['error_code'] ?? 'SCAN_REJECTED',
+                    'message' => 'This scan was already rejected. Scan the parcel again if it still applies.',
+                ];
+
+                continue;
+            }
+
             if ($existing !== null) {
                 $duplicated++;
                 $results[] = [

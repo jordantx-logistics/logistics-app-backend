@@ -6,6 +6,7 @@ use Src\Logistics\Order\Models\Order;
 use Src\Shared\Contracts\CustomerDirectory;
 use Src\Shared\Contracts\OrderQuery;
 use Src\Shared\DTOs\BillableOrder;
+use Src\Shared\DTOs\DeliveryContact;
 use Src\Shared\ValueObjects\Money;
 
 /**
@@ -44,6 +45,22 @@ class EloquentOrderQuery implements OrderQuery
             payerId: $payerId,
             payerName: $this->customers->customerDisplayName($payerId) ?? "Customer #{$payerId}",
             fiscalDocument: $this->customers->customerFiscalData($payerId),
+        );
+    }
+
+    public function findDeliveryContact(int $orderId): ?DeliveryContact
+    {
+        $order = Order::query()->find($orderId);
+
+        if ($order === null) {
+            return null;
+        }
+
+        return new DeliveryContact(
+            recipientName: $this->customers->customerDisplayName($order->receiver_id),
+            recipientPhone: $this->customers->customerPhone($order->receiver_id),
+            recipientAddress: $order->recipient_address,
+            requiresSignature: (bool) $order->requires_signature,
         );
     }
 }

@@ -92,6 +92,37 @@ class AttendanceController extends Controller
     }
 
     /**
+     * My Attendance
+     *
+     * Las marcaciones del empleado autenticado, de la más reciente a la más antigua.
+     *
+     * @queryParam per_page integer Rows per page (1..100, por defecto 15). Example: 15
+     *
+     * @apiResourceCollection Src\Identity\Attendance\Resources\AttendanceResource
+     *
+     * @apiResourceModel Src\Identity\Attendance\Models\AttendanceRecord paginate=15
+     *
+     * @apiResourceAdditional success=true message="Attendance retrieved successfully."
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        $data = $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100']]);
+        $employeeId = $request->user()->employee_id;
+
+        $records = AttendanceRecord::query()
+            // Sin ficha de empleado no hay marcaciones propias.
+            ->where('employee_id', $employeeId ?? 0)
+            ->orderByDesc('marked_at')
+            ->orderByDesc('id')
+            ->paginate((int) ($data['per_page'] ?? 15));
+
+        return $this->successPaginated(
+            resource: AttendanceResource::collection($records),
+            message: 'Attendance retrieved successfully.',
+        );
+    }
+
+    /**
      * Register Attendance
      *
      * Registra una marcación de entrada/salida de un empleado. Es idempotente por `idempotency_key`, por lo que los reintentos offline no duplican registros.

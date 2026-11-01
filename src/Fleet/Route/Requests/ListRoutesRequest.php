@@ -24,6 +24,7 @@ class ListRoutesRequest extends FormRequest
             'ticket_number' => ['sometimes', 'string', 'max:20'],
             'departure_from' => ['sometimes', 'date'],
             'departure_to' => ['sometimes', 'date'],
+            'updated_since' => ['sometimes', 'date'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ];
     }

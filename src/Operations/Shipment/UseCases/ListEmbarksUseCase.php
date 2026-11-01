@@ -3,6 +3,7 @@
 namespace Src\Operations\Shipment\UseCases;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Src\Operations\Shipment\Models\Embark;
 use Src\Shared\Scope\AgencyScope;
 
@@ -34,6 +35,10 @@ class ListEmbarksUseCase
 
         if (isset($filters['departed_to'])) {
             $query->where('departed_at', '<=', $filters['departed_to'].' 23:59:59');
+        }
+
+        if (isset($filters['updated_since'])) {
+            $query->where('updated_at', '>=', Carbon::parse($filters['updated_since']));
         }
 
         return $query->paginate($perPage);

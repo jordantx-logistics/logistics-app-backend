@@ -3,6 +3,7 @@
 namespace Src\Shared\Contracts;
 
 use Src\Shared\DTOs\BillableOrder;
+use Src\Shared\DTOs\DeliveryContact;
 
 /**
  * Puerto de lectura hacia Core para validar que una orden se puede cobrar.
@@ -17,4 +18,9 @@ interface OrderQuery
      * Orden con los datos fiscales del pagador, o `null` si no existe.
      */
     public function findBillable(int $orderId): ?BillableOrder;
+
+    /**
+     * Destinatario y dirección para la hoja de ruta del repartidor.
+     */
+    public function findDeliveryContact(int $orderId): ?DeliveryContact;
 }
