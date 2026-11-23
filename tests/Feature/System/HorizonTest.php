@@ -4,6 +4,8 @@ use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Laravel\Horizon\Horizon;
+use Src\Finance\Invoice\Jobs\SendCreditNoteSunatJob;
+use Src\Finance\Invoice\Jobs\SendSunatJob;
 
 it('configura las colas del spec con balanceo automático', function () {
     $supervisor = config('horizon.defaults.supervisor-1');
@@ -21,8 +23,8 @@ it('reintenta los jobs que quedaron a medias', function () {
 });
 
 it('no repite automáticamente los envíos a SUNAT', function () {
-    expect((new Src\Finance\Invoice\Jobs\SendSunatJob(1))->tries)->toBe(1)
-        ->and((new Src\Finance\Invoice\Jobs\SendCreditNoteSunatJob(1))->tries)->toBe(1);
+    expect((new SendSunatJob(1))->tries)->toBe(1)
+        ->and((new SendCreditNoteSunatJob(1))->tries)->toBe(1);
 });
 
 it('toma las colas de HORIZON_QUEUES en todos los entornos', function () {
