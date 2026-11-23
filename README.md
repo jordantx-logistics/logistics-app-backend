@@ -8,52 +8,35 @@ Laravel 13 REST API para gestión de logística (envíos, pagos, agencias y clie
 
 ## Características
 
-- **Autenticación con Sanctum** - Cookie de sesión HttpOnly para la web y tokens opacos para las apps
-- **Gestión de envíos** - Creación y seguimiento de órdenes con idempotencia
-- **Pagos** - Procesamiento de pagos vinculados a envíos
-- **Agencias** - Gestión de sucursales de logística
-- **Clientes** - Personas naturales y empresas (con RUC)
-- **Permisos RBAC** - Roles y permisos con Spatie
-- **Eventos asíncronos** - Pattern de Outbox para notificaciones
+- **Autenticación con Sanctum**: cookie de sesión HttpOnly para la web y tokens opacos para las apps móviles.
+- **Logística**: órdenes de envío con idempotencia, tarifas, ubicaciones y pagos.
+- **Operaciones**: recepción, inventario, embarques, reparto de última milla y tracking.
+- **Finanzas**: cobros, caja, comprobantes electrónicos (SUNAT), notas de crédito y anulaciones.
+- **Flota**: rutas, choferes, vehículos y gastos.
+- **Identidad**: usuarios, roles y permisos (Spatie), empleados, asistencia y dispositivos.
+- **Incidencias, reportes y ajustes** del sistema.
+- **Eventos asíncronos**: patrón outbox con Horizon sobre Redis.
 
 ## Arquitectura
 
 ### Estructura Modular
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    LOGISTICS APP BACKEND                    │
-│                  Laravel 13 + PHP 8.3                       │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
-│  │    Auth     │    │ Organization│    │  Customer   │      │
-│  │  (Sanctum)  │    │ (Agencies)  │    │(Persons/Cos)│      │
-│  └──────┬──────┘    └─────────────┘    └─────────────┘      │
-│         │                                                   │
-│         └──────────────┬────────────────────────────────────┘
-│                        │
-│                    ┌─────────────┐
-│                    │   Logistics │
-│                    │ ┌─────────┐ │
-│                    │ │  Order  │ │
-│                    │ │Payment  │ │
-│                    │ └─────────┘ │
-│                    └─────────────┘
-│                        │
-│                    ┌─────────────┐
-│                    │   Permission│
-│                    │  (RBAC)     │
-│                    └─────────────┘
-│                        │
-│                    ┌─────────────┐
-│                    │    Shared   │
-│                    │ (Traits,    │
-│                    │  Pipelines) │
-│                    └─────────────┘
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+Monolito modular con un contexto por carpeta en `src/`. Cada contexto expone sus rutas bajo `api/v1/...` y se comunica con los demás por contratos (`src/Shared/Contracts`) y eventos del outbox.
+
+| Contexto | Módulos | Prefijo |
+|---|---|---|
+| Identity | User, Role, Employee, Attendance, Device | `api/v1/auth`, `api/v1/identity`, `api/v1/permission` |
+| Organization | Agencias | `api/v1/organization` |
+| Customer | Personas y empresas | `api/v1/customer` |
+| Logistics | Order, Tariff, Location, Payment | `api/v1/logistics` |
+| Operations | Reception, Inventory, Shipment, Delivery, Tracking | `api/v1/operations` |
+| Finance | Payment, Cash, Invoice, CreditNote, Void | `api/v1/finance` |
+| Fleet | Route, Driver, Vehicle, Expense | `api/v1/fleet` |
+| Incident | Incidencias | `api/v1/incidents` |
+| Reporting | Reportes y exportaciones | `api/v1/reports` |
+| Settings | Ajustes | `api/v1/settings` |
+| System | Salud, métricas y utilidades | `api/v1` |
+| Shared | Contratos, outbox, pipelines, excepciones y traits | — |
 
 ### Request Flow
 
@@ -111,20 +94,22 @@ CheckDuplicateOrder::class // valida idempotency_key
 
 ```
 src/
-├── Auth/               # Login y tokens de Sanctum
-├── Customer/           # Persons (clientes naturales)
-├── Organization/       # Agencies (agencias/logística)
-├── Logistics/
-│   ├── Order/          # Gestión de envíos
-│   └── Payment/        # Pagos de envíos
-├── Permission/         # Roles y permisos (Spatie)
-└── Shared/             # Código compartido
-    ├── Exceptions/     # BusinessRuleException
-    ├── Models/         # OutboxEvent
-    ├── Pipelines/      # RulesPipeline
-    ├── Services/       # TicketCodeGenerator, TicketNumberGenerator
-    └── Traits/         # ApiResponse, HasTicketIdentifiers
+├── Identity/           # User, Role, Employee, Attendance, Device
+├── Organization/       # Agencias
+├── Customer/           # Personas y empresas
+├── Logistics/          # Order, Tariff, Location, Payment
+├── Operations/         # Reception, Inventory, Shipment, Delivery, Tracking
+├── Finance/            # Payment, Cash, Invoice, CreditNote, Void
+├── Fleet/              # Route, Driver, Vehicle, Expense
+├── Incident/
+├── Reporting/
+├── Settings/
+├── System/             # Salud, métricas, middleware
+└── Shared/             # Contracts, DTOs, Exceptions, Jobs, Models (OutboxEvent),
+                        # Pipelines, Scope, Services, Traits, ValueObjects
 ```
+
+Dentro de cada módulo: `Controllers`, `Requests`, `UseCases`, `Models`, `Resources`, `Rules` y su `routes.php`.
 
 ## Instalación
 
@@ -379,7 +364,7 @@ Añade las rutas al `routes.php` del módulo que corresponda:
 ```php
 // src/Logistics/Shipment/routes.php
 Route::prefix('api/v1/logistics')
-    ->middleware('auth:api')
+    ->middleware('auth:sanctum')
     ->group(function () {
         Route::apiResource('shipments', ShipmentController::class);
     });
@@ -468,17 +453,15 @@ Authorization: Bearer {token}
 
 ### Endpoints
 
+Hay más de 140 rutas. La referencia completa es el contrato OpenAPI versionado en `openapi/openapi.yaml`, que también se publica en `/docs` (Scribe). Los prefijos por contexto están en [Estructura Modular](#estructura-modular).
+
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
-| POST | `/auth/login` | Login | No |
-| POST | `/auth/register` | Registro | No |
-| POST | `/organizations` | Crear agencia | Sí |
-| POST | `/customers/persons` | Crear persona | Sí |
-| POST | `/customers/companies` | Crear empresa | Sí |
-| POST | `/logistics/orders` | Crear envío | Sí |
-| POST | `/logistics/payments` | Crear pago | Sí |
-| GET | `/permissions/roles` | Listar roles | Sí |
-| GET | `/permissions/permissions` | Listar permisos | Sí |
+| GET | `/sanctum/csrf-cookie` | Cookie CSRF para la web | No |
+| POST | `/api/v1/auth/login` | Login de la web (sesión) | No |
+| POST | `/api/v1/auth/token` | Token para las apps | No |
+| GET | `/api/v1/auth/me` | Usuario, roles y permisos | Sí |
+| POST | `/api/v1/auth/logout` | Cerrar sesión | Sí |
 
 ### Response Format
 
