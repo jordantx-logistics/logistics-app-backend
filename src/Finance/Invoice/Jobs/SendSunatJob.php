@@ -22,6 +22,13 @@ final class SendSunatJob implements ShouldQueue
 {
     use Dispatchable, Queueable;
 
+    /**
+     * Un solo intento: si SUNAT aceptó y luego falló la transacción, repetir
+     * reenviaría el comprobante. Lo que no se completa se reintenta a mano
+     * (`RetrySunatTransmissionUseCase`).
+     */
+    public int $tries = 1;
+
     public function __construct(
         public readonly int $invoiceId,
     ) {

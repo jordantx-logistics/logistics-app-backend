@@ -232,7 +232,14 @@ return [
             'maxTime' => 0,
             'maxJobs' => 0,
             'memory' => 128,
-            'tries' => 1,
+            // Un job que el worker reservó y no llegó a terminar (Redis o el worker
+            // cayeron a mitad) vuelve a la cola pasado `retry_after` con un intento
+            // más. Con 1 intento, Laravel lo daba por fallido sin ejecutarlo y el
+            // evento del outbox, ya `processed`, no se volvía a publicar: se perdía.
+            // Los jobs son idempotentes (`ProcessedEvents`); los que no pueden
+            // repetirse sin riesgo fijan su propio `$tries`.
+            'tries' => (int) env('HORIZON_TRIES', 3),
+            'backoff' => [10, 60],
             'timeout' => 60,
             'nice' => 0,
         ],
