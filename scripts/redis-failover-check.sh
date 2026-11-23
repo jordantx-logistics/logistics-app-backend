@@ -56,6 +56,8 @@ if ! $compose exec -T horizon php artisan horizon:status > /dev/null 2>&1; then
 fi
 
 if [ "$failures" -ne 0 ]; then
+  echo "Jobs fallidos:"
+  sql "SELECT queue, LEFT(payload, 160), LEFT(exception, 400) FROM failed_jobs ORDER BY id DESC LIMIT 5" || true
   echo "$failures comprobaciones fallaron."
   exit 1
 fi

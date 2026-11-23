@@ -13,6 +13,18 @@ it('configura las colas del spec con balanceo automático', function () {
         ->and($supervisor['balance'])->toBe('auto');
 });
 
+it('reintenta los jobs que quedaron a medias', function () {
+    // Con un solo intento, un job reservado antes de un corte de Redis volvía como
+    // intento 2 y se marcaba fallido sin ejecutarse (job `scale` de la Fase 9).
+    expect(config('horizon.defaults.supervisor-1.tries'))->toBeGreaterThanOrEqual(3)
+        ->and(config('horizon.defaults.supervisor-1.backoff'))->not->toBeEmpty();
+});
+
+it('no repite automáticamente los envíos a SUNAT', function () {
+    expect((new Src\Finance\Invoice\Jobs\SendSunatJob(1))->tries)->toBe(1)
+        ->and((new Src\Finance\Invoice\Jobs\SendCreditNoteSunatJob(1))->tries)->toBe(1);
+});
+
 it('toma las colas de HORIZON_QUEUES en todos los entornos', function () {
     // Lo que no se define por entorno se hereda de `defaults`.
     expect(config('horizon.defaults.supervisor-1.queue'))->toBe(['high', 'default', 'reports', 'sync'])
