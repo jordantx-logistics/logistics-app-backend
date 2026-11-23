@@ -8,7 +8,7 @@ Laravel 13 REST API para gestión de logística (envíos, pagos, agencias y clie
 
 ## Características
 
-- **Autenticación JWT** - Login, registro y tokens refresh
+- **Autenticación con Sanctum** - Cookie de sesión HttpOnly para la web y tokens opacos para las apps
 - **Gestión de envíos** - Creación y seguimiento de órdenes con idempotencia
 - **Pagos** - Procesamiento de pagos vinculados a envíos
 - **Agencias** - Gestión de sucursales de logística
@@ -28,7 +28,7 @@ Laravel 13 REST API para gestión de logística (envíos, pagos, agencias y clie
 │                                                             │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
 │  │    Auth     │    │ Organization│    │  Customer   │      │
-│  │  (JWT)      │    │ (Agencies)  │    │(Persons/Cos)│      │
+│  │  (Sanctum)  │    │ (Agencies)  │    │(Persons/Cos)│      │
 │  └──────┬──────┘    └─────────────┘    └─────────────┘      │
 │         │                                                   │
 │         └──────────────┬────────────────────────────────────┘
@@ -111,7 +111,7 @@ CheckDuplicateOrder::class // valida idempotency_key
 
 ```
 src/
-├── Auth/               # Login, registro, JWT tokens
+├── Auth/               # Login y tokens de Sanctum
 ├── Customer/           # Persons (clientes naturales)
 ├── Organization/       # Agencies (agencias/logística)
 ├── Logistics/
@@ -148,9 +148,6 @@ php artisan migrate
 
 # 6. Build assets (opcional, si usas Vite)
 npm run build
-
-# 7. Generar secret JWT (requerido para auth)
-php artisan jwt:secret
 ```
 
 ### Variables de Entorno
@@ -184,11 +181,11 @@ REDIS_HOST=redis        # Docker
 REDIS_PORT=6379
 ```
 
-**JWT:**
+**Sanctum:**
 ```env
-JWT_SECRET=             # Generar con: php artisan jwt:secret
-JWT_TTL=60
-JWT_REFRESH_TTL=20160
+SANCTUM_STATEFUL_DOMAINS=localhost:5173   # Dominios de la SPA que usan cookie de sesión
+SANCTUM_TOKEN_EXPIRATION=43200            # Minutos de vida de los tokens de las apps
+SESSION_SECURE_COOKIE=false               # true en producción (HTTPS)
 ```
 
 **Scribe (API docs):**
@@ -238,7 +235,6 @@ docker compose logs -f app
 # Ejecutar artisan dentro del contenedor
 docker compose exec app php artisan migrate:fresh --seed
 docker compose exec app php artisan test
-docker compose exec app php artisan jwt:secret
 
 # Detener servicios (mantiene volúmenes)
 docker compose down
@@ -461,7 +457,11 @@ http://localhost:8000/api/v1/
 
 ### Autenticación
 
-JWT Bearer token en header:
+Laravel Sanctum con dos modos:
+
+- **Web (SPA):** cookie de sesión HttpOnly. Antes del primer `POST` se pide `GET /sanctum/csrf-cookie`.
+- **Apps:** token opaco que entrega `POST /auth/token`, en el header:
+
 ```
 Authorization: Bearer {token}
 ```
